@@ -253,7 +253,7 @@
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Enter Document ID">
+                <input type="text" id="verifyDocId" placeholder="Example: MRDC-BP-2026-48217">
             </div>
             <button onclick="verifyDocument()">&#128269; Verify Document</button>
             <div id="verifyResult"></div>
@@ -276,13 +276,13 @@
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="Enter your official email">
+                    <input type="email" id="loginEmail" placeholder="staff@tondemanyame.gov.zw">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button id="loginBtn" onclick="staffLogin()">&#128274; Login to System</button>
+                <button onclick="staffLogin()">&#128274; Login to System</button>
                 <div id="loginError"></div>
             </div>
             
@@ -327,7 +327,7 @@
                         <small>Leave blank if no expiry date</small>
                     </div>
                     
-                    <button type="submit" id="submitBtn">&#128196; Issue Document & Generate QR Code</button>
+                    <button type="submit" id="submitBtn">&#128196; Issue Document &amp; Generate QR Code</button>
                 </form>
                 
                 <div id="issueResult"></div>
@@ -335,15 +335,15 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // ============================================
         // TONDEMANYAME RDC - OFFICIAL VERIFICATION SYSTEM
         // ============================================
         
-        // CONSOLE PROTECTION - Tonde Forbits console usage
+        // CONSOLE PROTECTION - Console Disabling Logic
         (function() {
             const noop = function() {};
-            
             console.log = noop;
             console.error = noop;
             console.warn = noop;
@@ -353,34 +353,41 @@
             console.trace = noop;
             
             if (console.clear) console.clear();
-            
             Object.freeze(console);
             
             let devToolsOpen = false;
-            const checkDevTools = setInterval(function() {
+            setInterval(function() {
                 const before = new Date().getTime();
                 debugger;
                 const after = new Date().getTime();
                 if (after - before > 100 || /./.test('')) {
                     if (!devToolsOpen) {
                         devToolsOpen = true;
-                        alert("&#9888; TONDE FORBIDS THE USE OF CONSOLE &#9888;\n\nThis system is protected. Close developer tools to continue.");
+                        alert("&#9888; SYSTEM TERMINAL NOTIFICATION &#9888;\n\nThis system is protected. Close developer tools to continue.");
                     }
                 }
             }, 1000);
         })();
         
         // ============================================
-        // SUPABASE CONFIGURATION
+        // SUPABASE INITIALIZATION
         // ============================================
-        
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
+        let supabaseClient = null;
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch(e) {
+            alert("Database connection setup error.");
+        }
+        
         let currentStaffUser = sessionStorage.getItem('staffEmail');
-        let currentStaffName = sessionStorage.getItem('staffName');
         const today = new Date().toISOString().split('T')[0];
         
+        // Tab switching
         function showTab(tab) {
             const verifyTab = document.getElementById('verifyTab');
             const staffTab = document.getElementById('staffTab');
@@ -401,8 +408,9 @@
         }
         
         function checkStaffLoginState() {
-            if (currentStaffUser && currentStaffName) {
-                showIssuanceForm(currentStaffUser, currentStaffName);
+            const cachedName = sessionStorage.getItem('staffDisplayName');
+            if (currentStaffUser && cachedName) {
+                showIssuanceForm(currentStaffUser, cachedName);
             } else {
                 showStaffLoginForm();
             }
@@ -416,77 +424,67 @@
             document.getElementById('loginError').innerHTML = '';
         }
         
-        function showIssuanceForm(email, name) {
+        function showIssuanceForm(email, displayName) {
             document.getElementById('staffLoginSection').classList.add('hidden');
             document.getElementById('issuanceSection').classList.remove('hidden');
-            document.getElementById('staffName').innerHTML = escapeHtml(name);
-            document.getElementById('issuedBy').value = name;
+            document.getElementById('staffName').innerHTML = displayName;
+            document.getElementById('issuedBy').value = displayName;
             document.getElementById('issueDate').value = today;
         }
         
-        // Dynamic Staff Login checking the 'profiles' table in Supabase
+        // Dynamic Staff Authentication via Supabase Database and Identity System
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
-            const loginBtn = document.getElementById('loginBtn');
             
-            if (!email || !password) {
-                errorDiv.innerHTML = '<div class="error">&#10006; Please fill in all fields.</div>';
-                return;
-            }
-            
-            errorDiv.innerHTML = '<div class="loading">Authenticating...</div>';
-            loginBtn.disabled = true;
+            errorDiv.innerHTML = '<div class="loading">&#9203; Authenticating user...</div>';
             
             try {
-                // Fetch profiles where email matches
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
+                // Step 1: Run authentication check directly through Supabase Auth Engine
+                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Database connection failed.');
-                }
+                if (authError) throw authError;
                 
-                const data = await response.json();
+                // Step 2: Grab full details dynamically using profiles data relation layout mapping
+                const { data: profileData, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('email', email)
+                    .maybeSingle();
                 
-                // Validate if user exists and password matches
-                if (data && data.length > 0 && data[0].password === password) {
-                    const userProfile = data[0];
-                    currentStaffUser = userProfile.email;
-                    currentStaffName = userProfile.full_name || userProfile.email.split('@')[0];
-                    
-                    sessionStorage.setItem('staffEmail', currentStaffUser);
-                    sessionStorage.setItem('staffName', currentStaffName);
-                    
-                    errorDiv.innerHTML = '';
-                    showIssuanceForm(currentStaffUser, currentStaffName);
-                } else {
-                    errorDiv.innerHTML = '<div class="error">&#10006; Invalid email or password. Please try again.</div>';
-                    document.getElementById('loginPassword').value = '';
-                }
+                const displayName = (profileData && profileData.full_name) ? profileData.full_name : email.split('@')[0];
+                
+                currentStaffUser = email;
+                sessionStorage.setItem('staffEmail', email);
+                sessionStorage.setItem('staffDisplayName', displayName);
+                
+                errorDiv.innerHTML = '';
+                showIssuanceForm(email, displayName);
+                
             } catch (error) {
-                errorDiv.innerHTML = `<div class="error">&#10006; Login Service Error: ${error.message}</div>`;
-            } finally {
-                loginBtn.disabled = false;
+                errorDiv.innerHTML = `<div class="error">&#10060; ${error.message || 'Invalid system email credentials or security entry password.'}</div>`;
+                document.getElementById('loginPassword').value = '';
             }
         }
         
-        function staffLogout() {
+        async function staffLogout() {
+            if(supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
             sessionStorage.removeItem('staffEmail');
-            sessionStorage.removeItem('staffName');
+            sessionStorage.removeItem('staffDisplayName');
             currentStaffUser = null;
-            currentStaffName = null;
             showStaffLoginForm();
             const form = document.getElementById('issueForm');
             if (form) form.reset();
             document.getElementById('issueResult').innerHTML = '';
         }
         
+        // Fluent DB query engine structure for Verification Engine
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
             const resultDiv = document.getElementById('verifyResult');
@@ -496,20 +494,18 @@
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="loading">Verifying...</div>';
+            resultDiv.innerHTML = '<div class="loading">&#9203; Querying official records database...</div>';
             
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/documents?doc_id=eq.${encodeURIComponent(docId)}&select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                });
+                const { data, error } = await supabaseClient
+                    .from('documents')
+                    .select('*')
+                    .eq('doc_id', docId);
                 
-                const data = await response.json();
+                if (error) throw error;
                 
                 if (!data || data.length === 0) {
-                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - Document ID "${docId}" not found in official records.</div>`;
+                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
                     return;
                 }
                 
@@ -520,20 +516,20 @@
                 if (isValid) {
                     resultDiv.innerHTML = `
                         <div class="valid">
-                            <strong>&#10004; VERIFIED - VALID DOCUMENT</strong><br><br>
+                            <strong>&check; VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
                             <strong>Document ID:</strong> ${escapeHtml(doc.doc_id)}<br>
                             <strong>Type:</strong> ${docTypeName}<br>
                             <strong>Issued To:</strong> ${escapeHtml(doc.issued_to)}<br>
                             <strong>Property:</strong> ${escapeHtml(doc.property_location || 'Not specified')}<br>
                             <strong>Issue Date:</strong> ${new Date(doc.issue_date).toLocaleDateString()}<br>
-                            <strong>Status:</strong> Active
+                            <strong>Status:</strong> &#9989; Active Council Record
                         </div>
                     `;
                 } else {
-                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - This document is no longer active.</div>`;
+                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - This record is cataloged as no longer active.</div>`;
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">Verification service error. Please try again.</div>`;
+                resultDiv.innerHTML = `<div class="error">&#10060; System verification infrastructure error. Please try again.</div>`;
             }
         }
         
@@ -568,6 +564,7 @@
                 });
         }
         
+        // Staff document issuance via clean table tracking
         document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('issueDate')) {
                 document.getElementById('issueDate').value = today;
@@ -582,8 +579,8 @@
                     const resultDiv = document.getElementById('issueResult');
                     
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Processing...';
-                    resultDiv.innerHTML = '<div class="loading">Issuing document...</div>';
+                    submitBtn.textContent = '&#9203; Processing Request...';
+                    resultDiv.innerHTML = '<div class="loading">&#9203; Broadcasting transaction to core server...</div>';
                     
                     try {
                         const docType = document.getElementById('docType').value;
@@ -598,35 +595,25 @@
                         const expiryDate = document.getElementById('expiryDate').value || null;
                         
                         if (!issuedTo || !propertyLocation || !issuedBy) {
-                            throw new Error('Please fill all required fields');
+                            throw new Error('Please populate all operational parameter fields');
                         }
                         
-                        const response = await fetch(`${SUPABASE_URL}/rest/v1/documents`, {
-                            method: 'POST',
-                            headers: {
-                                'apikey': SUPABASE_ANON_KEY,
-                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                doc_id: docId,
-                                doc_type: docType,
-                                issued_to: issuedTo,
-                                property_location: propertyLocation,
-                                issued_by: issuedBy,
-                                issue_date: issueDate,
-                                expiry_date: expiryDate,
-                                status: 'active'
-                            })
-                        });
+                        const { data, error } = await supabaseClient
+                            .from('documents')
+                            .insert([
+                                {
+                                    doc_id: docId,
+                                    doc_type: docType,
+                                    issued_to: issuedTo,
+                                    property_location: propertyLocation,
+                                    issued_by: issuedBy,
+                                    issue_date: issueDate,
+                                    expiry_date: expiryDate,
+                                    status: 'active'
+                                }
+                            ]);
                         
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            if (errorText.includes('row-level security')) {
-                                throw new Error('Database security policy not configured. Please run the SQL setup in Supabase.');
-                            }
-                            throw new Error(`Database error: ${errorText}`);
-                        }
+                        if (error) throw error;
                         
                         const verificationUrl = `https://tondewellington-prog.github.io/TondeManyameRDC/?id=${docId}`;
                         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}`;
@@ -637,27 +624,27 @@
                         
                         resultDiv.innerHTML = `
                             <div class="success">
-                                <strong>&#10004; DOCUMENT ISSUED SUCCESSFULLY!</strong><br><br>
+                                <strong>&#9989; DOCUMENT DATA GENERATED SUCCESSFULLY!</strong><br><br>
                                 <strong>Document ID:</strong> <span class="doc-id">${docId}</span><br><br>
                                 <div class="qr-code">
-                                    <img id="qrCodeImg" src="${qrApiUrl}" alt="QR Code">
-                                    <p>Scan this QR code to verify the document</p>
+                                    <img id="qrCodeImg" src="${qrApiUrl}" alt="Verification Target QR Code">
+                                    <p>Scan generated matrix endpoint interface to verify legitimacy</p>
                                 </div>
                                 <div class="button-group">
-                                    <button class="print-btn" onclick="window.print()">&#128438; Print</button>
-                                    <button class="download-qr-btn" onclick="downloadQRCode('${qrApiUrl}', '${docId}')">&#128147; Download QR Code</button>
+                                    <button class="print-btn" onclick="window.print()">&#128424; Print Hardcopy Document</button>
+                                    <button class="download-qr-btn" onclick="downloadQRCode('${qrApiUrl}', '${docId}')">&#11015; Download Token PNG</button>
                                 </div>
-                                <p style="margin-top: 15px; font-size: 13px;"><strong>Verification Link:</strong><br>
+                                <p style="margin-top: 15px; font-size: 13px;"><strong>Public Verification Link Endpoint:</strong><br>
                                 <small>${verificationUrl}</small></p>
                             </div>
                         `;
                         
                         document.getElementById('issueForm').reset();
                         document.getElementById('issueDate').value = today;
-                        document.getElementById('issuedBy').value = currentStaffName;
+                        document.getElementById('issuedBy').value = issuedBy;
                         
                     } catch (error) {
-                        resultDiv.innerHTML = `<div class="error">Error issuing document: ${error.message}<br>Please try again or contact support.</div>`;
+                        resultDiv.innerHTML = `<div class="error">&#10060; Operational execution warning: ${error.message}<br>Verify policies inside database manager setup configuration.</div>`;
                     } finally {
                         submitBtn.disabled = false;
                         submitBtn.textContent = '&#128196; Issue Document & Generate QR Code';
@@ -676,6 +663,7 @@
             });
         }
         
+        // Realtime Deep-linking checking routing engine
         const urlParams = new URLSearchParams(window.location.search);
         const docIdParam = urlParams.get('id');
         if (docIdParam && document.getElementById('verifyDocId')) {
