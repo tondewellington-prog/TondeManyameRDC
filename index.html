@@ -239,16 +239,14 @@
     </style>
 </head>
 <body>
-    <!-- Tab Navigation -->
     <div class="tabs no-print">
-        <button class="tab-btn active" onclick="showTab('verify')">🔍 Verify Document</button>
-        <button class="tab-btn" onclick="showTab('staff')">👥 Staff Login</button>
+        <button class="tab-btn active" onclick="showTab('verify')">&#128269; Verify Document</button>
+        <button class="tab-btn" onclick="showTab('staff')">&#128101; Staff Login</button>
     </div>
     
-    <!-- Public Verification Tab -->
     <div id="verifyTab" class="container">
         <div class="header">
-            <div class="seal">🏛️</div>
+            <div class="seal">&#127963;</div>
             <h1>Manyame Rural District Council</h1>
             <h2>Planning Department - Official Document Verification</h2>
         </div>
@@ -257,7 +255,7 @@
                 <label>Enter Document ID to Verify</label>
                 <input type="text" id="verifyDocId" placeholder="Example: MRDC-BP-2026-48217">
             </div>
-            <button onclick="verifyDocument()">🔍 Verify Document</button>
+            <button onclick="verifyDocument()">&#128269; Verify Document</button>
             <div id="verifyResult"></div>
             <div class="footer">
                 This is an official verification system of TondeManyame Rural District Council.
@@ -265,17 +263,15 @@
         </div>
     </div>
     
-    <!-- Staff Tab (Login + Issuance) -->
     <div id="staffTab" class="container hidden">
         <div class="header">
-            <h1>🏛️ Manyame RDC Planning Department</h1>
+            <h1>&#127963; Manyame RDC Planning Department</h1>
             <h2>Staff Document Issuance System</h2>
         </div>
         <div class="content">
-            <!-- Login Section -->
             <div id="staffLoginSection">
                 <div class="warning">
-                    ⚠️ <strong>Authorized Access Only</strong><br>
+                    &#9888; <strong>Authorized Access Only</strong><br>
                     This system is for Manyame RDC Planning Department staff only.
                 </div>
                 <div class="form-group">
@@ -286,15 +282,14 @@
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button onclick="staffLogin()">🔐 Login to System</button>
+                <button onclick="staffLogin()">&#128274; Login to System</button>
                 <div id="loginError"></div>
             </div>
             
-            <!-- Issuance Section (hidden until login) -->
             <div id="issuanceSection" class="hidden">
                 <div class="staff-info">
-                    <span>👋 Welcome, <strong id="staffName"></strong></span>
-                    <button class="logout-btn" onclick="staffLogout()">🚪 Logout</button>
+                    <span>Welcome, <strong id="staffName"></strong></span>
+                    <button class="logout-btn" onclick="staffLogout()">&#128682; Logout</button>
                 </div>
                 
                 <form id="issueForm">
@@ -332,7 +327,7 @@
                         <small>Leave blank if no expiry date</small>
                     </div>
                     
-                    <button type="submit" id="submitBtn">📄 Issue Document & Generate QR Code</button>
+                    <button type="submit" id="submitBtn">&#128196; Issue Document & Generate QR Code</button>
                 </form>
                 
                 <div id="issueResult"></div>
@@ -347,10 +342,8 @@
         
         // CONSOLE PROTECTION - Tonde Forbits console usage
         (function() {
-            // Store original console methods
             const noop = function() {};
             
-            // Override all console methods to do nothing
             console.log = noop;
             console.error = noop;
             console.warn = noop;
@@ -359,13 +352,10 @@
             console.table = noop;
             console.trace = noop;
             
-            // Clear any existing console messages
             if (console.clear) console.clear();
             
-            // Prevent console from being restored
             Object.freeze(console);
             
-            // Display warning if dev tools is opened
             let devToolsOpen = false;
             const checkDevTools = setInterval(function() {
                 const before = new Date().getTime();
@@ -374,7 +364,7 @@
                 if (after - before > 100 || /./.test('')) {
                     if (!devToolsOpen) {
                         devToolsOpen = true;
-                        alert("⚠️ TONDE FORBIDS THE USE OF CONSOLE ⚠️\n\nThis system is protected. Close developer tools to continue.");
+                        alert("&#9888; TONDE FORBIDS THE USE OF CONSOLE &#9888;\n\nThis system is protected. Close developer tools to continue.");
                     }
                 }
             }, 1000);
@@ -387,7 +377,6 @@
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
-        // Staff Users
         const STAFF_USERS = {
             'tondewellington@gmail.com': '123456789',
             'chikato.s@manyamerdc.gov.zw': 'chikato2025',
@@ -395,7 +384,6 @@
             'test@manyamerdc.gov.zw': 'test123'
         };
         
-        // Staff Names
         const STAFF_NAMES = {
             'tondewellington@gmail.com': 'CEO T. Wellington',
             'chikato.s@manyamerdc.gov.zw': 'Officer S. Chikato',
@@ -406,7 +394,6 @@
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         const today = new Date().toISOString().split('T')[0];
         
-        // Tab switching
         function showTab(tab) {
             const verifyTab = document.getElementById('verifyTab');
             const staffTab = document.getElementById('staffTab');
@@ -462,7 +449,7 @@
                 errorDiv.innerHTML = '';
                 showIssuanceForm(email);
             } else {
-                errorDiv.innerHTML = '<div class="error">❌ Invalid email or password. Please try again.</div>';
+                errorDiv.innerHTML = '<div class="error">&#10006; Invalid email or password. Please try again.</div>';
                 document.getElementById('loginPassword').value = '';
             }
         }
@@ -476,7 +463,6 @@
             document.getElementById('issueResult').innerHTML = '';
         }
         
-        // Public document verification
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
             const resultDiv = document.getElementById('verifyResult');
@@ -499,7 +485,7 @@
                 const data = await response.json();
                 
                 if (!data || data.length === 0) {
-                    resultDiv.innerHTML = `<div class="invalid">✗ INVALID - Document ID "${docId}" not found in official records.</div>`;
+                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - Document ID "${docId}" not found in official records.</div>`;
                     return;
                 }
                 
@@ -510,24 +496,23 @@
                 if (isValid) {
                     resultDiv.innerHTML = `
                         <div class="valid">
-                            <strong>✓ VERIFIED - VALID DOCUMENT</strong><br><br>
+                            <strong>&#10004; VERIFIED - VALID DOCUMENT</strong><br><br>
                             <strong>Document ID:</strong> ${escapeHtml(doc.doc_id)}<br>
                             <strong>Type:</strong> ${docTypeName}<br>
                             <strong>Issued To:</strong> ${escapeHtml(doc.issued_to)}<br>
                             <strong>Property:</strong> ${escapeHtml(doc.property_location || 'Not specified')}<br>
                             <strong>Issue Date:</strong> ${new Date(doc.issue_date).toLocaleDateString()}<br>
-                            <strong>Status:</strong> ✅ Active
+                            <strong>Status:</strong> Active
                         </div>
                     `;
                 } else {
-                    resultDiv.innerHTML = `<div class="invalid">✗ INVALID - This document is no longer active.</div>`;
+                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - This document is no longer active.</div>`;
                 }
             } catch (error) {
                 resultDiv.innerHTML = `<div class="error">Verification service error. Please try again.</div>`;
             }
         }
         
-        // Function to download QR code
         function downloadQRCode(qrImageUrl, docId) {
             fetch(qrImageUrl)
                 .then(response => response.blob())
@@ -559,7 +544,6 @@
                 });
         }
         
-        // Staff document issuance
         document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('issueDate')) {
                 document.getElementById('issueDate').value = today;
@@ -574,7 +558,7 @@
                     const resultDiv = document.getElementById('issueResult');
                     
                     submitBtn.disabled = true;
-                    submitBtn.textContent = '⏳ Processing...';
+                    submitBtn.textContent = 'Processing...';
                     resultDiv.innerHTML = '<div class="loading">Issuing document...</div>';
                     
                     try {
@@ -592,12 +576,6 @@
                         if (!issuedTo || !propertyLocation || !issuedBy) {
                             throw new Error('Please fill all required fields');
                         }
-                        
-                        // IMPORTANT: You need to set up Supabase to allow inserts with anon key
-                        // Run this SQL in Supabase SQL Editor:
-                        // ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
-                        // CREATE POLICY "Allow inserts" ON documents FOR INSERT WITH CHECK (true);
-                        // CREATE POLICY "Allow selects" ON documents FOR SELECT USING (true);
                         
                         const response = await fetch(`${SUPABASE_URL}/rest/v1/documents`, {
                             method: 'POST',
@@ -635,15 +613,15 @@
                         
                         resultDiv.innerHTML = `
                             <div class="success">
-                                <strong>✅ DOCUMENT ISSUED SUCCESSFULLY!</strong><br><br>
+                                <strong>&#10004; DOCUMENT ISSUED SUCCESSFULLY!</strong><br><br>
                                 <strong>Document ID:</strong> <span class="doc-id">${docId}</span><br><br>
                                 <div class="qr-code">
                                     <img id="qrCodeImg" src="${qrApiUrl}" alt="QR Code">
                                     <p>Scan this QR code to verify the document</p>
                                 </div>
                                 <div class="button-group">
-                                    <button class="print-btn" onclick="window.print()">🖨️ Print</button>
-                                    <button class="download-qr-btn" onclick="downloadQRCode('${qrApiUrl}', '${docId}')">⬇️ Download QR Code</button>
+                                    <button class="print-btn" onclick="window.print()">&#128438; Print</button>
+                                    <button class="download-qr-btn" onclick="downloadQRCode('${qrApiUrl}', '${docId}')">&#128147; Download QR Code</button>
                                 </div>
                                 <p style="margin-top: 15px; font-size: 13px;"><strong>Verification Link:</strong><br>
                                 <small>${verificationUrl}</small></p>
@@ -658,7 +636,7 @@
                         resultDiv.innerHTML = `<div class="error">Error issuing document: ${error.message}<br>Please try again or contact support.</div>`;
                     } finally {
                         submitBtn.disabled = false;
-                        submitBtn.textContent = '📄 Issue Document & Generate QR Code';
+                        submitBtn.textContent = '&#128196; Issue Document & Generate QR Code';
                     }
                 });
             }
@@ -674,7 +652,6 @@
             });
         }
         
-        // Check for URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const docIdParam = urlParams.get('id');
         if (docIdParam && document.getElementById('verifyDocId')) {
