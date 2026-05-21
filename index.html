@@ -253,7 +253,7 @@
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MRDC-BP-2026-48217">
+                <input type="text" id="verifyDocId" placeholder="Enter Document ID">
             </div>
             <button onclick="verifyDocument()">&#128269; Verify Document</button>
             <div id="verifyResult"></div>
@@ -276,13 +276,13 @@
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="staff@tondemanyame.gov.zw">
+                    <input type="email" id="loginEmail" placeholder="Enter your official email">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button onclick="staffLogin()">&#128274; Login to System</button>
+                <button id="loginBtn" onclick="staffLogin()">&#128274; Login to System</button>
                 <div id="loginError"></div>
             </div>
             
@@ -377,21 +377,8 @@
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
-        const STAFF_USERS = {
-            'tondewellington@gmail.com': '123456789',
-            'chikato.s@manyamerdc.gov.zw': 'chikato2025',
-            'makoni.l@manyamerdc.gov.zw': 'makoni2025',
-            'test@manyamerdc.gov.zw': 'test123'
-        };
-        
-        const STAFF_NAMES = {
-            'tondewellington@gmail.com': 'CEO T. Wellington',
-            'chikato.s@manyamerdc.gov.zw': 'Officer S. Chikato',
-            'makoni.l@manyamerdc.gov.zw': 'Officer L. Makoni',
-            'test@manyamerdc.gov.zw': 'Test User'
-        };
-        
         let currentStaffUser = sessionStorage.getItem('staffEmail');
+        let currentStaffName = sessionStorage.getItem('staffName');
         const today = new Date().toISOString().split('T')[0];
         
         function showTab(tab) {
@@ -414,8 +401,8 @@
         }
         
         function checkStaffLoginState() {
-            if (currentStaffUser && STAFF_USERS[currentStaffUser]) {
-                showIssuanceForm(currentStaffUser);
+            if (currentStaffUser && currentStaffName) {
+                showIssuanceForm(currentStaffUser, currentStaffName);
             } else {
                 showStaffLoginForm();
             }
@@ -429,34 +416,71 @@
             document.getElementById('loginError').innerHTML = '';
         }
         
-        function showIssuanceForm(email) {
+        function showIssuanceForm(email, name) {
             document.getElementById('staffLoginSection').classList.add('hidden');
             document.getElementById('issuanceSection').classList.remove('hidden');
-            const displayName = STAFF_NAMES[email] || email.split('@')[0];
-            document.getElementById('staffName').innerHTML = displayName;
-            document.getElementById('issuedBy').value = displayName;
+            document.getElementById('staffName').innerHTML = escapeHtml(name);
+            document.getElementById('issuedBy').value = name;
             document.getElementById('issueDate').value = today;
         }
         
-        function staffLogin() {
+        // Dynamic Staff Login checking the 'profiles' table in Supabase
+        async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
+            const loginBtn = document.getElementById('loginBtn');
             
-            if (STAFF_USERS[email] && STAFF_USERS[email] === password) {
-                currentStaffUser = email;
-                sessionStorage.setItem('staffEmail', email);
-                errorDiv.innerHTML = '';
-                showIssuanceForm(email);
-            } else {
-                errorDiv.innerHTML = '<div class="error">&#10006; Invalid email or password. Please try again.</div>';
-                document.getElementById('loginPassword').value = '';
+            if (!email || !password) {
+                errorDiv.innerHTML = '<div class="error">&#10006; Please fill in all fields.</div>';
+                return;
+            }
+            
+            errorDiv.innerHTML = '<div class="loading">Authenticating...</div>';
+            loginBtn.disabled = true;
+            
+            try {
+                // Fetch profiles where email matches
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Database connection failed.');
+                }
+                
+                const data = await response.json();
+                
+                // Validate if user exists and password matches
+                if (data && data.length > 0 && data[0].password === password) {
+                    const userProfile = data[0];
+                    currentStaffUser = userProfile.email;
+                    currentStaffName = userProfile.full_name || userProfile.email.split('@')[0];
+                    
+                    sessionStorage.setItem('staffEmail', currentStaffUser);
+                    sessionStorage.setItem('staffName', currentStaffName);
+                    
+                    errorDiv.innerHTML = '';
+                    showIssuanceForm(currentStaffUser, currentStaffName);
+                } else {
+                    errorDiv.innerHTML = '<div class="error">&#10006; Invalid email or password. Please try again.</div>';
+                    document.getElementById('loginPassword').value = '';
+                }
+            } catch (error) {
+                errorDiv.innerHTML = `<div class="error">&#10006; Login Service Error: ${error.message}</div>`;
+            } finally {
+                loginBtn.disabled = false;
             }
         }
         
         function staffLogout() {
             sessionStorage.removeItem('staffEmail');
+            sessionStorage.removeItem('staffName');
             currentStaffUser = null;
+            currentStaffName = null;
             showStaffLoginForm();
             const form = document.getElementById('issueForm');
             if (form) form.reset();
@@ -630,7 +654,7 @@
                         
                         document.getElementById('issueForm').reset();
                         document.getElementById('issueDate').value = today;
-                        document.getElementById('issuedBy').value = issuedBy;
+                        document.getElementById('issuedBy').value = currentStaffName;
                         
                     } catch (error) {
                         resultDiv.innerHTML = `<div class="error">Error issuing document: ${error.message}<br>Please try again or contact support.</div>`;
