@@ -3,391 +3,517 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TondeManyame RDC - Document Management System</title>
+    <title>Manyame RDC - Development Permit System</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            min-height: 100vh;
+            font-family: 'Times New Roman', 'Segoe UI', Georgia, serif;
+            background: #e0e0e0;
             padding: 20px;
         }
-        
+
+        /* Tabs */
         .tabs {
-            max-width: 700px;
+            max-width: 1200px;
             margin: 0 auto 20px auto;
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
-        
+
         .tab-btn {
-            flex: 1;
-            padding: 12px;
+            padding: 12px 28px;
             background: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: 0.2s;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
         }
-        
+
         .tab-btn.active {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: #1e3c72;
             color: white;
         }
-        
+
         .container {
-            max-width: 700px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             overflow: hidden;
         }
-        
+
         .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: #1e3c72;
             color: white;
-            padding: 25px;
-            text-align: center;
+            padding: 20px 30px;
         }
-        
+
         .header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
+            font-size: 22px;
         }
-        
+
         .header h2 {
             font-size: 14px;
             font-weight: normal;
-            opacity: 0.9;
+            opacity: 0.85;
         }
-        
+
         .content {
             padding: 30px;
         }
-        
-        .form-group {
-            margin-bottom: 20px;
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
         }
-        
+
+        .form-group {
+            margin-bottom: 5px;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
         label {
             display: block;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: #333;
+            font-size: 13px;
+            font-family: 'Segoe UI', sans-serif;
         }
-        
-        input, select {
+
+        input, select, textarea {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
         }
-        
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
         button {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: #1e3c72;
             color: white;
-            padding: 14px;
+            padding: 14px 24px;
             border: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s;
+            transition: 0.2s;
+            font-family: 'Segoe UI', sans-serif;
         }
-        
+
         button:hover {
-            transform: translateY(-2px);
+            background: #2a5298;
+            transform: translateY(-1px);
         }
-        
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 5px solid #28a745;
-        }
-        
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 5px solid #dc3545;
-        }
-        
-        .valid {
-            background: #d4edda;
-            color: #155724;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 5px solid #28a745;
-        }
-        
-        .invalid {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 5px solid #dc3545;
-        }
-        
-        .qr-code {
-            text-align: center;
-            margin: 20px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-        
-        .qr-code img {
-            max-width: 200px;
-            border: 1px solid #ddd;
-            padding: 10px;
-            background: white;
-        }
-        
-        .print-btn, .download-qr-btn {
+
+        .btn-generate {
             background: #28a745;
-            margin-top: 10px;
-        }
-        
-        .download-qr-btn {
-            background: #007bff;
-            margin-left: 10px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .doc-id {
-            font-family: monospace;
             font-size: 18px;
-            font-weight: bold;
-            background: #e9ecef;
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: inline-block;
-            margin: 10px 0;
+            padding: 16px;
+            margin-top: 20px;
+            width: 100%;
         }
-        
-        .staff-info {
-            background: #e9ecef;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+
+        .btn-generate:hover {
+            background: #218838;
         }
-        
+
         .logout-btn {
             background: #6c757d;
             width: auto;
-            padding: 8px 15px;
+            padding: 8px 20px;
         }
-        
-        .warning {
-            background: #fff3cd;
-            color: #856404;
-            padding: 12px;
+
+        .staff-info {
+            background: #e9ecef;
+            padding: 15px 20px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 5px solid #ffc107;
-            font-size: 14px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Segoe UI', sans-serif;
         }
-        
+
+        .hidden {
+            display: none;
+        }
+
+        .error, .success {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
         .loading {
             text-align: center;
             padding: 20px;
             color: #666;
         }
-        
-        .hidden {
-            display: none;
+
+        /* Permit Document Styles - For PDF/Print */
+        .permit-document {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            font-family: 'Times New Roman', Georgia, serif;
+            line-height: 1.4;
+            color: black;
         }
-        
+
+        .permit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+        }
+
+        .council-logo {
+            text-align: center;
+        }
+
+        .council-logo .seal {
+            font-size: 48px;
+        }
+
+        .council-name {
+            text-align: center;
+            flex: 1;
+        }
+
+        .council-name h1 {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .council-name h2 {
+            font-size: 12px;
+            font-weight: normal;
+            margin: 5px 0 0;
+        }
+
+        .qr-placeholder {
+            text-align: right;
+        }
+
+        .qr-placeholder img {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ccc;
+        }
+
+        .permit-ref {
+            background: #f5f5f5;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 14px;
+            border-left: 3px solid #1e3c72;
+        }
+
+        .permit-title {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .permit-title h3 {
+            font-size: 20px;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .permit-title h4 {
+            font-size: 16px;
+            font-weight: normal;
+        }
+
+        .conditions-list {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+
+        .conditions-list li {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+
+        .signature-block {
+            margin: 30px 0 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature-line {
+            width: 45%;
+        }
+
+        .signature-line p {
+            margin: 5px 0;
+        }
+
+        .signature-name {
+            border-top: 1px solid black;
+            padding-top: 5px;
+            margin-top: 30px;
+        }
+
+        .footer-note {
+            margin-top: 30px;
+            font-size: 11px;
+            border-top: 1px solid #ccc;
+            padding-top: 15px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            padding: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .print-area {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .btn-pdf {
+            background: #dc3545;
+        }
+
+        .btn-pdf:hover {
+            background: #c82333;
+        }
+
         @media print {
-            .tabs, .no-print, .button-group {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .no-print, .tabs, .staff-info, .btn-group, .print-area button {
                 display: none;
             }
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 12px;
-            color: #666;
+            .permit-document {
+                padding: 20px;
+                margin: 0;
+            }
+            .print-area {
+                background: white;
+                padding: 0;
+            }
         }
     </style>
 </head>
 <body>
     <div class="tabs no-print">
-        <button class="tab-btn active" onclick="showTab('verify')">&#128269; Verify Document</button>
-        <button class="tab-btn" onclick="showTab('staff')">&#128101; Staff Login</button>
+        <button class="tab-btn active" onclick="showTab('verify')">🔍 Verify Permit</button>
+        <button class="tab-btn" onclick="showTab('staff')">👨‍💼 Staff Login</button>
     </div>
-    
+
+    <!-- Verify Tab -->
     <div id="verifyTab" class="container">
         <div class="header">
-            <div class="seal">&#127963;</div>
-            <h1>Manyame Rural District Council</h1>
-            <h2>Planning Department - Official Document Verification</h2>
+            <h1>🏛️ Manyame Rural District Council</h1>
+            <h2>Official Development Permit Verification System</h2>
         </div>
         <div class="content">
             <div class="form-group">
-                <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MRDC-BP-2026-48217">
+                <label>Enter Permit Number to Verify</label>
+                <input type="text" id="verifyPermitNo" placeholder="Example: MANY/09/2026">
             </div>
-            <button onclick="verifyDocument()">&#128269; Verify Document</button>
+            <button onclick="verifyPermit()">🔍 Verify Permit</button>
             <div id="verifyResult"></div>
-            <div class="footer">
-                This is an official verification system of TondeManyame Rural District Council.
-            </div>
         </div>
     </div>
-    
+
+    <!-- Staff Tab -->
     <div id="staffTab" class="container hidden">
         <div class="header">
-            <h1>&#127963; Manyame RDC Planning Department</h1>
-            <h2>Staff Document Issuance System</h2>
+            <h1>🏛️ Manyame RDC - Planning Department</h1>
+            <h2>Development Permit Issuance System</h2>
         </div>
         <div class="content">
             <div id="staffLoginSection">
-                <div class="warning">
-                    &#9888; <strong>Authorized Access Only</strong><br>
+                <div class="error" style="background:#fff3cd; color:#856404;">
+                    ⚠️ <strong>Authorized Access Only</strong><br>
                     This system is for Manyame RDC Planning Department staff only.
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="staff@tondemanyame.gov.zw">
+                    <input type="email" id="loginEmail" placeholder="staff@manyame.gov.zw">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button onclick="staffLogin()">&#128274; Login to System</button>
+                <button onclick="staffLogin()">🔐 Login to System</button>
                 <div id="loginError"></div>
             </div>
-            
+
             <div id="issuanceSection" class="hidden">
                 <div class="staff-info">
                     <span>Welcome, <strong id="staffName"></strong></span>
-                    <button class="logout-btn" onclick="staffLogout()">&#128682; Logout</button>
+                    <button class="logout-btn" onclick="staffLogout()">🚪 Logout</button>
                 </div>
-                
-                <form id="issueForm">
-                    <div class="form-group">
-                        <label>Document Type *</label>
-                        <select id="docType" required>
-                            <option value="BP">Building Permit</option>
-                            <option value="SDP">Site Development Plan</option>
-                        </select>
+
+                <form id="permitForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Property Location *</label>
+                            <input type="text" id="propertyLocation" required placeholder="e.g., Subdivision 1 of Enslidale Farm">
+                        </div>
+                        <div class="form-group">
+                            <label>Applicant Name *</label>
+                            <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi">
+                        </div>
+                        <div class="form-group">
+                            <label>Company Name (if applicable)</label>
+                            <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments">
+                        </div>
+                        <div class="form-group">
+                            <label>Application Date *</label>
+                            <input type="date" id="applicationDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Application Reference No *</label>
+                            <input type="text" id="applicationRef" required placeholder="e.g., MANYA/05/2023">
+                        </div>
+                        <div class="form-group">
+                            <label>Council Resolution No *</label>
+                            <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Commercial Uses (separate with commas) *</label>
+                            <textarea id="commercialUses" required>WAREHOUSE, PETROL FILLING STATION, FOOD COURT, TRUCK STOP, SHOPPING MALL</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Issued At (Town) *</label>
+                            <input type="text" id="issuedAtTown" required value="BEATRICE">
+                        </div>
+                        <div class="form-group">
+                            <label>Issue Date *</label>
+                            <input type="date" id="issueDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Applicant Representative Name *</label>
+                            <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA">
+                        </div>
+                        <div class="form-group">
+                            <label>Applicant ID Number *</label>
+                            <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32">
+                        </div>
+                        <div class="form-group">
+                            <label>Applicant Witness Name *</label>
+                            <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha">
+                        </div>
+                        <div class="form-group">
+                            <label>Council Representative Name *</label>
+                            <input type="text" id="councilRep" required placeholder="e.g., F.Guta">
+                        </div>
+                        <div class="form-group">
+                            <label>Council Witness Name *</label>
+                            <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa">
+                        </div>
+                        <div class="form-group">
+                            <label>Expiry Date *</label>
+                            <input type="date" id="expiryDate" required>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Issued To (Citizen Name/Business) *</label>
-                        <input type="text" id="issuedTo" required placeholder="e.g., John Smith or ABC Construction">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Property Location *</label>
-                        <input type="text" id="propertyLocation" required placeholder="e.g., Manyame Plot 123">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Issued By (Your Full Name) *</label>
-                        <input type="text" id="issuedBy" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Issue Date *</label>
-                        <input type="date" id="issueDate" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Expiry Date (Optional)</label>
-                        <input type="date" id="expiryDate">
-                        <small>Leave blank if no expiry date</small>
-                    </div>
-                    
-                    <button type="submit" id="submitBtn">&#128196; Issue Document &amp; Generate QR Code</button>
+                    <button type="submit" class="btn-generate">📄 Generate Development Permit & Download PDF</button>
                 </form>
-                
+
                 <div id="issueResult"></div>
+                
+                <!-- Permit Display Area -->
+                <div id="permitDisplayArea" class="print-area hidden"></div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // ============================================
-        // TONDEMANYAME RDC - OFFICIAL VERIFICATION SYSTEM
-        // ============================================
-        
-        // CONSOLE PROTECTION - Console Disabling Logic
-        (function() {
-            const noop = function() {};
-            console.log = noop;
-            console.error = noop;
-            console.warn = noop;
-            console.info = noop;
-            console.debug = noop;
-            console.table = noop;
-            console.trace = noop;
-            
-            if (console.clear) console.clear();
-            Object.freeze(console);
-            
-            let devToolsOpen = false;
-            setInterval(function() {
-                const before = new Date().getTime();
-                debugger;
-                const after = new Date().getTime();
-                if (after - before > 100 || /./.test('')) {
-                    if (!devToolsOpen) {
-                        devToolsOpen = true;
-                        alert("&#9888; SYSTEM TERMINAL NOTIFICATION &#9888;\n\nThis system is protected. Close developer tools to continue.");
-                    }
-                }
-            }, 1000);
-        })();
-        
-        // ============================================
-        // SUPABASE INITIALIZATION
-        // ============================================
+        // Supabase Configuration
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
-        let supabaseClient = null;
+        let supabase = null;
         try {
             if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             }
         } catch(e) {
-            alert("Database connection setup error.");
+            console.error("Supabase init error");
         }
-        
+
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         const today = new Date().toISOString().split('T')[0];
         
-        // Tab switching
+        // Set default dates
+        document.addEventListener('DOMContentLoaded', function() {
+            const applicationDateInput = document.getElementById('applicationDate');
+            const issueDateInput = document.getElementById('issueDate');
+            const expiryDateInput = document.getElementById('expiryDate');
+            
+            if (applicationDateInput) {
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                applicationDateInput.value = oneYearAgo.toISOString().split('T')[0];
+            }
+            if (issueDateInput) issueDateInput.value = today;
+            if (expiryDateInput) {
+                const nextYear = new Date();
+                nextYear.setFullYear(nextYear.getFullYear() + 1);
+                expiryDateInput.value = nextYear.toISOString().split('T')[0];
+            }
+        });
+
         function showTab(tab) {
             const verifyTab = document.getElementById('verifyTab');
             const staffTab = document.getElementById('staffTab');
@@ -406,7 +532,7 @@
                 checkStaffLoginState();
             }
         }
-        
+
         function checkStaffLoginState() {
             const cachedName = sessionStorage.getItem('staffDisplayName');
             if (currentStaffUser && cachedName) {
@@ -415,42 +541,34 @@
                 showStaffLoginForm();
             }
         }
-        
+
         function showStaffLoginForm() {
             document.getElementById('staffLoginSection').classList.remove('hidden');
             document.getElementById('issuanceSection').classList.add('hidden');
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
-            document.getElementById('loginError').innerHTML = '';
         }
-        
+
         function showIssuanceForm(email, displayName) {
             document.getElementById('staffLoginSection').classList.add('hidden');
             document.getElementById('issuanceSection').classList.remove('hidden');
             document.getElementById('staffName').innerHTML = displayName;
-            document.getElementById('issuedBy').value = displayName;
-            document.getElementById('issueDate').value = today;
         }
-        
-        // Dynamic Staff Authentication via Supabase Database and Identity System
+
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             
-            errorDiv.innerHTML = '<div class="loading">&#9203; Authenticating user...</div>';
+            errorDiv.innerHTML = '<div class="loading">⏳ Authenticating...</div>';
             
             try {
-                // Step 1: Run authentication check directly through Supabase Auth Engine
-                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
                 
                 if (authError) throw authError;
                 
-                // Step 2: Grab full details dynamically using profiles data relation layout mapping
-                const { data: profileData, error: profileError } = await supabaseClient
+                const { data: profileData } = await supabase
                     .from('profiles')
                     .select('full_name')
                     .eq('email', email)
@@ -466,193 +584,158 @@
                 showIssuanceForm(email, displayName);
                 
             } catch (error) {
-                errorDiv.innerHTML = `<div class="error">&#10060; ${error.message || 'Invalid system email credentials or security entry password.'}</div>`;
+                errorDiv.innerHTML = `<div class="error">❌ ${error.message || 'Invalid credentials'}</div>`;
                 document.getElementById('loginPassword').value = '';
             }
         }
-        
+
         async function staffLogout() {
-            if(supabaseClient) {
-                await supabaseClient.auth.signOut();
-            }
+            if(supabase) await supabase.auth.signOut();
             sessionStorage.removeItem('staffEmail');
             sessionStorage.removeItem('staffDisplayName');
             currentStaffUser = null;
             showStaffLoginForm();
-            const form = document.getElementById('issueForm');
-            if (form) form.reset();
+            document.getElementById('permitDisplayArea').classList.add('hidden');
             document.getElementById('issueResult').innerHTML = '';
         }
-        
-        // Fluent DB query engine structure for Verification Engine
-        async function verifyDocument() {
-            const docId = document.getElementById('verifyDocId').value.trim();
-            const resultDiv = document.getElementById('verifyResult');
+
+        function generatePermitNumber() {
+            const year = new Date().getFullYear();
+            const random = Math.floor(Math.random() * 900) + 100;
+            return `MANY/${random}/${year}`;
+        }
+
+        function generatePermitHTML(data, qrUrl) {
+            const issueDateFormatted = new Date(data.issue_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            const applicationDateFormatted = new Date(data.application_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            const expiryDateFormatted = new Date(data.expiry_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
             
-            if (!docId) {
-                resultDiv.innerHTML = '<div class="error">Please enter a Document ID.</div>';
-                return;
-            }
+            const day = new Date(data.issue_date).getDate();
+            const month = new Date(data.issue_date).toLocaleString('en-GB', { month: 'long' });
+            const year = new Date(data.issue_date).getFullYear();
             
-            resultDiv.innerHTML = '<div class="loading">&#9203; Querying official records database...</div>';
-            
-            try {
-                const { data, error } = await supabaseClient
-                    .from('documents')
-                    .select('*')
-                    .eq('doc_id', docId);
+            return `
+            <div class="permit-document">
+                <div class="permit-header">
+                    <div class="council-logo">
+                        <div class="seal">🏛️</div>
+                    </div>
+                    <div class="council-name">
+                        <h1>MANYAME RURAL DISTRICT COUNCIL</h1>
+                        <h2>RURAL DISTRICT COUNCILS ACT, CHAPTER 29:13 - SECTION (3)</h2>
+                    </div>
+                    <div class="qr-placeholder">
+                        <img src="${qrUrl}" alt="QR Code" width="100" height="100">
+                    </div>
+                </div>
                 
-                if (error) throw error;
+                <div class="permit-ref">
+                    <strong>REFERENCE:</strong> ${escapeHtml(data.property_location)}<br>
+                    <strong>PERMIT NO:</strong> ${escapeHtml(data.permit_number)}<br>
+                    <strong>APPLICANT:</strong> ${escapeHtml(data.applicant_name)}${data.company_name ? ' (' + escapeHtml(data.company_name) + ')' : ''}
+                </div>
                 
-                if (!data || data.length === 0) {
-                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
-                    return;
-                }
+                <div class="permit-title">
+                    <h3>DEVELOPMENT PERMIT</h3>
+                    <h4>CHANGE OF USE ON ${escapeHtml(data.property_location.toUpperCase())}: SEKE DISTRICT</h4>
+                </div>
                 
-                const doc = data[0];
-                const isValid = doc.status === 'active' && (!doc.expiry_date || new Date(doc.expiry_date) >= new Date());
-                const docTypeName = doc.doc_type === 'BP' ? 'Building Permit' : 'Site Development Plan';
+                <p>The MANYAME Rural District Council (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${applicationDateFormatted} and numbered ${escapeHtml(data.application_ref)} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name)}</strong> (hereinafter called "the applicant") for:-</p>
                 
-                if (isValid) {
-                    resultDiv.innerHTML = `
-                        <div class="valid">
-                            <strong>&check; VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
-                            <strong>Document ID:</strong> ${escapeHtml(doc.doc_id)}<br>
-                            <strong>Type:</strong> ${docTypeName}<br>
-                            <strong>Issued To:</strong> ${escapeHtml(doc.issued_to)}<br>
-                            <strong>Property:</strong> ${escapeHtml(doc.property_location || 'Not specified')}<br>
-                            <strong>Issue Date:</strong> ${new Date(doc.issue_date).toLocaleDateString()}<br>
-                            <strong>Status:</strong> &#9989; Active Council Record
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `<div class="invalid">&#10007; INVALID - This record is cataloged as no longer active.</div>`;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="error">&#10060; System verification infrastructure error. Please try again.</div>`;
-            }
+                <p><strong>This Permit is granted subject to the conditions set hereunder Part I to III.</strong></p>
+                
+                <p>In these conditions:<br>
+                The Owner means the person in whose favour any of the stands is subsequently transferred to by the Registrar of Deeds<br>
+                The Local Authority means MANYAME Rural District Council or its successors.</p>
+                
+                <p>This permit is issued subject to the following conditions:-</p>
+                
+                <ol class="conditions-list">
+                    <li>That council consent to the establishment of a business centre on portion of ${escapeHtml(data.property_location)} through <strong>${escapeHtml(data.council_resolution)}.</strong></li>
+                    <li>The applicant to engage a private planning consultant to produce a layout plan and report for submission to the Department of Spatial Planning and Development for approval.</li>
+                    <li>No development shall take place unless in accordance with approved layout plan and report to be submitted by the applicant to the Department of Spatial Planning.</li>
+                    <li>The applicant undertakes to commence the erection of buildings and other structures according to council by laws and any other regulations.</li>
+                    <li>During the period of the permit, all rates and taxes and other charges as would be payable by the registered owner of the stand, will be paid to the Local authority, and they have the right to ask, demand, sue for and recover all such rates and taxes.</li>
+                    <li>The applicant shall meet the full cost of servicing the land in terms of water, sewerage, storm water drains and roads.</li>
+                    <li>The applicant must obtain relevant authorization from different government departments and other relevant agencies. The owner must apply for relevant licences from the local authority and other relevant agencies before operating.</li>
+                    <li>The applicant shall not occupy, or cause, or suffer or permit any person or persons to occupy any stand hereby approved until the buildings have been completed to the satisfaction of the Local authority.</li>
+                    <li>Representatives of the Local authority shall be entitled to enter on the stand at all reasonable times during the daytime, to inspect the state and condition thereof and of the building that have been or are being erected thereon.</li>
+                    <li>The portion of the stand <strong>shall be used for COMMERCIAL PURPOSES THAT IS THE ESTABLISHMENT OF ${escapeHtml(data.commercial_uses).toUpperCase()}</strong> and the only buildings which may be erected or used thereon shall consists of not more than building designed for uses as detailed in the application and a guard room.</li>
+                    <li>The site coverage, inclusive of outbuildings shall not be less than 30% of the area of the stand.</li>
+                    <li>The stand shall not be occupied until:-<br>
+                        a) Approved buildings have been erected and completed thereon.<br>
+                        b) A reticulated water supply has been connected thereto: and<br>
+                        c) A sanitary system to the approval of the Manyame Rural District Council has been installed thereon.</li>
+                    <li>No building other than boundary walls or fences shall be erected within 50 meters of the state road servitude or within 9 meters of any other boundary of the stand.</li>
+                    <li>No culvert or other means of access to the stand shall be constructed except with the consent of and to a specification approved by the Manyame Rural District Council and the Provincial Roads Engineer.</li>
+                    <li>The developer must consult the Provincial engineer before constructing access road to the stand.</li>
+                    <li>Servitude over the stand for all water supply, sewerage and public utility purposes shall be granted by the owner as and when required.</li>
+                    <li>The applicant must attend to any issues that may be raised by council from time to time during site inspections:</li>
+                    <li>The bricks shall meet with the standard Association of Zimbabwe requirements.</li>
+                    <li>That all Manyame Rural District Council By Laws relating to building be adhered to.</li>
+                    <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
+                </ol>
+                
+                <p>Dated at <strong>${escapeHtml(data.issued_at_town)}</strong> this <strong>${day}<sup>${getOrdinal(day)}</sup></strong> day of <strong>${month}</strong> Year <strong>${year}</strong></p>
+                
+                <div class="signature-block">
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.applicant_rep)}</strong> ID NUMBER (${escapeHtml(data.applicant_id)})</p>
+                        <p><strong>For Applicant</strong></p>
+                    </div>
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.applicant_witness)}</strong></p>
+                        <p><strong>Witness</strong></p>
+                    </div>
+                </div>
+                
+                <div class="signature-block">
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.council_rep)}</strong></p>
+                        <p><strong>For MANYAME RURAL DISTRICT COUNCIL</strong></p>
+                    </div>
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.council_witness)}</strong></p>
+                        <p><strong>Witness</strong></p>
+                    </div>
+                </div>
+                
+                <p><u>Copies To:</u><br>
+                Change of Use Permits File (1) File Copy (1)<br>
+                Department of Spatial Planning and development File Copy (10)<br>
+                <strong>CHIEF EXECUTIVE OFFICER -- MANYAME RURAL DISTRICT COUNCIL</strong></p>
+                
+                <div class="warning-box">
+                    <strong>THE ATTENTION OF THE APPLICANT IS DRAWN TO THE FOLLOWING MATTERS</strong><br><br>
+                    <strong>WARNING</strong><br>
+                    Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.<br><br>
+                    <strong>EXPIRY OF PERMIT</strong><br>
+                    This permit expires, if unimplemented, on ${expiryDateFormatted} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
+                    <strong>EXTENSION OF TIME</strong><br>
+                    PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.<br><br>
+                    <strong>COPIES OF THE PERMIT</strong><br>
+                    Copies of this Permit may be obtained on payment of the prescribed fee from the issuing Local Planning Authority. In this regard the <strong>PERMIT</strong> number and file reference should be quoted on all correspondence.<br><br>
+                    <strong>AMENDMENT TO THE PERMIT</strong><br>
+                    Amendment to this Permit can only be made as provided by the law. Correspondence in this connection must quote the details referred to in paragraph 3 above. Any change required which is not of a minor nature cannot be effected by way of an amendment; application for a new permit would have to be made.
+                </div>
+            </div>
+            `;
         }
         
-        function downloadQRCode(qrImageUrl, docId) {
-            fetch(qrImageUrl)
-                .then(response => response.blob())
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `QR_${docId}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                })
-                .catch(() => {
-                    const img = new Image();
-                    img.crossOrigin = 'Anonymous';
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        const link = document.createElement('a');
-                        link.download = `QR_${docId}.png`;
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                    };
-                    img.src = qrImageUrl;
-                });
+        function getOrdinal(n) {
+            if (n > 3 && n < 21) return 'th';
+            switch (n % 10) {
+                case 1: return 'st';
+                case 2: return 'nd';
+                case 3: return 'rd';
+                default: return 'th';
+            }
         }
-        
-        // Staff document issuance via clean table tracking
-        document.addEventListener('DOMContentLoaded', function() {
-            if (document.getElementById('issueDate')) {
-                document.getElementById('issueDate').value = today;
-            }
-            
-            const form = document.getElementById('issueForm');
-            if (form) {
-                form.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const submitBtn = document.getElementById('submitBtn');
-                    const resultDiv = document.getElementById('issueResult');
-                    
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = '&#9203; Processing Request...';
-                    resultDiv.innerHTML = '<div class="loading">&#9203; Broadcasting transaction to core server...</div>';
-                    
-                    try {
-                        const docType = document.getElementById('docType').value;
-                        const year = new Date().getFullYear();
-                        const random = Math.floor(Math.random() * 90000) + 10000;
-                        const docId = `MRDC-${docType}-${year}-${random}`;
-                        
-                        const issuedTo = document.getElementById('issuedTo').value.trim();
-                        const propertyLocation = document.getElementById('propertyLocation').value.trim();
-                        const issuedBy = document.getElementById('issuedBy').value.trim();
-                        const issueDate = document.getElementById('issueDate').value;
-                        const expiryDate = document.getElementById('expiryDate').value || null;
-                        
-                        if (!issuedTo || !propertyLocation || !issuedBy) {
-                            throw new Error('Please populate all operational parameter fields');
-                        }
-                        
-                        const { data, error } = await supabaseClient
-                            .from('documents')
-                            .insert([
-                                {
-                                    doc_id: docId,
-                                    doc_type: docType,
-                                    issued_to: issuedTo,
-                                    property_location: propertyLocation,
-                                    issued_by: issuedBy,
-                                    issue_date: issueDate,
-                                    expiry_date: expiryDate,
-                                    status: 'active'
-                                }
-                            ]);
-                        
-                        if (error) throw error;
-                        
-                        const verificationUrl = `https://zippy-muffin-19094a.netlify.app/?id=${docId}`;
-                        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}`;
-                        
-                        setTimeout(() => {
-                            downloadQRCode(qrApiUrl, docId);
-                        }, 500);
-                        
-                        resultDiv.innerHTML = `
-                            <div class="success">
-                                <strong>&#9989; DOCUMENT DATA GENERATED SUCCESSFULLY!</strong><br><br>
-                                <strong>Document ID:</strong> <span class="doc-id">${docId}</span><br><br>
-                                <div class="qr-code">
-                                    <img id="qrCodeImg" src="${qrApiUrl}" alt="Verification Target QR Code">
-                                    <p>Scan generated matrix endpoint interface to verify legitimacy</p>
-                                </div>
-                                <div class="button-group">
-                                    <button class="print-btn" onclick="window.print()">&#128424; Print Hardcopy Document</button>
-                                    <button class="download-qr-btn" onclick="downloadQRCode('${qrApiUrl}', '${docId}')">&#11015; Download Token PNG</button>
-                                </div>
-                                <p style="margin-top: 15px; font-size: 13px;"><strong>Public Verification Link Endpoint:</strong><br>
-                                <small>${verificationUrl}</small></p>
-                            </div>
-                        `;
-                        
-                        document.getElementById('issueForm').reset();
-                        document.getElementById('issueDate').value = today;
-                        document.getElementById('issuedBy').value = issuedBy;
-                        
-                    } catch (error) {
-                        resultDiv.innerHTML = `<div class="error">&#10060; Operational execution warning: ${error.message}<br>Verify policies inside database manager setup configuration.</div>`;
-                    } finally {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = '&#128196; Issue Document & Generate QR Code';
-                    }
-                });
-            }
-        });
-        
+
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -662,13 +745,150 @@
                 return m;
             });
         }
+
+        async function verifyPermit() {
+            const permitNo = document.getElementById('verifyPermitNo').value.trim();
+            const resultDiv = document.getElementById('verifyResult');
+            
+            if (!permitNo) {
+                resultDiv.innerHTML = '<div class="error">Please enter a Permit Number.</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="loading">⏳ Verifying...</div>';
+            
+            try {
+                const { data, error } = await supabase
+                    .from('development_permits')
+                    .select('*')
+                    .eq('permit_number', permitNo);
+                
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    resultDiv.innerHTML = `<div class="error">❌ INVALID - Permit "${escapeHtml(permitNo)}" not found in official council records.</div>`;
+                    return;
+                }
+                
+                const permit = data[0];
+                const isValid = permit.status === 'active' && new Date(permit.expiry_date) >= new Date();
+                
+                if (isValid) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <strong>✅ VERIFIED - VALID OFFICIAL DEVELOPMENT PERMIT</strong><br><br>
+                            <strong>Permit Number:</strong> ${escapeHtml(permit.permit_number)}<br>
+                            <strong>Property:</strong> ${escapeHtml(permit.property_location)}<br>
+                            <strong>Issued To:</strong> ${escapeHtml(permit.applicant_name)}${permit.company_name ? ' (' + escapeHtml(permit.company_name) + ')' : ''}<br>
+                            <strong>Issue Date:</strong> ${new Date(permit.issue_date).toLocaleDateString()}<br>
+                            <strong>Expiry Date:</strong> ${new Date(permit.expiry_date).toLocaleDateString()}<br>
+                            <strong>Status:</strong> ✅ Active Council Record
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ INVALID - This permit has expired or been revoked.</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Verification error. Please try again.</div>`;
+            }
+        }
+
+        // Form submission
+        const form = document.getElementById('permitForm');
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const resultDiv = document.getElementById('issueResult');
+                const displayArea = document.getElementById('permitDisplayArea');
+                const submitBtn = form.querySelector('button[type="submit"]');
+                
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Generating Permit...';
+                resultDiv.innerHTML = '<div class="loading">⏳ Processing and generating document...</div>';
+                displayArea.classList.add('hidden');
+                
+                try {
+                    const permitNumber = generatePermitNumber();
+                    const verificationUrl = `https://${window.location.hostname}${window.location.pathname}?verify=${permitNumber}`;
+                    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verificationUrl)}`;
+                    
+                    const permitData = {
+                        permit_number: permitNumber,
+                        property_location: document.getElementById('propertyLocation').value.trim(),
+                        applicant_name: document.getElementById('applicantName').value.trim(),
+                        company_name: document.getElementById('companyName').value.trim() || null,
+                        application_date: document.getElementById('applicationDate').value,
+                        application_ref: document.getElementById('applicationRef').value.trim(),
+                        council_resolution: document.getElementById('councilResolution').value.trim(),
+                        commercial_uses: document.getElementById('commercialUses').value.trim(),
+                        issued_at_town: document.getElementById('issuedAtTown').value.trim(),
+                        issue_date: document.getElementById('issueDate').value,
+                        applicant_rep: document.getElementById('applicantRep').value.trim(),
+                        applicant_id: document.getElementById('applicantId').value.trim(),
+                        applicant_witness: document.getElementById('applicantWitness').value.trim(),
+                        council_rep: document.getElementById('councilRep').value.trim(),
+                        council_witness: document.getElementById('councilWitness').value.trim(),
+                        expiry_date: document.getElementById('expiryDate').value,
+                        qr_code_url: qrApiUrl,
+                        status: 'active',
+                        issued_by_email: currentStaffUser
+                    };
+                    
+                    // Validate required fields
+                    for (const [key, value] of Object.entries(permitData)) {
+                        if (value === null || value === undefined || value === '') {
+                            if (key !== 'company_name' && key !== 'qr_code_url') {
+                                throw new Error(`Please fill in all required fields. Missing: ${key}`);
+                            }
+                        }
+                    }
+                    
+                    // Save to Supabase
+                    const { error: insertError } = await supabase
+                        .from('development_permits')
+                        .insert([permitData]);
+                    
+                    if (insertError) throw insertError;
+                    
+                    // Generate and display permit
+                    const permitHTML = generatePermitHTML(permitData, qrApiUrl);
+                    displayArea.innerHTML = permitHTML;
+                    displayArea.classList.remove('hidden');
+                    
+                    resultDiv.innerHTML = `<div class="success">✅ Permit ${permitNumber} issued successfully!</div>`;
+                    
+                    // Scroll to document
+                    displayArea.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Reset form but keep some defaults
+                    document.getElementById('applicantName').value = '';
+                    document.getElementById('companyName').value = '';
+                    document.getElementById('applicationRef').value = '';
+                    document.getElementById('applicantRep').value = '';
+                    document.getElementById('applicantId').value = '';
+                    document.getElementById('applicantWitness').value = '';
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '📄 Generate Development Permit & Download PDF';
+                }
+            });
+        }
         
-        // Realtime Deep-linking checking routing engine
+        // Handle URL verification param
         const urlParams = new URLSearchParams(window.location.search);
-        const docIdParam = urlParams.get('id');
-        if (docIdParam && document.getElementById('verifyDocId')) {
-            document.getElementById('verifyDocId').value = docIdParam;
-            verifyDocument();
+        const verifyParam = urlParams.get('verify');
+        if (verifyParam && document.getElementById('verifyPermitNo')) {
+            document.getElementById('verifyPermitNo').value = verifyParam;
+            verifyPermit();
+            showTab('verify');
+        }
+        
+        function downloadPDF() {
+            window.print();
         }
     </script>
 </body>
