@@ -17,7 +17,6 @@
             padding: 20px;
         }
 
-        /* Tabs */
         .tabs {
             max-width: 1200px;
             margin: 0 auto 20px auto;
@@ -186,7 +185,6 @@
             color: #666;
         }
 
-        /* Permit Document Styles - For PDF/Print */
         .permit-document {
             max-width: 1100px;
             margin: 0 auto;
@@ -289,19 +287,6 @@
             margin: 5px 0;
         }
 
-        .signature-name {
-            border-top: 1px solid black;
-            padding-top: 5px;
-            margin-top: 30px;
-        }
-
-        .footer-note {
-            margin-top: 30px;
-            font-size: 11px;
-            border-top: 1px solid #ccc;
-            padding-top: 15px;
-        }
-
         .warning-box {
             background: #fff3cd;
             padding: 12px;
@@ -316,28 +301,13 @@
             margin-top: 30px;
         }
 
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-            justify-content: center;
-        }
-
-        .btn-pdf {
-            background: #dc3545;
-        }
-
-        .btn-pdf:hover {
-            background: #c82333;
-        }
-
         @media print {
             body {
                 background: white;
                 padding: 0;
                 margin: 0;
             }
-            .no-print, .tabs, .staff-info, .btn-group, .print-area button {
+            .no-print, .tabs, .staff-info, .btn-generate, .logout-btn, .tab-btn {
                 display: none;
             }
             .permit-document {
@@ -353,8 +323,8 @@
 </head>
 <body>
     <div class="tabs no-print">
-        <button class="tab-btn active" onclick="showTab('verify')">🔍 Verify Permit</button>
-        <button class="tab-btn" onclick="showTab('staff')">👨‍💼 Staff Login</button>
+        <button class="tab-btn active" id="btnVerifyTab">🔍 Verify Permit</button>
+        <button class="tab-btn" id="btnStaffTab">👨‍💼 Staff Login</button>
     </div>
 
     <!-- Verify Tab -->
@@ -368,7 +338,7 @@
                 <label>Enter Permit Number to Verify</label>
                 <input type="text" id="verifyPermitNo" placeholder="Example: MANY/09/2026">
             </div>
-            <button onclick="verifyPermit()">🔍 Verify Permit</button>
+            <button id="verifyBtn">🔍 Verify Permit</button>
             <div id="verifyResult"></div>
         </div>
     </div>
@@ -393,85 +363,82 @@
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button onclick="staffLogin()">🔐 Login to System</button>
+                <button id="loginBtn">🔐 Login to System</button>
                 <div id="loginError"></div>
             </div>
 
             <div id="issuanceSection" class="hidden">
                 <div class="staff-info">
                     <span>Welcome, <strong id="staffName"></strong></span>
-                    <button class="logout-btn" onclick="staffLogout()">🚪 Logout</button>
+                    <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
                 </div>
 
-                <form id="permitForm">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Property Location *</label>
-                            <input type="text" id="propertyLocation" required placeholder="e.g., Subdivision 1 of Enslidale Farm">
-                        </div>
-                        <div class="form-group">
-                            <label>Applicant Name *</label>
-                            <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi">
-                        </div>
-                        <div class="form-group">
-                            <label>Company Name (if applicable)</label>
-                            <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments">
-                        </div>
-                        <div class="form-group">
-                            <label>Application Date *</label>
-                            <input type="date" id="applicationDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Application Reference No *</label>
-                            <input type="text" id="applicationRef" required placeholder="e.g., MANYA/05/2023">
-                        </div>
-                        <div class="form-group">
-                            <label>Council Resolution No *</label>
-                            <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12">
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Commercial Uses (separate with commas) *</label>
-                            <textarea id="commercialUses" required>WAREHOUSE, PETROL FILLING STATION, FOOD COURT, TRUCK STOP, SHOPPING MALL</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Issued At (Town) *</label>
-                            <input type="text" id="issuedAtTown" required value="BEATRICE">
-                        </div>
-                        <div class="form-group">
-                            <label>Issue Date *</label>
-                            <input type="date" id="issueDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Applicant Representative Name *</label>
-                            <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA">
-                        </div>
-                        <div class="form-group">
-                            <label>Applicant ID Number *</label>
-                            <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32">
-                        </div>
-                        <div class="form-group">
-                            <label>Applicant Witness Name *</label>
-                            <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha">
-                        </div>
-                        <div class="form-group">
-                            <label>Council Representative Name *</label>
-                            <input type="text" id="councilRep" required placeholder="e.g., F.Guta">
-                        </div>
-                        <div class="form-group">
-                            <label>Council Witness Name *</label>
-                            <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa">
-                        </div>
-                        <div class="form-group">
-                            <label>Expiry Date *</label>
-                            <input type="date" id="expiryDate" required>
-                        </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Property Location *</label>
+                        <input type="text" id="propertyLocation" required placeholder="e.g., Subdivision 1 of Enslidale Farm">
                     </div>
-                    <button type="submit" class="btn-generate">📄 Generate Development Permit & Download PDF</button>
-                </form>
+                    <div class="form-group">
+                        <label>Applicant Name *</label>
+                        <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi">
+                    </div>
+                    <div class="form-group">
+                        <label>Company Name (if applicable)</label>
+                        <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments">
+                    </div>
+                    <div class="form-group">
+                        <label>Application Date *</label>
+                        <input type="date" id="applicationDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Application Reference No *</label>
+                        <input type="text" id="applicationRef" required placeholder="e.g., MANYA/05/2023">
+                    </div>
+                    <div class="form-group">
+                        <label>Council Resolution No *</label>
+                        <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Commercial Uses (separate with commas) *</label>
+                        <textarea id="commercialUses" required>WAREHOUSE, PETROL FILLING STATION, FOOD COURT, TRUCK STOP, SHOPPING MALL</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Issued At (Town) *</label>
+                        <input type="text" id="issuedAtTown" required value="BEATRICE">
+                    </div>
+                    <div class="form-group">
+                        <label>Issue Date *</label>
+                        <input type="date" id="issueDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant Representative Name *</label>
+                        <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA">
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant ID Number *</label>
+                        <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32">
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant Witness Name *</label>
+                        <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha">
+                    </div>
+                    <div class="form-group">
+                        <label>Council Representative Name *</label>
+                        <input type="text" id="councilRep" required placeholder="e.g., F.Guta">
+                    </div>
+                    <div class="form-group">
+                        <label>Council Witness Name *</label>
+                        <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date *</label>
+                        <input type="date" id="expiryDate" required>
+                    </div>
+                </div>
+                <button id="generateBtn" class="btn-generate">📄 Generate Development Permit</button>
 
                 <div id="issueResult"></div>
                 
-                <!-- Permit Display Area -->
                 <div id="permitDisplayArea" class="print-area hidden"></div>
             </div>
         </div>
@@ -479,154 +446,252 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // ============================================
+        // FIXED VERSION - All functions defined before use
+        // ============================================
+        
         // Supabase Configuration
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
-        let supabase = null;
-        try {
-            if (window.supabase) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-        } catch(e) {
-            console.error("Supabase init error");
-        }
-
+        // Global variables
+        let _supabase = null;
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         const today = new Date().toISOString().split('T')[0];
         
-        // Set default dates
-        document.addEventListener('DOMContentLoaded', function() {
-            const applicationDateInput = document.getElementById('applicationDate');
-            const issueDateInput = document.getElementById('issueDate');
-            const expiryDateInput = document.getElementById('expiryDate');
-            
-            if (applicationDateInput) {
-                const oneYearAgo = new Date();
-                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                applicationDateInput.value = oneYearAgo.toISOString().split('T')[0];
+        // Initialize Supabase
+        function initSupabase() {
+            if (typeof window.supabase !== 'undefined' && window.supabase.createClient && !_supabase) {
+                _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log("Supabase initialized");
+                return true;
             }
-            if (issueDateInput) issueDateInput.value = today;
-            if (expiryDateInput) {
-                const nextYear = new Date();
-                nextYear.setFullYear(nextYear.getFullYear() + 1);
-                expiryDateInput.value = nextYear.toISOString().split('T')[0];
-            }
-        });
-
-        function showTab(tab) {
-            const verifyTab = document.getElementById('verifyTab');
-            const staffTab = document.getElementById('staffTab');
-            const btns = document.querySelectorAll('.tab-btn');
-            
-            if (tab === 'verify') {
-                verifyTab.classList.remove('hidden');
-                staffTab.classList.add('hidden');
-                btns[0].classList.add('active');
-                btns[1].classList.remove('active');
-            } else {
-                verifyTab.classList.add('hidden');
-                staffTab.classList.remove('hidden');
-                btns[0].classList.remove('active');
-                btns[1].classList.add('active');
-                checkStaffLoginState();
+            return false;
+        }
+        
+        // Helper functions
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        function getOrdinal(n) {
+            if (n > 3 && n < 21) return 'th';
+            switch (n % 10) {
+                case 1: return 'st';
+                case 2: return 'nd';
+                case 3: return 'rd';
+                default: return 'th';
             }
         }
-
+        
+        function generatePermitNumber() {
+            const year = new Date().getFullYear();
+            const random = Math.floor(Math.random() * 900) + 100;
+            return `MANY/${random}/${year}`;
+        }
+        
+        function setDefaultDates() {
+            const appDate = document.getElementById('applicationDate');
+            const issueDate = document.getElementById('issueDate');
+            const expiryDate = document.getElementById('expiryDate');
+            
+            if (appDate && !appDate.value) {
+                let d = new Date();
+                d.setFullYear(d.getFullYear() - 1);
+                appDate.value = d.toISOString().split('T')[0];
+            }
+            if (issueDate && !issueDate.value) issueDate.value = today;
+            if (expiryDate && !expiryDate.value) {
+                let d = new Date();
+                d.setFullYear(d.getFullYear() + 1);
+                expiryDate.value = d.toISOString().split('T')[0];
+            }
+        }
+        
+        // Tab switching
+        function switchToVerifyTab() {
+            document.getElementById('verifyTab').classList.remove('hidden');
+            document.getElementById('staffTab').classList.add('hidden');
+            document.getElementById('btnVerifyTab').classList.add('active');
+            document.getElementById('btnStaffTab').classList.remove('active');
+        }
+        
+        function switchToStaffTab() {
+            document.getElementById('verifyTab').classList.add('hidden');
+            document.getElementById('staffTab').classList.remove('hidden');
+            document.getElementById('btnVerifyTab').classList.remove('active');
+            document.getElementById('btnStaffTab').classList.add('active');
+            checkStaffLoginState();
+        }
+        
+        // Staff login state
         function checkStaffLoginState() {
             const cachedName = sessionStorage.getItem('staffDisplayName');
-            if (currentStaffUser && cachedName) {
-                showIssuanceForm(currentStaffUser, cachedName);
+            const cachedEmail = sessionStorage.getItem('staffEmail');
+            if (cachedEmail && cachedName) {
+                currentStaffUser = cachedEmail;
+                document.getElementById('staffLoginSection').classList.add('hidden');
+                document.getElementById('issuanceSection').classList.remove('hidden');
+                document.getElementById('staffName').innerHTML = cachedName;
+                setDefaultDates();
             } else {
-                showStaffLoginForm();
+                document.getElementById('staffLoginSection').classList.remove('hidden');
+                document.getElementById('issuanceSection').classList.add('hidden');
+                document.getElementById('permitDisplayArea').classList.add('hidden');
             }
         }
-
-        function showStaffLoginForm() {
-            document.getElementById('staffLoginSection').classList.remove('hidden');
-            document.getElementById('issuanceSection').classList.add('hidden');
-        }
-
-        function showIssuanceForm(email, displayName) {
-            document.getElementById('staffLoginSection').classList.add('hidden');
-            document.getElementById('issuanceSection').classList.remove('hidden');
-            document.getElementById('staffName').innerHTML = displayName;
-        }
-
-        async function staffLogin() {
+        
+        // Staff login function
+        async function doStaffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             
+            if (!email || !password) {
+                errorDiv.innerHTML = '<div class="error">❌ Please enter email and password.</div>';
+                return;
+            }
+            
+            if (!initSupabase()) {
+                errorDiv.innerHTML = '<div class="error">❌ Database connection error. Please refresh the page.</div>';
+                return;
+            }
+            
             errorDiv.innerHTML = '<div class="loading">⏳ Authenticating...</div>';
             
             try {
-                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
                 
                 if (authError) throw authError;
                 
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('email', email)
-                    .maybeSingle();
+                let displayName = email.split('@')[0];
                 
-                const displayName = (profileData && profileData.full_name) ? profileData.full_name : email.split('@')[0];
+                try {
+                    const { data: profileData } = await _supabase
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('email', email)
+                        .maybeSingle();
+                    if (profileData && profileData.full_name) displayName = profileData.full_name;
+                } catch(e) {}
                 
                 currentStaffUser = email;
                 sessionStorage.setItem('staffEmail', email);
                 sessionStorage.setItem('staffDisplayName', displayName);
                 
                 errorDiv.innerHTML = '';
-                showIssuanceForm(email, displayName);
+                document.getElementById('staffLoginSection').classList.add('hidden');
+                document.getElementById('issuanceSection').classList.remove('hidden');
+                document.getElementById('staffName').innerHTML = displayName;
+                setDefaultDates();
                 
             } catch (error) {
                 errorDiv.innerHTML = `<div class="error">❌ ${error.message || 'Invalid credentials'}</div>`;
                 document.getElementById('loginPassword').value = '';
             }
         }
-
-        async function staffLogout() {
-            if(supabase) await supabase.auth.signOut();
+        
+        // Staff logout
+        async function doStaffLogout() {
+            if (_supabase) {
+                try { await _supabase.auth.signOut(); } catch(e) {}
+            }
             sessionStorage.removeItem('staffEmail');
             sessionStorage.removeItem('staffDisplayName');
             currentStaffUser = null;
-            showStaffLoginForm();
+            document.getElementById('staffLoginSection').classList.remove('hidden');
+            document.getElementById('issuanceSection').classList.add('hidden');
             document.getElementById('permitDisplayArea').classList.add('hidden');
             document.getElementById('issueResult').innerHTML = '';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
         }
-
-        function generatePermitNumber() {
-            const year = new Date().getFullYear();
-            const random = Math.floor(Math.random() * 900) + 100;
-            return `MANY/${random}/${year}`;
-        }
-
-        function generatePermitHTML(data, qrUrl) {
-            const issueDateFormatted = new Date(data.issue_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-            const applicationDateFormatted = new Date(data.application_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-            const expiryDateFormatted = new Date(data.expiry_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        // Verify permit
+        async function doVerifyPermit() {
+            const permitNo = document.getElementById('verifyPermitNo').value.trim();
+            const resultDiv = document.getElementById('verifyResult');
             
-            const day = new Date(data.issue_date).getDate();
-            const month = new Date(data.issue_date).toLocaleString('en-GB', { month: 'long' });
-            const year = new Date(data.issue_date).getFullYear();
+            if (!permitNo) {
+                resultDiv.innerHTML = '<div class="error">Please enter a Permit Number.</div>';
+                return;
+            }
+            
+            if (!initSupabase()) {
+                resultDiv.innerHTML = '<div class="error">❌ Database connection error. Please refresh.</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="loading">⏳ Verifying...</div>';
+            
+            try {
+                const { data, error } = await _supabase
+                    .from('development_permits')
+                    .select('*')
+                    .eq('permit_number', permitNo);
+                
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    resultDiv.innerHTML = `<div class="error">❌ INVALID - Permit "${escapeHtml(permitNo)}" not found in official council records.</div>`;
+                    return;
+                }
+                
+                const permit = data[0];
+                const isValid = permit.status === 'active' && new Date(permit.expiry_date) >= new Date();
+                
+                if (isValid) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <strong>✅ VERIFIED - VALID OFFICIAL DEVELOPMENT PERMIT</strong><br><br>
+                            <strong>Permit Number:</strong> ${escapeHtml(permit.permit_number)}<br>
+                            <strong>Property:</strong> ${escapeHtml(permit.property_location)}<br>
+                            <strong>Issued To:</strong> ${escapeHtml(permit.applicant_name)}${permit.company_name ? ' (' + escapeHtml(permit.company_name) + ')' : ''}<br>
+                            <strong>Issue Date:</strong> ${new Date(permit.issue_date).toLocaleDateString()}<br>
+                            <strong>Expiry Date:</strong> ${new Date(permit.expiry_date).toLocaleDateString()}<br>
+                            <strong>Status:</strong> ✅ Active Council Record
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ INVALID - This permit has expired or been revoked.</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Verification error: ${error.message}</div>`;
+            }
+        }
+        
+        // Generate permit HTML
+        function generatePermitHTML(data, qrUrl) {
+            const issueDate = new Date(data.issue_date);
+            const appDate = new Date(data.application_date);
+            const expiryDate = new Date(data.expiry_date);
+            
+            const day = issueDate.getDate();
+            const month = issueDate.toLocaleString('en-GB', { month: 'long' });
+            const year = issueDate.getFullYear();
+            
+            const appDay = appDate.getDate();
+            const appMonth = appDate.toLocaleString('en-GB', { month: 'long' });
+            const appYear = appDate.getFullYear();
             
             return `
-            <div class="permit-document">
+            <div class="permit-document" id="permitForPrint">
                 <div class="permit-header">
-                    <div class="council-logo">
-                        <div class="seal">🏛️</div>
-                    </div>
+                    <div class="council-logo"><div class="seal">🏛️</div></div>
                     <div class="council-name">
                         <h1>MANYAME RURAL DISTRICT COUNCIL</h1>
                         <h2>RURAL DISTRICT COUNCILS ACT, CHAPTER 29:13 - SECTION (3)</h2>
                     </div>
-                    <div class="qr-placeholder">
-                        <img src="${qrUrl}" alt="QR Code" width="100" height="100">
-                    </div>
+                    <div class="qr-placeholder"><img src="${qrUrl}" alt="QR Code" width="100" height="100"></div>
                 </div>
                 
                 <div class="permit-ref">
@@ -640,7 +705,7 @@
                     <h4>CHANGE OF USE ON ${escapeHtml(data.property_location.toUpperCase())}: SEKE DISTRICT</h4>
                 </div>
                 
-                <p>The MANYAME Rural District Council (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${applicationDateFormatted} and numbered ${escapeHtml(data.application_ref)} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name)}</strong> (hereinafter called "the applicant") for:-</p>
+                <p>The MANYAME Rural District Council (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${appDay} ${appMonth} ${appYear} and numbered ${escapeHtml(data.application_ref)} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name)}</strong> (hereinafter called "the applicant") for:-</p>
                 
                 <p><strong>This Permit is granted subject to the conditions set hereunder Part I to III.</strong></p>
                 
@@ -714,7 +779,7 @@
                     <strong>WARNING</strong><br>
                     Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.<br><br>
                     <strong>EXPIRY OF PERMIT</strong><br>
-                    This permit expires, if unimplemented, on ${expiryDateFormatted} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
+                    This permit expires, if unimplemented, on ${expiryDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
                     <strong>EXTENSION OF TIME</strong><br>
                     PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.<br><br>
                     <strong>COPIES OF THE PERMIT</strong><br>
@@ -726,170 +791,143 @@
             `;
         }
         
-        function getOrdinal(n) {
-            if (n > 3 && n < 21) return 'th';
-            switch (n % 10) {
-                case 1: return 'st';
-                case 2: return 'nd';
-                case 3: return 'rd';
-                default: return 'th';
-            }
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        async function verifyPermit() {
-            const permitNo = document.getElementById('verifyPermitNo').value.trim();
-            const resultDiv = document.getElementById('verifyResult');
+        // Generate and save permit
+        async function doGeneratePermit() {
+            const resultDiv = document.getElementById('issueResult');
+            const displayArea = document.getElementById('permitDisplayArea');
+            const generateBtn = document.getElementById('generateBtn');
             
-            if (!permitNo) {
-                resultDiv.innerHTML = '<div class="error">Please enter a Permit Number.</div>';
+            // Get all form values
+            const propertyLocation = document.getElementById('propertyLocation').value.trim();
+            const applicantName = document.getElementById('applicantName').value.trim();
+            const companyName = document.getElementById('companyName').value.trim();
+            const applicationDate = document.getElementById('applicationDate').value;
+            const applicationRef = document.getElementById('applicationRef').value.trim();
+            const councilResolution = document.getElementById('councilResolution').value.trim();
+            const commercialUses = document.getElementById('commercialUses').value.trim();
+            const issuedAtTown = document.getElementById('issuedAtTown').value.trim();
+            const issueDate = document.getElementById('issueDate').value;
+            const applicantRep = document.getElementById('applicantRep').value.trim();
+            const applicantId = document.getElementById('applicantId').value.trim();
+            const applicantWitness = document.getElementById('applicantWitness').value.trim();
+            const councilRep = document.getElementById('councilRep').value.trim();
+            const councilWitness = document.getElementById('councilWitness').value.trim();
+            const expiryDate = document.getElementById('expiryDate').value;
+            
+            // Validate required fields
+            if (!propertyLocation || !applicantName || !applicationDate || !applicationRef || !councilResolution || !commercialUses || !issuedAtTown || !issueDate || !applicantRep || !applicantId || !applicantWitness || !councilRep || !councilWitness || !expiryDate) {
+                resultDiv.innerHTML = '<div class="error">❌ Please fill in all required fields.</div>';
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="loading">⏳ Verifying...</div>';
+            if (!currentStaffUser) {
+                resultDiv.innerHTML = '<div class="error">❌ Please login again.</div>';
+                return;
+            }
+            
+            if (!initSupabase()) {
+                resultDiv.innerHTML = '<div class="error">❌ Database connection error. Please refresh.</div>';
+                return;
+            }
+            
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating Permit...';
+            resultDiv.innerHTML = '<div class="loading">⏳ Processing and generating document...</div>';
+            displayArea.classList.add('hidden');
             
             try {
-                const { data, error } = await supabase
+                const permitNumber = generatePermitNumber();
+                const verificationUrl = `https://${window.location.hostname}${window.location.pathname}?verify=${permitNumber}`;
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verificationUrl)}`;
+                
+                const permitData = {
+                    permit_number: permitNumber,
+                    property_location: propertyLocation,
+                    applicant_name: applicantName,
+                    company_name: companyName || null,
+                    application_date: applicationDate,
+                    application_ref: applicationRef,
+                    council_resolution: councilResolution,
+                    commercial_uses: commercialUses,
+                    issued_at_town: issuedAtTown,
+                    issue_date: issueDate,
+                    applicant_rep: applicantRep,
+                    applicant_id: applicantId,
+                    applicant_witness: applicantWitness,
+                    council_rep: councilRep,
+                    council_witness: councilWitness,
+                    expiry_date: expiryDate,
+                    qr_code_url: qrApiUrl,
+                    status: 'active',
+                    issued_by_email: currentStaffUser
+                };
+                
+                // Save to Supabase
+                const { error: insertError } = await _supabase
                     .from('development_permits')
-                    .select('*')
-                    .eq('permit_number', permitNo);
+                    .insert([permitData]);
                 
-                if (error) throw error;
+                if (insertError) throw insertError;
                 
-                if (!data || data.length === 0) {
-                    resultDiv.innerHTML = `<div class="error">❌ INVALID - Permit "${escapeHtml(permitNo)}" not found in official council records.</div>`;
-                    return;
-                }
+                // Generate and display permit
+                const permitHTML = generatePermitHTML(permitData, qrApiUrl);
+                displayArea.innerHTML = permitHTML;
+                displayArea.classList.remove('hidden');
                 
-                const permit = data[0];
-                const isValid = permit.status === 'active' && new Date(permit.expiry_date) >= new Date();
+                resultDiv.innerHTML = `<div class="success">✅ Permit ${permitNumber} issued successfully! <br><br> <strong>To save as PDF:</strong> Click anywhere on the permit above, then press Ctrl+P (Windows) or Cmd+P (Mac) and choose "Save as PDF".</div>`;
                 
-                if (isValid) {
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            <strong>✅ VERIFIED - VALID OFFICIAL DEVELOPMENT PERMIT</strong><br><br>
-                            <strong>Permit Number:</strong> ${escapeHtml(permit.permit_number)}<br>
-                            <strong>Property:</strong> ${escapeHtml(permit.property_location)}<br>
-                            <strong>Issued To:</strong> ${escapeHtml(permit.applicant_name)}${permit.company_name ? ' (' + escapeHtml(permit.company_name) + ')' : ''}<br>
-                            <strong>Issue Date:</strong> ${new Date(permit.issue_date).toLocaleDateString()}<br>
-                            <strong>Expiry Date:</strong> ${new Date(permit.expiry_date).toLocaleDateString()}<br>
-                            <strong>Status:</strong> ✅ Active Council Record
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `<div class="error">❌ INVALID - This permit has expired or been revoked.</div>`;
-                }
+                // Scroll to document
+                displayArea.scrollIntoView({ behavior: 'smooth' });
+                
+                // Clear sensitive fields but keep defaults
+                document.getElementById('applicantName').value = '';
+                document.getElementById('companyName').value = '';
+                document.getElementById('applicationRef').value = '';
+                document.getElementById('applicantRep').value = '';
+                document.getElementById('applicantId').value = '';
+                document.getElementById('applicantWitness').value = '';
+                setDefaultDates();
+                
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">❌ Verification error. Please try again.</div>`;
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '📄 Generate Development Permit';
             }
         }
-
-        // Form submission
-        const form = document.getElementById('permitForm');
-        if (form) {
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const resultDiv = document.getElementById('issueResult');
-                const displayArea = document.getElementById('permitDisplayArea');
-                const submitBtn = form.querySelector('button[type="submit"]');
-                
-                submitBtn.disabled = true;
-                submitBtn.textContent = '⏳ Generating Permit...';
-                resultDiv.innerHTML = '<div class="loading">⏳ Processing and generating document...</div>';
-                displayArea.classList.add('hidden');
-                
-                try {
-                    const permitNumber = generatePermitNumber();
-                    const verificationUrl = `https://${window.location.hostname}${window.location.pathname}?verify=${permitNumber}`;
-                    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verificationUrl)}`;
-                    
-                    const permitData = {
-                        permit_number: permitNumber,
-                        property_location: document.getElementById('propertyLocation').value.trim(),
-                        applicant_name: document.getElementById('applicantName').value.trim(),
-                        company_name: document.getElementById('companyName').value.trim() || null,
-                        application_date: document.getElementById('applicationDate').value,
-                        application_ref: document.getElementById('applicationRef').value.trim(),
-                        council_resolution: document.getElementById('councilResolution').value.trim(),
-                        commercial_uses: document.getElementById('commercialUses').value.trim(),
-                        issued_at_town: document.getElementById('issuedAtTown').value.trim(),
-                        issue_date: document.getElementById('issueDate').value,
-                        applicant_rep: document.getElementById('applicantRep').value.trim(),
-                        applicant_id: document.getElementById('applicantId').value.trim(),
-                        applicant_witness: document.getElementById('applicantWitness').value.trim(),
-                        council_rep: document.getElementById('councilRep').value.trim(),
-                        council_witness: document.getElementById('councilWitness').value.trim(),
-                        expiry_date: document.getElementById('expiryDate').value,
-                        qr_code_url: qrApiUrl,
-                        status: 'active',
-                        issued_by_email: currentStaffUser
-                    };
-                    
-                    // Validate required fields
-                    for (const [key, value] of Object.entries(permitData)) {
-                        if (value === null || value === undefined || value === '') {
-                            if (key !== 'company_name' && key !== 'qr_code_url') {
-                                throw new Error(`Please fill in all required fields. Missing: ${key}`);
-                            }
-                        }
-                    }
-                    
-                    // Save to Supabase
-                    const { error: insertError } = await supabase
-                        .from('development_permits')
-                        .insert([permitData]);
-                    
-                    if (insertError) throw insertError;
-                    
-                    // Generate and display permit
-                    const permitHTML = generatePermitHTML(permitData, qrApiUrl);
-                    displayArea.innerHTML = permitHTML;
-                    displayArea.classList.remove('hidden');
-                    
-                    resultDiv.innerHTML = `<div class="success">✅ Permit ${permitNumber} issued successfully!</div>`;
-                    
-                    // Scroll to document
-                    displayArea.scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Reset form but keep some defaults
-                    document.getElementById('applicantName').value = '';
-                    document.getElementById('companyName').value = '';
-                    document.getElementById('applicationRef').value = '';
-                    document.getElementById('applicantRep').value = '';
-                    document.getElementById('applicantId').value = '';
-                    document.getElementById('applicantWitness').value = '';
-                    
-                } catch (error) {
-                    resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '📄 Generate Development Permit & Download PDF';
-                }
-            });
-        }
         
-        // Handle URL verification param
-        const urlParams = new URLSearchParams(window.location.search);
-        const verifyParam = urlParams.get('verify');
-        if (verifyParam && document.getElementById('verifyPermitNo')) {
-            document.getElementById('verifyPermitNo').value = verifyParam;
-            verifyPermit();
-            showTab('verify');
-        }
-        
-        function downloadPDF() {
-            window.print();
-        }
+        // Set up event listeners when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab buttons
+            document.getElementById('btnVerifyTab').addEventListener('click', switchToVerifyTab);
+            document.getElementById('btnStaffTab').addEventListener('click', switchToStaffTab);
+            
+            // Login/Logout buttons
+            document.getElementById('loginBtn').addEventListener('click', doStaffLogin);
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.addEventListener('click', doStaffLogout);
+            
+            // Verify button
+            document.getElementById('verifyBtn').addEventListener('click', doVerifyPermit);
+            
+            // Generate button
+            document.getElementById('generateBtn').addEventListener('click', doGeneratePermit);
+            
+            // Set default dates
+            setDefaultDates();
+            
+            // Check if coming from QR code with verify param
+            const urlParams = new URLSearchParams(window.location.search);
+            const verifyParam = urlParams.get('verify');
+            if (verifyParam) {
+                document.getElementById('verifyPermitNo').value = verifyParam;
+                doVerifyPermit();
+                switchToVerifyTab();
+            }
+            
+            // Initialize Supabase
+            initSupabase();
+        });
     </script>
 </body>
 </html>
