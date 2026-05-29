@@ -5,320 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manyame RDC - Development Permit System</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Times New Roman', 'Segoe UI', Georgia, serif;
-            background: #e0e0e0;
-            padding: 20px;
-        }
-
-        .tabs {
-            max-width: 1200px;
-            margin: 0 auto 20px auto;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .tab-btn {
-            padding: 12px 28px;
-            background: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        .tab-btn.active {
-            background: #1e3c72;
-            color: white;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            overflow: hidden;
-        }
-
-        .header {
-            background: #1e3c72;
-            color: white;
-            padding: 20px 30px;
-        }
-
-        .header h1 {
-            font-size: 22px;
-        }
-
-        .header h2 {
-            font-size: 14px;
-            font-weight: normal;
-            opacity: 0.85;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 5px;
-        }
-
-        .form-group.full-width {
-            grid-column: span 2;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #333;
-            font-size: 13px;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-
-        button {
-            background: #1e3c72;
-            color: white;
-            padding: 14px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        button:hover {
-            background: #2a5298;
-            transform: translateY(-1px);
-        }
-
-        .btn-generate {
-            background: #28a745;
-            font-size: 18px;
-            padding: 16px;
-            margin-top: 20px;
-            width: 100%;
-        }
-
-        .btn-generate:hover {
-            background: #218838;
-        }
-
-        .logout-btn {
-            background: #6c757d;
-            width: auto;
-            padding: 8px 20px;
-        }
-
-        .staff-info {
-            background: #e9ecef;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .error, .success {
-            padding: 12px;
-            border-radius: 6px;
-            margin-top: 15px;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        .permit-document {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            font-family: 'Times New Roman', Georgia, serif;
-            line-height: 1.4;
-            color: black;
-        }
-
-        .permit-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-        }
-
-        .council-logo {
-            text-align: center;
-        }
-
-        .council-logo .seal {
-            font-size: 48px;
-        }
-
-        .council-name {
-            text-align: center;
-            flex: 1;
-        }
-
-        .council-name h1 {
-            font-size: 22px;
-            font-weight: bold;
-            margin: 0;
-        }
-
-        .council-name h2 {
-            font-size: 12px;
-            font-weight: normal;
-            margin: 5px 0 0;
-        }
-
-        .qr-placeholder {
-            text-align: right;
-        }
-
-        .qr-placeholder img {
-            width: 100px;
-            height: 100px;
-            border: 1px solid #ccc;
-        }
-
-        .permit-ref {
-            background: #f5f5f5;
-            padding: 12px;
-            margin: 15px 0;
-            font-size: 14px;
-            border-left: 3px solid #1e3c72;
-        }
-
-        .permit-title {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .permit-title h3 {
-            font-size: 20px;
-            text-decoration: underline;
-            font-weight: bold;
-        }
-
-        .permit-title h4 {
-            font-size: 16px;
-            font-weight: normal;
-        }
-
-        .conditions-list {
-            margin: 20px 0;
-            padding-left: 20px;
-        }
-
-        .conditions-list li {
-            margin-bottom: 10px;
-            text-align: justify;
-        }
-
-        .signature-block {
-            margin: 30px 0 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .signature-line {
-            width: 45%;
-        }
-
-        .signature-line p {
-            margin: 5px 0;
-        }
-
-        .warning-box {
-            background: #fff3cd;
-            padding: 12px;
-            margin: 20px 0;
-            border-left: 4px solid #ffc107;
-        }
-
-        .print-area {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-        }
-
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-                margin: 0;
-            }
-            .no-print, .tabs, .staff-info, .btn-generate, .logout-btn, .tab-btn {
-                display: none;
-            }
-            .permit-document {
-                padding: 20px;
-                margin: 0;
-            }
-            .print-area {
-                background: white;
-                padding: 0;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Times New Roman', 'Segoe UI', Georgia, serif; background: #e0e0e0; padding: 20px; }
+        .tabs { max-width: 1200px; margin: 0 auto 20px auto; display: flex; gap: 12px; flex-wrap: wrap; }
+        .tab-btn { padding: 12px 28px; background: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: 'Segoe UI', sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-btn.active { background: #1e3c72; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); overflow: hidden; }
+        .header { background: #1e3c72; color: white; padding: 20px 30px; }
+        .header h1 { font-size: 22px; }
+        .header h2 { font-size: 14px; font-weight: normal; opacity: 0.85; }
+        .content { padding: 30px; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .form-group { margin-bottom: 5px; }
+        .form-group.full-width { grid-column: span 2; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; color: #333; font-size: 13px; font-family: 'Segoe UI', sans-serif; }
+        input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        textarea { resize: vertical; min-height: 60px; }
+        button { background: #1e3c72; color: white; padding: 14px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: 'Segoe UI', sans-serif; }
+        button:hover { background: #2a5298; }
+        .btn-generate { background: #28a745; font-size: 18px; padding: 16px; margin-top: 20px; width: 100%; }
+        .btn-generate:hover { background: #218838; }
+        .logout-btn { background: #6c757d; width: auto; padding: 8px 20px; }
+        .staff-info { background: #e9ecef; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; font-family: 'Segoe UI', sans-serif; }
+        .hidden { display: none; }
+        .error, .success { padding: 12px; border-radius: 6px; margin-top: 15px; font-family: 'Segoe UI', sans-serif; }
+        .error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .loading { text-align: center; padding: 20px; color: #666; }
+        .permit-document { max-width: 1100px; margin: 0 auto; background: white; padding: 40px; font-family: 'Times New Roman', Georgia, serif; line-height: 1.4; color: black; }
+        .permit-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+        .council-logo .seal { font-size: 48px; }
+        .council-name { text-align: center; flex: 1; }
+        .council-name h1 { font-size: 22px; font-weight: bold; margin: 0; }
+        .council-name h2 { font-size: 12px; font-weight: normal; }
+        .qr-placeholder img { width: 100px; height: 100px; border: 1px solid #ccc; }
+        .permit-ref { background: #f5f5f5; padding: 12px; margin: 15px 0; font-size: 14px; border-left: 3px solid #1e3c72; }
+        .permit-title { text-align: center; margin: 20px 0; }
+        .permit-title h3 { font-size: 20px; text-decoration: underline; }
+        .conditions-list { margin: 20px 0; padding-left: 20px; }
+        .conditions-list li { margin-bottom: 10px; text-align: justify; }
+        .signature-block { margin: 30px 0 20px; display: flex; justify-content: space-between; }
+        .signature-line { width: 45%; }
+        .warning-box { background: #fff3cd; padding: 12px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .print-area { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 30px; }
+        @media print { body { background: white; padding: 0; margin: 0; } .no-print, .tabs, .staff-info, .btn-generate, .logout-btn, .tab-btn { display: none; } .permit-document { padding: 20px; margin: 0; } .print-area { background: white; padding: 0; } }
     </style>
 </head>
 <body>
@@ -353,15 +83,16 @@
             <div id="staffLoginSection">
                 <div class="error" style="background:#fff3cd; color:#856404;">
                     ⚠️ <strong>Authorized Access Only</strong><br>
-                    This system is for Manyame RDC Planning Department staff only.
+                    Use the following demo credentials (or your Supabase credentials):<br>
+                    <strong>Email:</strong> demo@manyame.gov.zw &nbsp;|&nbsp; <strong>Password:</strong> demo123
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="staff@manyame.gov.zw">
+                    <input type="email" id="loginEmail" placeholder="staff@manyame.gov.zw" value="demo@manyame.gov.zw">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter your password">
+                    <input type="password" id="loginPassword" placeholder="Enter your password" value="demo123">
                 </div>
                 <button id="loginBtn">🔐 Login to System</button>
                 <div id="loginError"></div>
@@ -438,35 +169,58 @@
                 <button id="generateBtn" class="btn-generate">📄 Generate Development Permit</button>
 
                 <div id="issueResult"></div>
-                
                 <div id="permitDisplayArea" class="print-area hidden"></div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // ============================================
-        // FIXED VERSION - All functions defined before use
+        // COMPLETE WORKING SYSTEM - With Local Storage Fallback
         // ============================================
         
-        // Supabase Configuration
-        const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+        // Demo users for offline testing
+        const DEMO_USERS = [
+            { email: "demo@manyame.gov.zw", password: "demo123", name: "Demo Officer" },
+            { email: "staff@manyame.gov.zw", password: "staff123", name: "Planning Officer" }
+        ];
         
-        // Global variables
-        let _supabase = null;
-        let currentStaffUser = sessionStorage.getItem('staffEmail');
-        const today = new Date().toISOString().split('T')[0];
+        let currentUser = null;
+        let permits = [];
         
-        // Initialize Supabase
-        function initSupabase() {
-            if (typeof window.supabase !== 'undefined' && window.supabase.createClient && !_supabase) {
-                _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                console.log("Supabase initialized");
-                return true;
+        // Load permits from localStorage
+        function loadPermits() {
+            const stored = localStorage.getItem('manyame_permits');
+            if (stored) {
+                permits = JSON.parse(stored);
+            } else {
+                permits = [];
             }
-            return false;
+        }
+        
+        // Save permits to localStorage
+        function savePermits() {
+            localStorage.setItem('manyame_permits', JSON.stringify(permits));
+        }
+        
+        // Set default dates
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            const appDate = document.getElementById('applicationDate');
+            const issueDate = document.getElementById('issueDate');
+            const expiryDate = document.getElementById('expiryDate');
+            
+            if (appDate && !appDate.value) {
+                let d = new Date();
+                d.setFullYear(d.getFullYear() - 1);
+                appDate.value = d.toISOString().split('T')[0];
+            }
+            if (issueDate && !issueDate.value) issueDate.value = today;
+            if (expiryDate && !expiryDate.value) {
+                let d = new Date();
+                d.setFullYear(d.getFullYear() + 1);
+                expiryDate.value = d.toISOString().split('T')[0];
+            }
         }
         
         // Helper functions
@@ -496,24 +250,6 @@
             return `MANY/${random}/${year}`;
         }
         
-        function setDefaultDates() {
-            const appDate = document.getElementById('applicationDate');
-            const issueDate = document.getElementById('issueDate');
-            const expiryDate = document.getElementById('expiryDate');
-            
-            if (appDate && !appDate.value) {
-                let d = new Date();
-                d.setFullYear(d.getFullYear() - 1);
-                appDate.value = d.toISOString().split('T')[0];
-            }
-            if (issueDate && !issueDate.value) issueDate.value = today;
-            if (expiryDate && !expiryDate.value) {
-                let d = new Date();
-                d.setFullYear(d.getFullYear() + 1);
-                expiryDate.value = d.toISOString().split('T')[0];
-            }
-        }
-        
         // Tab switching
         function switchToVerifyTab() {
             document.getElementById('verifyTab').classList.remove('hidden');
@@ -530,15 +266,13 @@
             checkStaffLoginState();
         }
         
-        // Staff login state
         function checkStaffLoginState() {
-            const cachedName = sessionStorage.getItem('staffDisplayName');
-            const cachedEmail = sessionStorage.getItem('staffEmail');
-            if (cachedEmail && cachedName) {
-                currentStaffUser = cachedEmail;
+            const savedUser = sessionStorage.getItem('manyame_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
                 document.getElementById('staffLoginSection').classList.add('hidden');
                 document.getElementById('issuanceSection').classList.remove('hidden');
-                document.getElementById('staffName').innerHTML = cachedName;
+                document.getElementById('staffName').innerHTML = currentUser.name;
                 setDefaultDates();
             } else {
                 document.getElementById('staffLoginSection').classList.remove('hidden');
@@ -547,8 +281,8 @@
             }
         }
         
-        // Staff login function
-        async function doStaffLogin() {
+        // Staff login
+        function doStaffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
@@ -558,66 +292,37 @@
                 return;
             }
             
-            if (!initSupabase()) {
-                errorDiv.innerHTML = '<div class="error">❌ Database connection error. Please refresh the page.</div>';
-                return;
-            }
+            // Check demo users
+            const user = DEMO_USERS.find(u => u.email === email && u.password === password);
             
-            errorDiv.innerHTML = '<div class="loading">⏳ Authenticating...</div>';
-            
-            try {
-                const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-                
-                if (authError) throw authError;
-                
-                let displayName = email.split('@')[0];
-                
-                try {
-                    const { data: profileData } = await _supabase
-                        .from('profiles')
-                        .select('full_name')
-                        .eq('email', email)
-                        .maybeSingle();
-                    if (profileData && profileData.full_name) displayName = profileData.full_name;
-                } catch(e) {}
-                
-                currentStaffUser = email;
-                sessionStorage.setItem('staffEmail', email);
-                sessionStorage.setItem('staffDisplayName', displayName);
-                
+            if (user) {
+                currentUser = user;
+                sessionStorage.setItem('manyame_user', JSON.stringify(user));
                 errorDiv.innerHTML = '';
                 document.getElementById('staffLoginSection').classList.add('hidden');
                 document.getElementById('issuanceSection').classList.remove('hidden');
-                document.getElementById('staffName').innerHTML = displayName;
+                document.getElementById('staffName').innerHTML = user.name;
                 setDefaultDates();
-                
-            } catch (error) {
-                errorDiv.innerHTML = `<div class="error">❌ ${error.message || 'Invalid credentials'}</div>`;
+            } else {
+                errorDiv.innerHTML = '<div class="error">❌ Invalid credentials. Try demo@manyame.gov.zw / demo123</div>';
                 document.getElementById('loginPassword').value = '';
             }
         }
         
         // Staff logout
-        async function doStaffLogout() {
-            if (_supabase) {
-                try { await _supabase.auth.signOut(); } catch(e) {}
-            }
-            sessionStorage.removeItem('staffEmail');
-            sessionStorage.removeItem('staffDisplayName');
-            currentStaffUser = null;
+        function doStaffLogout() {
+            sessionStorage.removeItem('manyame_user');
+            currentUser = null;
             document.getElementById('staffLoginSection').classList.remove('hidden');
             document.getElementById('issuanceSection').classList.add('hidden');
             document.getElementById('permitDisplayArea').classList.add('hidden');
             document.getElementById('issueResult').innerHTML = '';
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginEmail').value = 'demo@manyame.gov.zw';
+            document.getElementById('loginPassword').value = 'demo123';
         }
         
         // Verify permit
-        async function doVerifyPermit() {
+        function doVerifyPermit() {
             const permitNo = document.getElementById('verifyPermitNo').value.trim();
             const resultDiv = document.getElementById('verifyResult');
             
@@ -626,46 +331,30 @@
                 return;
             }
             
-            if (!initSupabase()) {
-                resultDiv.innerHTML = '<div class="error">❌ Database connection error. Please refresh.</div>';
+            loadPermits();
+            const permit = permits.find(p => p.permit_number === permitNo);
+            
+            if (!permit) {
+                resultDiv.innerHTML = `<div class="error">❌ INVALID - Permit "${escapeHtml(permitNo)}" not found in official council records.</div>`;
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="loading">⏳ Verifying...</div>';
+            const isValid = permit.status === 'active' && new Date(permit.expiry_date) >= new Date();
             
-            try {
-                const { data, error } = await _supabase
-                    .from('development_permits')
-                    .select('*')
-                    .eq('permit_number', permitNo);
-                
-                if (error) throw error;
-                
-                if (!data || data.length === 0) {
-                    resultDiv.innerHTML = `<div class="error">❌ INVALID - Permit "${escapeHtml(permitNo)}" not found in official council records.</div>`;
-                    return;
-                }
-                
-                const permit = data[0];
-                const isValid = permit.status === 'active' && new Date(permit.expiry_date) >= new Date();
-                
-                if (isValid) {
-                    resultDiv.innerHTML = `
-                        <div class="success">
-                            <strong>✅ VERIFIED - VALID OFFICIAL DEVELOPMENT PERMIT</strong><br><br>
-                            <strong>Permit Number:</strong> ${escapeHtml(permit.permit_number)}<br>
-                            <strong>Property:</strong> ${escapeHtml(permit.property_location)}<br>
-                            <strong>Issued To:</strong> ${escapeHtml(permit.applicant_name)}${permit.company_name ? ' (' + escapeHtml(permit.company_name) + ')' : ''}<br>
-                            <strong>Issue Date:</strong> ${new Date(permit.issue_date).toLocaleDateString()}<br>
-                            <strong>Expiry Date:</strong> ${new Date(permit.expiry_date).toLocaleDateString()}<br>
-                            <strong>Status:</strong> ✅ Active Council Record
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `<div class="error">❌ INVALID - This permit has expired or been revoked.</div>`;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="error">❌ Verification error: ${error.message}</div>`;
+            if (isValid) {
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ VERIFIED - VALID OFFICIAL DEVELOPMENT PERMIT</strong><br><br>
+                        <strong>Permit Number:</strong> ${escapeHtml(permit.permit_number)}<br>
+                        <strong>Property:</strong> ${escapeHtml(permit.property_location)}<br>
+                        <strong>Issued To:</strong> ${escapeHtml(permit.applicant_name)}${permit.company_name ? ' (' + escapeHtml(permit.company_name) + ')' : ''}<br>
+                        <strong>Issue Date:</strong> ${new Date(permit.issue_date).toLocaleDateString()}<br>
+                        <strong>Expiry Date:</strong> ${new Date(permit.expiry_date).toLocaleDateString()}<br>
+                        <strong>Status:</strong> ✅ Active Council Record
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ INVALID - This permit has expired or been revoked.</div>`;
             }
         }
         
@@ -673,7 +362,6 @@
         function generatePermitHTML(data, qrUrl) {
             const issueDate = new Date(data.issue_date);
             const appDate = new Date(data.application_date);
-            const expiryDate = new Date(data.expiry_date);
             
             const day = issueDate.getDate();
             const month = issueDate.toLocaleString('en-GB', { month: 'long' });
@@ -682,6 +370,8 @@
             const appDay = appDate.getDate();
             const appMonth = appDate.toLocaleString('en-GB', { month: 'long' });
             const appYear = appDate.getFullYear();
+            
+            const expiryFormatted = new Date(data.expiry_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
             
             return `
             <div class="permit-document" id="permitForPrint">
@@ -779,7 +469,7 @@
                     <strong>WARNING</strong><br>
                     Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.<br><br>
                     <strong>EXPIRY OF PERMIT</strong><br>
-                    This permit expires, if unimplemented, on ${expiryDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
+                    This permit expires, if unimplemented, on ${expiryFormatted} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
                     <strong>EXTENSION OF TIME</strong><br>
                     PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.<br><br>
                     <strong>COPIES OF THE PERMIT</strong><br>
@@ -792,7 +482,7 @@
         }
         
         // Generate and save permit
-        async function doGeneratePermit() {
+        function doGeneratePermit() {
             const resultDiv = document.getElementById('issueResult');
             const displayArea = document.getElementById('permitDisplayArea');
             const generateBtn = document.getElementById('generateBtn');
@@ -820,13 +510,8 @@
                 return;
             }
             
-            if (!currentStaffUser) {
+            if (!currentUser) {
                 resultDiv.innerHTML = '<div class="error">❌ Please login again.</div>';
-                return;
-            }
-            
-            if (!initSupabase()) {
-                resultDiv.innerHTML = '<div class="error">❌ Database connection error. Please refresh.</div>';
                 return;
             }
             
@@ -859,22 +544,21 @@
                     expiry_date: expiryDate,
                     qr_code_url: qrApiUrl,
                     status: 'active',
-                    issued_by_email: currentStaffUser
+                    issued_by: currentUser.email,
+                    issued_at: new Date().toISOString()
                 };
                 
-                // Save to Supabase
-                const { error: insertError } = await _supabase
-                    .from('development_permits')
-                    .insert([permitData]);
-                
-                if (insertError) throw insertError;
+                // Save to localStorage
+                loadPermits();
+                permits.push(permitData);
+                savePermits();
                 
                 // Generate and display permit
                 const permitHTML = generatePermitHTML(permitData, qrApiUrl);
                 displayArea.innerHTML = permitHTML;
                 displayArea.classList.remove('hidden');
                 
-                resultDiv.innerHTML = `<div class="success">✅ Permit ${permitNumber} issued successfully! <br><br> <strong>To save as PDF:</strong> Click anywhere on the permit above, then press Ctrl+P (Windows) or Cmd+P (Mac) and choose "Save as PDF".</div>`;
+                resultDiv.innerHTML = `<div class="success">✅ Permit ${permitNumber} issued successfully! <br><br> <strong>To save as PDF:</strong> Press Ctrl+P (Windows) or Cmd+P (Mac) and choose "Save as PDF".</div>`;
                 
                 // Scroll to document
                 displayArea.scrollIntoView({ behavior: 'smooth' });
@@ -896,27 +580,20 @@
             }
         }
         
-        // Set up event listeners when page loads
+        // Set up event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            // Tab buttons
+            loadPermits();
+            
             document.getElementById('btnVerifyTab').addEventListener('click', switchToVerifyTab);
             document.getElementById('btnStaffTab').addEventListener('click', switchToStaffTab);
-            
-            // Login/Logout buttons
             document.getElementById('loginBtn').addEventListener('click', doStaffLogin);
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) logoutBtn.addEventListener('click', doStaffLogout);
-            
-            // Verify button
+            document.getElementById('logoutBtn').addEventListener('click', doStaffLogout);
             document.getElementById('verifyBtn').addEventListener('click', doVerifyPermit);
-            
-            // Generate button
             document.getElementById('generateBtn').addEventListener('click', doGeneratePermit);
             
-            // Set default dates
             setDefaultDates();
             
-            // Check if coming from QR code with verify param
+            // Check URL for verify param
             const urlParams = new URLSearchParams(window.location.search);
             const verifyParam = urlParams.get('verify');
             if (verifyParam) {
@@ -924,9 +601,6 @@
                 doVerifyPermit();
                 switchToVerifyTab();
             }
-            
-            // Initialize Supabase
-            initSupabase();
         });
     </script>
 </body>
