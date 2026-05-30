@@ -192,7 +192,9 @@
             background: #dc3545;
         }
         
-        /* Permit Document Styles */
+        /* ============================================ */
+        /* PERMIT DOCUMENT STYLES - EXACT MATCH TO WORD */
+        /* ============================================ */
         .permit-document {
             max-width: 100%;
             margin: 0 auto;
@@ -203,59 +205,87 @@
             color: black;
         }
         
+        /* Header with image left and QR right */
         .permit-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 20px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
         }
         
-        .council-logo .seal {
-            font-size: 48px;
-        }
-        
-        .council-name {
-            text-align: center;
+        .council-header-img {
             flex: 1;
+            margin-right: 20px;
         }
         
-        .council-name h1 {
-            font-size: 22px;
-            font-weight: bold;
-            margin: 0;
+        .council-header-img img {
+            width: 100%;
+            max-width: 752px;
+            height: auto;
         }
         
-        .council-name h2 {
-            font-size: 12px;
-            font-weight: normal;
+        .qr-container {
+            flex-shrink: 0;
+            text-align: right;
         }
         
-        .qr-placeholder img {
+        .qr-container img {
             width: 100px;
             height: 100px;
             border: 1px solid #ccc;
         }
         
+        /* Act header text (if not in image) */
+        .act-header {
+            text-align: center;
+            margin: 10px 0 20px;
+            font-weight: bold;
+        }
+        
+        .act-header p {
+            font-size: 14px;
+        }
+        
+        /* Reference box - matching Word document */
         .permit-ref {
             background: #f5f5f5;
-            padding: 12px;
+            padding: 12px 15px;
             margin: 15px 0;
             font-size: 14px;
             border-left: 3px solid #1e3c72;
+            font-family: 'Courier New', monospace;
         }
         
+        .permit-ref-line {
+            margin: 3px 0;
+        }
+        
+        /* Title section */
         .permit-title {
             text-align: center;
-            margin: 20px 0;
+            margin: 25px 0 15px;
         }
         
         .permit-title h3 {
             font-size: 20px;
             text-decoration: underline;
+            font-weight: bold;
+            margin-bottom: 5px;
         }
         
+        .permit-title h4 {
+            font-size: 16px;
+            font-weight: normal;
+            font-style: italic;
+        }
+        
+        /* Main text */
+        .permit-text {
+            text-align: justify;
+            margin: 15px 0;
+        }
+        
+        /* Conditions list */
         .conditions-list {
             margin: 20px 0;
             padding-left: 20px;
@@ -266,21 +296,68 @@
             text-align: justify;
         }
         
-        .signature-block {
+        /* Signature blocks - matching Word exactly */
+        .signatures-container {
             margin: 30px 0 20px;
-            display: flex;
-            justify-content: space-between;
         }
         
-        .signature-line {
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+        
+        .signature-col {
             width: 45%;
         }
         
+        .signature-line {
+            border-top: 1px solid black;
+            margin-top: 30px;
+            padding-top: 5px;
+        }
+        
+        .signature-name {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .signature-title {
+            font-size: 13px;
+            margin-top: 3px;
+        }
+        
+        /* Copies section */
+        .copies-section {
+            margin: 20px 0;
+            font-size: 13px;
+        }
+        
+        .copies-section u {
+            font-weight: bold;
+        }
+        
+        /* Warning boxes */
         .warning-box {
             background: #fff3cd;
-            padding: 12px;
+            padding: 15px;
             margin: 20px 0;
             border-left: 4px solid #ffc107;
+        }
+        
+        .warning-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .warning-text {
+            margin: 10px 0;
+        }
+        
+        /* Expiry section */
+        .expiry-section {
+            margin: 15px 0;
         }
         
         @media print {
@@ -297,6 +374,9 @@
             .print-area {
                 background: white;
                 padding: 0;
+            }
+            .container {
+                box-shadow: none;
             }
         }
     </style>
@@ -395,7 +475,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Supabase Configuration (SAME as index.html)
+        // Supabase Configuration
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -410,7 +490,6 @@
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
         const today = new Date().toISOString().split('T')[0];
         
-        // Check login
         function checkStaffLogin() {
             if (!currentStaffUser || !currentStaffName) {
                 document.getElementById('formSection').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
@@ -489,36 +568,49 @@
             
             return `
             <div class="permit-document" id="permitForPrint">
+                <!-- HEADER: Council Header Image on Left, QR Code on Right -->
                 <div class="permit-header">
-                    <div class="council-logo"><div class="seal">🏛️</div></div>
-                    <div class="council-name">
-                        <h1>MANYAME RURAL DISTRICT COUNCIL</h1>
-                        <h2>RURAL DISTRICT COUNCILS ACT, CHAPTER 29:13 - SECTION (3)</h2>
+                    <div class="council-header-img">
+                        <img src="council-header.png" alt="Manyame Rural District Council Header" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27752%27 height=%27178%27%3E%3Crect width=%27752%27 height=%27178%27 fill=%27%231e3c72%27/%3E%3Ctext x=%27376%27 y=%2790%27 text-anchor=%27middle%27 fill=%27white%27 font-size=%2720%27%3EMANYAME RURAL DISTRICT COUNCIL%3C/text%3E%3C/svg%3E'">
                     </div>
-                    <div class="qr-placeholder"><img src="${qrUrl}" alt="QR Code" width="100" height="100"></div>
+                    <div class="qr-container">
+                        <img src="${qrUrl}" alt="QR Code">
+                    </div>
                 </div>
                 
+                <!-- REFERENCE BOX -->
                 <div class="permit-ref">
-                    <strong>REFERENCE:</strong> ${escapeHtml(data.property_location)}<br>
-                    <strong>PERMIT NO:</strong> ${escapeHtml(data.permit_number)}<br>
-                    <strong>APPLICANT:</strong> ${escapeHtml(data.applicant_name)}${data.company_name ? ' (' + escapeHtml(data.company_name) + ')' : ''}
+                    <div class="permit-ref-line"><strong>REFERENCE:</strong> ${escapeHtml(data.property_location)}</div>
+                    <div class="permit-ref-line"><strong>PERMIT NO:</strong> ${escapeHtml(data.permit_number)}</div>
+                    <div class="permit-ref-line"><strong>APPLICANT:</strong> ${escapeHtml(data.applicant_name)}${data.company_name ? ' (' + escapeHtml(data.company_name) + ')' : ''}</div>
                 </div>
                 
+                <!-- TITLE -->
                 <div class="permit-title">
                     <h3>DEVELOPMENT PERMIT</h3>
                     <h4>CHANGE OF USE ON ${escapeHtml(data.property_location.toUpperCase())}: SEKE DISTRICT</h4>
                 </div>
                 
-                <p>The MANYAME Rural District Council (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${appDay} ${appMonth} ${appYear} and numbered ${escapeHtml(data.application_ref)} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name)}</strong> (hereinafter called "the applicant") for:-</p>
+                <!-- PERMIT GRANT TEXT -->
+                <div class="permit-text">
+                    <p>The MANYAME Rural District Council (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${appDay} ${appMonth} ${appYear} and numbered ${escapeHtml(data.application_ref)} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name)}</strong> (hereinafter called "the applicant") for:-</p>
+                </div>
                 
-                <p><strong>This Permit is granted subject to the conditions set hereunder Part I to III.</strong></p>
+                <div class="permit-text">
+                    <p><strong>This Permit is granted subject to the conditions set hereunder Part I to III.</strong></p>
+                </div>
                 
-                <p>In these conditions:<br>
-                The Owner means the person in whose favour any of the stands is subsequently transferred to by the Registrar of Deeds<br>
-                The Local Authority means MANYAME Rural District Council or its successors.</p>
+                <div class="permit-text">
+                    <p>In these conditions:<br>
+                    The Owner means the person in whose favour any of the stands is subsequently transferred to by the Registrar of Deeds<br>
+                    The Local Authority means MANYAME Rural District Council or its successors.</p>
+                </div>
                 
-                <p>This permit is issued subject to the following conditions:-</p>
+                <div class="permit-text">
+                    <p>This permit is issued subject to the following conditions:-</p>
+                </div>
                 
+                <!-- CONDITIONS 1-20 -->
                 <ol class="conditions-list">
                     <li>That council consent to the establishment of a business centre on portion of ${escapeHtml(data.property_location)} through <strong>${escapeHtml(data.council_resolution)}.</strong></li>
                     <li>The applicant to engage a private planning consultant to produce a layout plan and report for submission to the Department of Spatial Planning and Development for approval.</li>
@@ -545,51 +637,76 @@
                     <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
                 </ol>
                 
-                <p>Dated at <strong>${escapeHtml(data.issued_at_town)}</strong> this <strong>${day}<sup>${getOrdinal(day)}</sup></strong> day of <strong>${month}</strong> Year <strong>${year}</strong></p>
-                
-                <div class="signature-block">
-                    <div class="signature-line">
-                        <p>.............................................</p>
-                        <p><strong>${escapeHtml(data.applicant_rep)}</strong> ID NUMBER (${escapeHtml(data.applicant_id)})</p>
-                        <p><strong>For Applicant</strong></p>
+                <!-- SIGNATURE BLOCK - Matching Word format -->
+                <div class="signatures-container">
+                    <div class="signature-row">
+                        <div class="signature-col">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">${escapeHtml(data.applicant_rep)} ID NUMBER (${escapeHtml(data.applicant_id)})</div>
+                            <div class="signature-title"><strong>For Applicant</strong></div>
+                        </div>
+                        <div class="signature-col">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">${escapeHtml(data.applicant_witness)}</div>
+                            <div class="signature-title"><strong>Witness</strong></div>
+                        </div>
                     </div>
-                    <div class="signature-line">
-                        <p>.............................................</p>
-                        <p><strong>${escapeHtml(data.applicant_witness)}</strong></p>
-                        <p><strong>Witness</strong></p>
+                    
+                    <div class="signature-row">
+                        <div class="signature-col">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">${escapeHtml(data.council_rep)}</div>
+                            <div class="signature-title"><strong>For MANYAME RURAL DISTRICT COUNCIL</strong></div>
+                        </div>
+                        <div class="signature-col">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">${escapeHtml(data.council_witness)}</div>
+                            <div class="signature-title"><strong>Witness</strong></div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="signature-block">
-                    <div class="signature-line">
-                        <p>.............................................</p>
-                        <p><strong>${escapeHtml(data.council_rep)}</strong></p>
-                        <p><strong>For MANYAME RURAL DISTRICT COUNCIL</strong></p>
-                    </div>
-                    <div class="signature-line">
-                        <p>.............................................</p>
-                        <p><strong>${escapeHtml(data.council_witness)}</strong></p>
-                        <p><strong>Witness</strong></p>
-                    </div>
+                <!-- DATED LINE -->
+                <div class="permit-text">
+                    <p>Dated at <strong>${escapeHtml(data.issued_at_town)}</strong> this <strong>${day}<sup>${getOrdinal(day)}</sup></strong> day of <strong>${month}</strong> Year <strong>${year}</strong></p>
                 </div>
                 
-                <p><u>Copies To:</u><br>
-                Change of Use Permits File (1) File Copy (1)<br>
-                Department of Spatial Planning and development File Copy (10)<br>
-                <strong>CHIEF EXECUTIVE OFFICER -- MANYAME RURAL DISTRICT COUNCIL</strong></p>
+                <!-- COPIES TO SECTION -->
+                <div class="copies-section">
+                    <p><u>Copies To:</u></p>
+                    <p>Change of Use Permits File (1) File Copy (1)</p>
+                    <p>Department of Spatial Planning and development File Copy (10)</p>
+                    <p><strong>CHIEF EXECUTIVE OFFICER -- MANYAME RURAL DISTRICT COUNCIL</strong></p>
+                </div>
                 
+                <!-- WARNING AND LEGAL SECTIONS -->
                 <div class="warning-box">
-                    <strong>THE ATTENTION OF THE APPLICANT IS DRAWN TO THE FOLLOWING MATTERS</strong><br><br>
-                    <strong>WARNING</strong><br>
-                    Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.<br><br>
-                    <strong>EXPIRY OF PERMIT</strong><br>
-                    This permit expires, if unimplemented, on ${expiryFormatted} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
-                    <strong>EXTENSION OF TIME</strong><br>
-                    PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.<br><br>
-                    <strong>COPIES OF THE PERMIT</strong><br>
-                    Copies of this Permit may be obtained on payment of the prescribed fee from the issuing Local Planning Authority. In this regard the <strong>PERMIT</strong> number and file reference should be quoted on all correspondence.<br><br>
-                    <strong>AMENDMENT TO THE PERMIT</strong><br>
-                    Amendment to this Permit can only be made as provided by the law. Correspondence in this connection must quote the details referred to in paragraph 3 above. Any change required which is not of a minor nature cannot be effected by way of an amendment; application for a new permit would have to be made.
+                    <div class="warning-title">THE ATTENTION OF THE APPLICANT IS DRAWN TO THE FOLLOWING MATTERS</div>
+                    
+                    <div class="warning-text">
+                        <strong>WARNING</strong><br>
+                        Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.
+                    </div>
+                    
+                    <div class="warning-text">
+                        <strong>EXPIRY OF PERMIT</strong><br>
+                        This permit expires, if unimplemented, on ${expiryFormatted} unless the period of validity is extended by the Local Planning Authority in writing.
+                    </div>
+                    
+                    <div class="warning-text">
+                        <strong>EXTENSION OF TIME</strong><br>
+                        PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.
+                    </div>
+                    
+                    <div class="warning-text">
+                        <strong>COPIES OF THE PERMIT</strong><br>
+                        Copies of this Permit may be obtained on payment of the prescribed fee from the issuing Local Planning Authority. In this regard the <strong>PERMIT</strong> number and file reference should be quoted on all correspondence.
+                    </div>
+                    
+                    <div class="warning-text">
+                        <strong>AMENDMENT TO THE PERMIT</strong><br>
+                        Amendment to this Permit can only be made as provided by the law. Correspondence in this connection must quote the details referred to in paragraph 3 above. Any change required which is not of a minor nature cannot be effected by way of an amendment; application for a new permit would have to be made.
+                    </div>
                 </div>
             </div>
             `;
@@ -648,24 +765,25 @@
                     council_witness: councilWitness
                 };
                 
-                // Save to Supabase issued_documents table
-                const { error } = await supabaseClient
-                    .from('issued_documents')
-                    .insert([{
-                        document_type: 'development_permit',
-                        document_number: permitNumber,
-                        document_data: documentData,
-                        issued_to: applicantName,
-                        issued_by_email: currentStaffUser,
-                        issued_by_name: currentStaffName,
-                        issue_date: issueDate,
-                        expiry_date: expiryDate,
-                        status: 'active',
-                        qr_code_url: qrApiUrl,
-                        verification_url: verificationUrl
-                    }]);
-                
-                if (error) throw error;
+                if (supabaseClient) {
+                    const { error } = await supabaseClient
+                        .from('issued_documents')
+                        .insert([{
+                            document_type: 'development_permit',
+                            document_number: permitNumber,
+                            document_data: documentData,
+                            issued_to: applicantName,
+                            issued_by_email: currentStaffUser,
+                            issued_by_name: currentStaffName,
+                            issue_date: issueDate,
+                            expiry_date: expiryDate,
+                            status: 'active',
+                            qr_code_url: qrApiUrl,
+                            verification_url: verificationUrl
+                        }]);
+                    
+                    if (error) console.log('Supabase error:', error);
+                }
                 
                 const permitData = {
                     permit_number: permitNumber,
