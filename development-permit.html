@@ -38,22 +38,6 @@
             overflow: hidden;
         }
         
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 20px 25px;
-        }
-        
-        .header h1 {
-            font-size: 22px;
-        }
-        
-        .header h2 {
-            font-size: 13px;
-            font-weight: normal;
-            opacity: 0.9;
-        }
-        
         .content {
             padding: 30px;
         }
@@ -172,9 +156,9 @@
         }
         
         .print-area {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
+            background: white;
+            padding: 0;
+            border-radius: 0;
             margin-top: 30px;
         }
         
@@ -203,6 +187,8 @@
             font-family: 'Times New Roman', Georgia, serif;
             line-height: 1.4;
             color: black;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
         /* Header with image left and QR right */
@@ -210,7 +196,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .council-header-img {
@@ -235,15 +221,20 @@
             border: 1px solid #ccc;
         }
         
-        /* Act header text (if not in image) */
+        /* Act header - exactly like original document */
         .act-header {
             text-align: center;
-            margin: 10px 0 20px;
+            margin: 5px 0 15px;
             font-weight: bold;
         }
         
-        .act-header p {
+        .act-header .act-title {
             font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .act-header .act-chapter {
+            font-size: 13px;
         }
         
         /* Reference box - matching Word document */
@@ -355,28 +346,29 @@
             margin: 10px 0;
         }
         
-        /* Expiry section */
-        .expiry-section {
-            margin: 15px 0;
-        }
-        
         @media print {
             body {
                 background: white;
                 padding: 0;
+                margin: 0;
             }
             .no-print, .back-link, .staff-info, .form-grid, .generate-btn, .button-group, .logout-btn {
                 display: none;
             }
             .permit-document {
                 padding: 20px;
+                margin: 0;
+                border: none;
+                box-shadow: none;
             }
             .print-area {
                 background: white;
                 padding: 0;
+                margin: 0;
             }
             .container {
                 box-shadow: none;
+                border-radius: 0;
             }
         }
     </style>
@@ -387,10 +379,6 @@
     </div>
     
     <div class="container">
-        <div class="header">
-            <h1>Manyame Rural District Council</h1>
-            <h2>Planning Department - Issue Development Permit (Change of Use)</h2>
-        </div>
         <div class="content">
             <div id="staffInfoSection" class="staff-info no-print">
                 <span>Logged in as: <strong id="staffName"></strong></span>
@@ -405,15 +393,15 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Property Location *</label>
-                        <input type="text" id="propertyLocation" required placeholder="e.g., Subdivision 1 of Enslidale Farm">
+                        <input type="text" id="propertyLocation" required placeholder="e.g., Subdivision 1 of Enslidale Farm" value="Subdivision 1 of Enslidale Farm">
                     </div>
                     <div class="form-group">
                         <label>Applicant Name *</label>
-                        <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi">
+                        <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi" value="Tonderai Nyamandi">
                     </div>
                     <div class="form-group">
                         <label>Company Name</label>
-                        <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments">
+                        <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments" value="Youth Engage Investments">
                     </div>
                     <div class="form-group">
                         <label>Application Date *</label>
@@ -421,11 +409,11 @@
                     </div>
                     <div class="form-group">
                         <label>Application Reference No *</label>
-                        <input type="text" id="applicationRef" required placeholder="e.g., MANYA/05/2023">
+                        <input type="text" id="applicationRef" required placeholder="e.g., MANYA/05/2023" value="MANYA/05/2023">
                     </div>
                     <div class="form-group">
                         <label>Council Resolution No *</label>
-                        <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12">
+                        <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12" value="Full Council FC13 645.12">
                     </div>
                     <div class="form-group full-width">
                         <label>Commercial Uses *</label>
@@ -441,23 +429,23 @@
                     </div>
                     <div class="form-group">
                         <label>Applicant Representative *</label>
-                        <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA">
+                        <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA" value="CHARLES SIWELA">
                     </div>
                     <div class="form-group">
                         <label>Applicant ID Number *</label>
-                        <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32">
+                        <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32" value="59 069210 M 32">
                     </div>
                     <div class="form-group">
                         <label>Applicant Witness *</label>
-                        <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha">
+                        <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha" value="N.Tsaha">
                     </div>
                     <div class="form-group">
                         <label>Council Representative *</label>
-                        <input type="text" id="councilRep" required placeholder="e.g., F.Guta">
+                        <input type="text" id="councilRep" required placeholder="e.g., F.Guta" value="F.Guta">
                     </div>
                     <div class="form-group">
                         <label>Council Witness *</label>
-                        <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa">
+                        <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa" value="C.Murepa">
                     </div>
                     <div class="form-group">
                         <label>Expiry Date *</label>
@@ -552,7 +540,7 @@
             return `MANY/${random}/${year}`;
         }
         
-        function generatePermitHTML(data, qrUrl) {
+        function generatePermitHTML(data, qrUrl, verificationUrl) {
             const issueDate = new Date(data.issue_date);
             const appDate = new Date(data.application_date);
             
@@ -576,6 +564,13 @@
                     <div class="qr-container">
                         <img src="${qrUrl}" alt="QR Code">
                     </div>
+                </div>
+                
+                <!-- ACT HEADER - exactly like original document -->
+                <div class="act-header">
+                    <div class="act-title">RURAL DISTRICT COUNCILS ACT</div>
+                    <div class="act-chapter">CHAPTER 29:13</div>
+                    <div class="act-chapter">SECTION (3)</div>
                 </div>
                 
                 <!-- REFERENCE BOX -->
@@ -637,7 +632,7 @@
                     <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
                 </ol>
                 
-                <!-- SIGNATURE BLOCK - Matching Word format -->
+                <!-- SIGNATURE BLOCK -->
                 <div class="signatures-container">
                     <div class="signature-row">
                         <div class="signature-col">
@@ -804,7 +799,7 @@
                     expiry_date: expiryDate
                 };
                 
-                const permitHTML = generatePermitHTML(permitData, qrApiUrl);
+                const permitHTML = generatePermitHTML(permitData, qrApiUrl, verificationUrl);
                 displayArea.innerHTML = permitHTML;
                 displayArea.classList.remove('hidden');
                 
