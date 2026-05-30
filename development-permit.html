@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manyame RDC - Development Permit Issuance</title>
+    <title>Manyame RDC - Issue Development Permit</title>
     <style>
         * {
             margin: 0;
@@ -29,10 +29,6 @@
             font-weight: bold;
         }
         
-        .back-link a:hover {
-            text-decoration: underline;
-        }
-        
         .container {
             max-width: 1100px;
             margin: 0 auto;
@@ -50,7 +46,6 @@
         
         .header h1 {
             font-size: 22px;
-            margin-bottom: 5px;
         }
         
         .header h2 {
@@ -85,7 +80,7 @@
             font-size: 13px;
         }
         
-        input, select, textarea {
+        input, textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -119,10 +114,6 @@
         .generate-btn {
             background: #28a745;
             margin-top: 20px;
-        }
-        
-        .generate-btn:hover {
-            background: #218838;
         }
         
         .staff-info {
@@ -187,6 +178,20 @@
             margin-top: 30px;
         }
         
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .button-group button {
+            flex: 1;
+        }
+        
+        .pdf-btn {
+            background: #dc3545;
+        }
+        
         /* Permit Document Styles */
         .permit-document {
             max-width: 100%;
@@ -225,11 +230,6 @@
         .council-name h2 {
             font-size: 12px;
             font-weight: normal;
-            margin: 5px 0 0;
-        }
-        
-        .qr-placeholder {
-            text-align: right;
         }
         
         .qr-placeholder img {
@@ -254,12 +254,6 @@
         .permit-title h3 {
             font-size: 20px;
             text-decoration: underline;
-            font-weight: bold;
-        }
-        
-        .permit-title h4 {
-            font-size: 16px;
-            font-weight: normal;
         }
         
         .conditions-list {
@@ -282,10 +276,6 @@
             width: 45%;
         }
         
-        .signature-line p {
-            margin: 5px 0;
-        }
-        
         .warning-box {
             background: #fff3cd;
             padding: 12px;
@@ -293,69 +283,43 @@
             border-left: 4px solid #ffc107;
         }
         
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        
-        .button-group button {
-            flex: 1;
-        }
-        
-        .pdf-btn {
-            background: #dc3545;
-        }
-        
-        .pdf-btn:hover {
-            background: #c82333;
-        }
-        
         @media print {
             body {
                 background: white;
                 padding: 0;
-                margin: 0;
             }
             .no-print, .back-link, .staff-info, .form-grid, .generate-btn, .button-group, .logout-btn {
                 display: none;
             }
             .permit-document {
                 padding: 20px;
-                margin: 0;
             }
             .print-area {
                 background: white;
                 padding: 0;
-            }
-            .container {
-                box-shadow: none;
-                border-radius: 0;
             }
         }
     </style>
 </head>
 <body>
     <div class="back-link no-print">
-        <a href="#" id="backToHome">← Back to Document Management</a>
+        <a href="index.html">← Back to Document Management</a>
     </div>
     
     <div class="container">
         <div class="header">
             <h1>Manyame Rural District Council</h1>
-            <h2>Planning Department - Development Permit Issuance (Change of Use)</h2>
+            <h2>Planning Department - Issue Development Permit (Change of Use)</h2>
         </div>
         <div class="content">
             <div id="staffInfoSection" class="staff-info no-print">
                 <span>Logged in as: <strong id="staffName"></strong></span>
-                <button id="logoutBtn" class="logout-btn">Logout</button>
+                <button class="logout-btn" onclick="staffLogout()">Logout</button>
             </div>
-            
-            <div id="loginError" class="error hidden">Please login to access this page.</div>
             
             <div id="formSection">
                 <div class="warning no-print">
-                    ⚠️ <strong>Important:</strong> Please complete all required fields below to issue a Development Permit.
+                    ⚠️ <strong>Important:</strong> Please complete all required fields below.
                 </div>
                 
                 <div class="form-grid">
@@ -368,7 +332,7 @@
                         <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi">
                     </div>
                     <div class="form-group">
-                        <label>Company Name (if applicable)</label>
+                        <label>Company Name</label>
                         <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments">
                     </div>
                     <div class="form-group">
@@ -384,7 +348,7 @@
                         <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12">
                     </div>
                     <div class="form-group full-width">
-                        <label>Commercial Uses (separate with commas) *</label>
+                        <label>Commercial Uses *</label>
                         <textarea id="commercialUses" required>WAREHOUSE, PETROL FILLING STATION, FOOD COURT, TRUCK STOP, SHOPPING MALL</textarea>
                     </div>
                     <div class="form-group">
@@ -396,7 +360,7 @@
                         <input type="date" id="issueDate" required>
                     </div>
                     <div class="form-group">
-                        <label>Applicant Representative Name *</label>
+                        <label>Applicant Representative *</label>
                         <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA">
                     </div>
                     <div class="form-group">
@@ -404,15 +368,15 @@
                         <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32">
                     </div>
                     <div class="form-group">
-                        <label>Applicant Witness Name *</label>
+                        <label>Applicant Witness *</label>
                         <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha">
                     </div>
                     <div class="form-group">
-                        <label>Council Representative Name *</label>
+                        <label>Council Representative *</label>
                         <input type="text" id="councilRep" required placeholder="e.g., F.Guta">
                     </div>
                     <div class="form-group">
-                        <label>Council Witness Name *</label>
+                        <label>Council Witness *</label>
                         <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa">
                     </div>
                     <div class="form-group">
@@ -421,10 +385,9 @@
                     </div>
                 </div>
                 
-                <button id="generateBtn" class="generate-btn no-print">Generate Development Permit</button>
+                <button class="generate-btn" onclick="generatePermit()">Generate Development Permit</button>
                 
                 <div id="issueResult"></div>
-                
                 <div id="permitDisplayArea" class="print-area hidden"></div>
             </div>
         </div>
@@ -432,39 +395,41 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Supabase Configuration
+        // Supabase Configuration (SAME as index.html)
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
         let supabaseClient = null;
-        let currentStaffUser = null;
-        let currentStaffName = null;
-        
-        function initSupabase() {
-            if (typeof window.supabase !== 'undefined' && window.supabase.createClient && !supabaseClient) {
+        try {
+            if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                return true;
             }
-            return false;
-        }
+        } catch(e) {}
         
+        let currentStaffUser = sessionStorage.getItem('staffEmail');
+        let currentStaffName = sessionStorage.getItem('staffDisplayName');
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Check login
         function checkStaffLogin() {
-            currentStaffUser = sessionStorage.getItem('staffEmail');
-            currentStaffName = sessionStorage.getItem('staffDisplayName');
-            
             if (!currentStaffUser || !currentStaffName) {
-                document.getElementById('formSection').classList.add('hidden');
-                document.getElementById('loginError').classList.remove('hidden');
-                document.getElementById('loginError').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+                document.getElementById('formSection').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
                 return false;
             }
-            
             document.getElementById('staffName').innerHTML = currentStaffName;
             return true;
         }
         
+        function staffLogout() {
+            if(supabaseClient) {
+                supabaseClient.auth.signOut();
+            }
+            sessionStorage.removeItem('staffEmail');
+            sessionStorage.removeItem('staffDisplayName');
+            window.location.href = 'index.html';
+        }
+        
         function setDefaultDates() {
-            const today = new Date().toISOString().split('T')[0];
             const appDate = document.getElementById('applicationDate');
             const issueDate = document.getElementById('issueDate');
             const expiryDate = document.getElementById('expiryDate');
@@ -630,54 +595,10 @@
             `;
         }
         
-        async function saveToSupabase(permitData) {
-            if (!supabaseClient) {
-                initSupabase();
-            }
-            
-            if (!supabaseClient) {
-                // Fallback: save to localStorage only
-                let localPermits = JSON.parse(localStorage.getItem('manyame_permits') || '[]');
-                localPermits.push(permitData);
-                localStorage.setItem('manyame_permits', JSON.stringify(localPermits));
-                return true;
-            }
-            
-            try {
-                const record = {
-                    document_type: 'development_permit',
-                    document_number: permitData.permit_number,
-                    document_data: permitData,
-                    issued_to: permitData.applicant_name,
-                    issued_by_email: currentStaffUser,
-                    issued_by_name: currentStaffName,
-                    issue_date: permitData.issue_date,
-                    expiry_date: permitData.expiry_date,
-                    status: 'active',
-                    qr_code_url: permitData.qr_code_url,
-                    verification_url: permitData.verification_url
-                };
-                
-                const { error } = await supabaseClient
-                    .from('issued_documents')
-                    .insert([record]);
-                
-                if (error) throw error;
-                return true;
-            } catch (error) {
-                console.error('Supabase save error:', error);
-                // Fallback to localStorage
-                let localPermits = JSON.parse(localStorage.getItem('manyame_permits') || '[]');
-                localPermits.push(permitData);
-                localStorage.setItem('manyame_permits', JSON.stringify(localPermits));
-                return true;
-            }
-        }
-        
         async function generatePermit() {
             const resultDiv = document.getElementById('issueResult');
             const displayArea = document.getElementById('permitDisplayArea');
-            const generateBtn = document.getElementById('generateBtn');
+            const generateBtn = event.target;
             
             // Get form values
             const propertyLocation = document.getElementById('propertyLocation').value.trim();
@@ -696,7 +617,6 @@
             const councilWitness = document.getElementById('councilWitness').value.trim();
             const expiryDate = document.getElementById('expiryDate').value;
             
-            // Validation
             if (!propertyLocation || !applicantName || !applicationDate || !applicationRef || !councilResolution || !commercialUses || !issuedAtTown || !issueDate || !applicantRep || !applicantId || !applicantWitness || !councilRep || !councilWitness || !expiryDate) {
                 resultDiv.innerHTML = '<div class="error">Please fill in all required fields.</div>';
                 return;
@@ -712,11 +632,46 @@
                 const verificationUrl = `${window.location.origin}/index.html?id=${permitNumber}`;
                 const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verificationUrl)}`;
                 
+                const documentData = {
+                    property_location: propertyLocation,
+                    applicant_name: applicantName,
+                    company_name: companyName || null,
+                    application_date: applicationDate,
+                    application_ref: applicationRef,
+                    council_resolution: councilResolution,
+                    commercial_uses: commercialUses,
+                    issued_at_town: issuedAtTown,
+                    applicant_rep: applicantRep,
+                    applicant_id: applicantId,
+                    applicant_witness: applicantWitness,
+                    council_rep: councilRep,
+                    council_witness: councilWitness
+                };
+                
+                // Save to Supabase issued_documents table
+                const { error } = await supabaseClient
+                    .from('issued_documents')
+                    .insert([{
+                        document_type: 'development_permit',
+                        document_number: permitNumber,
+                        document_data: documentData,
+                        issued_to: applicantName,
+                        issued_by_email: currentStaffUser,
+                        issued_by_name: currentStaffName,
+                        issue_date: issueDate,
+                        expiry_date: expiryDate,
+                        status: 'active',
+                        qr_code_url: qrApiUrl,
+                        verification_url: verificationUrl
+                    }]);
+                
+                if (error) throw error;
+                
                 const permitData = {
                     permit_number: permitNumber,
                     property_location: propertyLocation,
                     applicant_name: applicantName,
-                    company_name: companyName || null,
+                    company_name: companyName,
                     application_date: applicationDate,
                     application_ref: applicationRef,
                     council_resolution: councilResolution,
@@ -728,35 +683,26 @@
                     applicant_witness: applicantWitness,
                     council_rep: councilRep,
                     council_witness: councilWitness,
-                    expiry_date: expiryDate,
-                    qr_code_url: qrApiUrl,
-                    verification_url: verificationUrl,
-                    document_type: 'development_permit',
-                    issued_by: currentStaffUser,
-                    issued_by_name: currentStaffName
+                    expiry_date: expiryDate
                 };
                 
-                // Save to Supabase
-                await saveToSupabase(permitData);
-                
-                // Generate and display permit
                 const permitHTML = generatePermitHTML(permitData, qrApiUrl);
                 displayArea.innerHTML = permitHTML;
                 displayArea.classList.remove('hidden');
                 
                 resultDiv.innerHTML = `
                     <div class="success">
-                        <strong>Permit ${permitNumber} issued successfully!</strong><br><br>
+                        <strong>✅ Permit ${permitNumber} issued successfully!</strong><br><br>
                         <strong>To save as PDF:</strong> Click the button below or press Ctrl+P (Windows) / Cmd+P (Mac).
                     </div>
                     <div class="button-group no-print">
-                        <button id="printPdfBtn" class="pdf-btn">Save as PDF / Print</button>
+                        <button class="pdf-btn" onclick="window.print()">Save as PDF / Print</button>
                     </div>
                 `;
                 
                 displayArea.scrollIntoView({ behavior: 'smooth' });
                 
-                // Clear form
+                // Clear form fields
                 document.getElementById('applicantName').value = '';
                 document.getElementById('companyName').value = '';
                 document.getElementById('applicationRef').value = '';
@@ -765,41 +711,20 @@
                 document.getElementById('applicantWitness').value = '';
                 setDefaultDates();
                 
-                // Add print listener
-                document.getElementById('printPdfBtn').addEventListener('click', function() {
-                    window.print();
-                });
-                
             } catch (error) {
-                resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
             } finally {
                 generateBtn.disabled = false;
                 generateBtn.textContent = 'Generate Development Permit';
             }
         }
         
-        function staffLogout() {
-            sessionStorage.removeItem('staffEmail');
-            sessionStorage.removeItem('staffDisplayName');
-            window.location.href = 'index.html';
-        }
-        
-        function goBackToHome() {
-            window.location.href = 'index.html';
-        }
-        
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            initSupabase();
-            
-            if (!checkStaffLogin()) return;
-            
+        // Initialize
+        if (!checkStaffLogin()) {
+            // Page will show error
+        } else {
             setDefaultDates();
-            
-            document.getElementById('generateBtn').addEventListener('click', generatePermit);
-            document.getElementById('logoutBtn').addEventListener('click', staffLogout);
-            document.getElementById('backToHome').addEventListener('click', goBackToHome);
-        });
+        }
     </script>
 </body>
 </html>
