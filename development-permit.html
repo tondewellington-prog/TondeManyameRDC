@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manyame RDC - Development Permit Issuance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .back-link {
+            max-width: 1100px;
+            margin: 0 auto 15px auto;
+        }
+        
+        .back-link a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 25px;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        
+        .header h2 {
+            font-size: 13px;
+            font-weight: normal;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 5px;
+        }
+        
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .generate-btn {
+            background: #28a745;
+            margin-top: 20px;
+        }
+        
+        .generate-btn:hover {
+            background: #218838;
+        }
+        
+        .staff-info {
+            background: #e9ecef;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logout-btn {
+            background: #6c757d;
+            width: auto;
+            padding: 6px 15px;
+            font-size: 13px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+            font-size: 14px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .print-area {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        
+        /* Permit Document Styles */
+        .permit-document {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            font-family: 'Times New Roman', Georgia, serif;
+            line-height: 1.4;
+            color: black;
+        }
+        
+        .permit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+        }
+        
+        .council-logo .seal {
+            font-size: 48px;
+        }
+        
+        .council-name {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .council-name h1 {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .council-name h2 {
+            font-size: 12px;
+            font-weight: normal;
+            margin: 5px 0 0;
+        }
+        
+        .qr-placeholder {
+            text-align: right;
+        }
+        
+        .qr-placeholder img {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ccc;
+        }
+        
+        .permit-ref {
+            background: #f5f5f5;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 14px;
+            border-left: 3px solid #1e3c72;
+        }
+        
+        .permit-title {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .permit-title h3 {
+            font-size: 20px;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        
+        .permit-title h4 {
+            font-size: 16px;
+            font-weight: normal;
+        }
+        
+        .conditions-list {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+        
+        .conditions-list li {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+        
+        .signature-block {
+            margin: 30px 0 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-line {
+            width: 45%;
+        }
+        
+        .signature-line p {
+            margin: 5px 0;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            padding: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .button-group button {
+            flex: 1;
+        }
+        
+        .pdf-btn {
+            background: #dc3545;
+        }
+        
+        .pdf-btn:hover {
+            background: #c82333;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .no-print, .back-link, .staff-info, .form-grid, .generate-btn, .button-group, .logout-btn {
+                display: none;
+            }
+            .permit-document {
+                padding: 20px;
+                margin: 0;
+            }
+            .print-area {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link no-print">
+        <a href="#" id="backToHome">← Back to Document Management</a>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Manyame Rural District Council</h1>
+            <h2>Planning Department - Development Permit Issuance (Change of Use)</h2>
+        </div>
+        <div class="content">
+            <div id="staffInfoSection" class="staff-info no-print">
+                <span>Logged in as: <strong id="staffName"></strong></span>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
+            
+            <div id="loginError" class="error hidden">Please login to access this page.</div>
+            
+            <div id="formSection">
+                <div class="warning no-print">
+                    ⚠️ <strong>Important:</strong> Please complete all required fields below to issue a Development Permit.
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Property Location *</label>
+                        <input type="text" id="propertyLocation" required placeholder="e.g., Subdivision 1 of Enslidale Farm">
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant Name *</label>
+                        <input type="text" id="applicantName" required placeholder="e.g., Tonderai Nyamandi">
+                    </div>
+                    <div class="form-group">
+                        <label>Company Name (if applicable)</label>
+                        <input type="text" id="companyName" placeholder="e.g., Youth Engage Investments">
+                    </div>
+                    <div class="form-group">
+                        <label>Application Date *</label>
+                        <input type="date" id="applicationDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Application Reference No *</label>
+                        <input type="text" id="applicationRef" required placeholder="e.g., MANYA/05/2023">
+                    </div>
+                    <div class="form-group">
+                        <label>Council Resolution No *</label>
+                        <input type="text" id="councilResolution" required placeholder="e.g., Full Council FC13 645.12">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Commercial Uses (separate with commas) *</label>
+                        <textarea id="commercialUses" required>WAREHOUSE, PETROL FILLING STATION, FOOD COURT, TRUCK STOP, SHOPPING MALL</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Issued At (Town) *</label>
+                        <input type="text" id="issuedAtTown" required value="BEATRICE">
+                    </div>
+                    <div class="form-group">
+                        <label>Issue Date *</label>
+                        <input type="date" id="issueDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant Representative Name *</label>
+                        <input type="text" id="applicantRep" required placeholder="e.g., CHARLES SIWELA">
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant ID Number *</label>
+                        <input type="text" id="applicantId" required placeholder="e.g., 59 069210 M 32">
+                    </div>
+                    <div class="form-group">
+                        <label>Applicant Witness Name *</label>
+                        <input type="text" id="applicantWitness" required placeholder="e.g., N.Tsaha">
+                    </div>
+                    <div class="form-group">
+                        <label>Council Representative Name *</label>
+                        <input type="text" id="councilRep" required placeholder="e.g., F.Guta">
+                    </div>
+                    <div class="form-group">
+                        <label>Council Witness Name *</label>
+                        <input type="text" id="councilWitness" required placeholder="e.g., C.Murepa">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date *</label>
+                        <input type="date" id="expiryDate" required>
+                    </div>
+                </div>
+                
+                <button id="generateBtn" class="generate-btn no-print">Generate Development Permit</button>
+                
+                <div id="issueResult"></div>
+                
+                <div id="permitDisplayArea" class="print-area hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+        
+        let supabaseClient = null;
+        let currentStaffUser = null;
+        let currentStaffName = null;
+        
+        function initSupabase() {
+            if (typeof window.supabase !== 'undefined' && window.supabase.createClient && !supabaseClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return true;
+            }
+            return false;
+        }
+        
+        function checkStaffLogin() {
+            currentStaffUser = sessionStorage.getItem('staffEmail');
+            currentStaffName = sessionStorage.getItem('staffDisplayName');
+            
+            if (!currentStaffUser || !currentStaffName) {
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('loginError').classList.remove('hidden');
+                document.getElementById('loginError').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+                return false;
+            }
+            
+            document.getElementById('staffName').innerHTML = currentStaffName;
+            return true;
+        }
+        
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            const appDate = document.getElementById('applicationDate');
+            const issueDate = document.getElementById('issueDate');
+            const expiryDate = document.getElementById('expiryDate');
+            
+            if (appDate && !appDate.value) {
+                let d = new Date();
+                d.setFullYear(d.getFullYear() - 1);
+                appDate.value = d.toISOString().split('T')[0];
+            }
+            if (issueDate && !issueDate.value) issueDate.value = today;
+            if (expiryDate && !expiryDate.value) {
+                let d = new Date();
+                d.setFullYear(d.getFullYear() + 1);
+                expiryDate.value = d.toISOString().split('T')[0];
+            }
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        function getOrdinal(n) {
+            if (n > 3 && n < 21) return 'th';
+            switch (n % 10) {
+                case 1: return 'st';
+                case 2: return 'nd';
+                case 3: return 'rd';
+                default: return 'th';
+            }
+        }
+        
+        function generatePermitNumber() {
+            const year = new Date().getFullYear();
+            const random = Math.floor(Math.random() * 900) + 100;
+            return `MANY/${random}/${year}`;
+        }
+        
+        function generatePermitHTML(data, qrUrl) {
+            const issueDate = new Date(data.issue_date);
+            const appDate = new Date(data.application_date);
+            
+            const day = issueDate.getDate();
+            const month = issueDate.toLocaleString('en-GB', { month: 'long' });
+            const year = issueDate.getFullYear();
+            
+            const appDay = appDate.getDate();
+            const appMonth = appDate.toLocaleString('en-GB', { month: 'long' });
+            const appYear = appDate.getFullYear();
+            
+            const expiryFormatted = new Date(data.expiry_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+            return `
+            <div class="permit-document" id="permitForPrint">
+                <div class="permit-header">
+                    <div class="council-logo"><div class="seal">🏛️</div></div>
+                    <div class="council-name">
+                        <h1>MANYAME RURAL DISTRICT COUNCIL</h1>
+                        <h2>RURAL DISTRICT COUNCILS ACT, CHAPTER 29:13 - SECTION (3)</h2>
+                    </div>
+                    <div class="qr-placeholder"><img src="${qrUrl}" alt="QR Code" width="100" height="100"></div>
+                </div>
+                
+                <div class="permit-ref">
+                    <strong>REFERENCE:</strong> ${escapeHtml(data.property_location)}<br>
+                    <strong>PERMIT NO:</strong> ${escapeHtml(data.permit_number)}<br>
+                    <strong>APPLICANT:</strong> ${escapeHtml(data.applicant_name)}${data.company_name ? ' (' + escapeHtml(data.company_name) + ')' : ''}
+                </div>
+                
+                <div class="permit-title">
+                    <h3>DEVELOPMENT PERMIT</h3>
+                    <h4>CHANGE OF USE ON ${escapeHtml(data.property_location.toUpperCase())}: SEKE DISTRICT</h4>
+                </div>
+                
+                <p>The MANYAME Rural District Council (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${appDay} ${appMonth} ${appYear} and numbered ${escapeHtml(data.application_ref)} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name)}</strong> (hereinafter called "the applicant") for:-</p>
+                
+                <p><strong>This Permit is granted subject to the conditions set hereunder Part I to III.</strong></p>
+                
+                <p>In these conditions:<br>
+                The Owner means the person in whose favour any of the stands is subsequently transferred to by the Registrar of Deeds<br>
+                The Local Authority means MANYAME Rural District Council or its successors.</p>
+                
+                <p>This permit is issued subject to the following conditions:-</p>
+                
+                <ol class="conditions-list">
+                    <li>That council consent to the establishment of a business centre on portion of ${escapeHtml(data.property_location)} through <strong>${escapeHtml(data.council_resolution)}.</strong></li>
+                    <li>The applicant to engage a private planning consultant to produce a layout plan and report for submission to the Department of Spatial Planning and Development for approval.</li>
+                    <li>No development shall take place unless in accordance with approved layout plan and report to be submitted by the applicant to the Department of Spatial Planning.</li>
+                    <li>The applicant undertakes to commence the erection of buildings and other structures according to council by laws and any other regulations.</li>
+                    <li>During the period of the permit, all rates and taxes and other charges as would be payable by the registered owner of the stand, will be paid to the Local authority, and they have the right to ask, demand, sue for and recover all such rates and taxes.</li>
+                    <li>The applicant shall meet the full cost of servicing the land in terms of water, sewerage, storm water drains and roads.</li>
+                    <li>The applicant must obtain relevant authorization from different government departments and other relevant agencies. The owner must apply for relevant licences from the local authority and other relevant agencies before operating.</li>
+                    <li>The applicant shall not occupy, or cause, or suffer or permit any person or persons to occupy any stand hereby approved until the buildings have been completed to the satisfaction of the Local authority.</li>
+                    <li>Representatives of the Local authority shall be entitled to enter on the stand at all reasonable times during the daytime, to inspect the state and condition thereof and of the building that have been or are being erected thereon.</li>
+                    <li>The portion of the stand <strong>shall be used for COMMERCIAL PURPOSES THAT IS THE ESTABLISHMENT OF ${escapeHtml(data.commercial_uses).toUpperCase()}</strong> and the only buildings which may be erected or used thereon shall consists of not more than building designed for uses as detailed in the application and a guard room.</li>
+                    <li>The site coverage, inclusive of outbuildings shall not be less than 30% of the area of the stand.</li>
+                    <li>The stand shall not be occupied until:-<br>
+                        a) Approved buildings have been erected and completed thereon.<br>
+                        b) A reticulated water supply has been connected thereto: and<br>
+                        c) A sanitary system to the approval of the Manyame Rural District Council has been installed thereon.</li>
+                    <li>No building other than boundary walls or fences shall be erected within 50 meters of the state road servitude or within 9 meters of any other boundary of the stand.</li>
+                    <li>No culvert or other means of access to the stand shall be constructed except with the consent of and to a specification approved by the Manyame Rural District Council and the Provincial Roads Engineer.</li>
+                    <li>The developer must consult the Provincial engineer before constructing access road to the stand.</li>
+                    <li>Servitude over the stand for all water supply, sewerage and public utility purposes shall be granted by the owner as and when required.</li>
+                    <li>The applicant must attend to any issues that may be raised by council from time to time during site inspections.</li>
+                    <li>The bricks shall meet with the standard Association of Zimbabwe requirements.</li>
+                    <li>That all Manyame Rural District Council By Laws relating to building be adhered to.</li>
+                    <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
+                </ol>
+                
+                <p>Dated at <strong>${escapeHtml(data.issued_at_town)}</strong> this <strong>${day}<sup>${getOrdinal(day)}</sup></strong> day of <strong>${month}</strong> Year <strong>${year}</strong></p>
+                
+                <div class="signature-block">
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.applicant_rep)}</strong> ID NUMBER (${escapeHtml(data.applicant_id)})</p>
+                        <p><strong>For Applicant</strong></p>
+                    </div>
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.applicant_witness)}</strong></p>
+                        <p><strong>Witness</strong></p>
+                    </div>
+                </div>
+                
+                <div class="signature-block">
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.council_rep)}</strong></p>
+                        <p><strong>For MANYAME RURAL DISTRICT COUNCIL</strong></p>
+                    </div>
+                    <div class="signature-line">
+                        <p>.............................................</p>
+                        <p><strong>${escapeHtml(data.council_witness)}</strong></p>
+                        <p><strong>Witness</strong></p>
+                    </div>
+                </div>
+                
+                <p><u>Copies To:</u><br>
+                Change of Use Permits File (1) File Copy (1)<br>
+                Department of Spatial Planning and development File Copy (10)<br>
+                <strong>CHIEF EXECUTIVE OFFICER -- MANYAME RURAL DISTRICT COUNCIL</strong></p>
+                
+                <div class="warning-box">
+                    <strong>THE ATTENTION OF THE APPLICANT IS DRAWN TO THE FOLLOWING MATTERS</strong><br><br>
+                    <strong>WARNING</strong><br>
+                    Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.<br><br>
+                    <strong>EXPIRY OF PERMIT</strong><br>
+                    This permit expires, if unimplemented, on ${expiryFormatted} unless the period of validity is extended by the Local Planning Authority in writing.<br><br>
+                    <strong>EXTENSION OF TIME</strong><br>
+                    PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.<br><br>
+                    <strong>COPIES OF THE PERMIT</strong><br>
+                    Copies of this Permit may be obtained on payment of the prescribed fee from the issuing Local Planning Authority. In this regard the <strong>PERMIT</strong> number and file reference should be quoted on all correspondence.<br><br>
+                    <strong>AMENDMENT TO THE PERMIT</strong><br>
+                    Amendment to this Permit can only be made as provided by the law. Correspondence in this connection must quote the details referred to in paragraph 3 above. Any change required which is not of a minor nature cannot be effected by way of an amendment; application for a new permit would have to be made.
+                </div>
+            </div>
+            `;
+        }
+        
+        async function saveToSupabase(permitData) {
+            if (!supabaseClient) {
+                initSupabase();
+            }
+            
+            if (!supabaseClient) {
+                // Fallback: save to localStorage only
+                let localPermits = JSON.parse(localStorage.getItem('manyame_permits') || '[]');
+                localPermits.push(permitData);
+                localStorage.setItem('manyame_permits', JSON.stringify(localPermits));
+                return true;
+            }
+            
+            try {
+                const record = {
+                    document_type: 'development_permit',
+                    document_number: permitData.permit_number,
+                    document_data: permitData,
+                    issued_to: permitData.applicant_name,
+                    issued_by_email: currentStaffUser,
+                    issued_by_name: currentStaffName,
+                    issue_date: permitData.issue_date,
+                    expiry_date: permitData.expiry_date,
+                    status: 'active',
+                    qr_code_url: permitData.qr_code_url,
+                    verification_url: permitData.verification_url
+                };
+                
+                const { error } = await supabaseClient
+                    .from('issued_documents')
+                    .insert([record]);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Supabase save error:', error);
+                // Fallback to localStorage
+                let localPermits = JSON.parse(localStorage.getItem('manyame_permits') || '[]');
+                localPermits.push(permitData);
+                localStorage.setItem('manyame_permits', JSON.stringify(localPermits));
+                return true;
+            }
+        }
+        
+        async function generatePermit() {
+            const resultDiv = document.getElementById('issueResult');
+            const displayArea = document.getElementById('permitDisplayArea');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            // Get form values
+            const propertyLocation = document.getElementById('propertyLocation').value.trim();
+            const applicantName = document.getElementById('applicantName').value.trim();
+            const companyName = document.getElementById('companyName').value.trim();
+            const applicationDate = document.getElementById('applicationDate').value;
+            const applicationRef = document.getElementById('applicationRef').value.trim();
+            const councilResolution = document.getElementById('councilResolution').value.trim();
+            const commercialUses = document.getElementById('commercialUses').value.trim();
+            const issuedAtTown = document.getElementById('issuedAtTown').value.trim();
+            const issueDate = document.getElementById('issueDate').value;
+            const applicantRep = document.getElementById('applicantRep').value.trim();
+            const applicantId = document.getElementById('applicantId').value.trim();
+            const applicantWitness = document.getElementById('applicantWitness').value.trim();
+            const councilRep = document.getElementById('councilRep').value.trim();
+            const councilWitness = document.getElementById('councilWitness').value.trim();
+            const expiryDate = document.getElementById('expiryDate').value;
+            
+            // Validation
+            if (!propertyLocation || !applicantName || !applicationDate || !applicationRef || !councilResolution || !commercialUses || !issuedAtTown || !issueDate || !applicantRep || !applicantId || !applicantWitness || !councilRep || !councilWitness || !expiryDate) {
+                resultDiv.innerHTML = '<div class="error">Please fill in all required fields.</div>';
+                return;
+            }
+            
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Processing...';
+            resultDiv.innerHTML = '<div class="loading">Generating permit document...</div>';
+            displayArea.classList.add('hidden');
+            
+            try {
+                const permitNumber = generatePermitNumber();
+                const verificationUrl = `${window.location.origin}/index.html?id=${permitNumber}`;
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verificationUrl)}`;
+                
+                const permitData = {
+                    permit_number: permitNumber,
+                    property_location: propertyLocation,
+                    applicant_name: applicantName,
+                    company_name: companyName || null,
+                    application_date: applicationDate,
+                    application_ref: applicationRef,
+                    council_resolution: councilResolution,
+                    commercial_uses: commercialUses,
+                    issued_at_town: issuedAtTown,
+                    issue_date: issueDate,
+                    applicant_rep: applicantRep,
+                    applicant_id: applicantId,
+                    applicant_witness: applicantWitness,
+                    council_rep: councilRep,
+                    council_witness: councilWitness,
+                    expiry_date: expiryDate,
+                    qr_code_url: qrApiUrl,
+                    verification_url: verificationUrl,
+                    document_type: 'development_permit',
+                    issued_by: currentStaffUser,
+                    issued_by_name: currentStaffName
+                };
+                
+                // Save to Supabase
+                await saveToSupabase(permitData);
+                
+                // Generate and display permit
+                const permitHTML = generatePermitHTML(permitData, qrApiUrl);
+                displayArea.innerHTML = permitHTML;
+                displayArea.classList.remove('hidden');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>Permit ${permitNumber} issued successfully!</strong><br><br>
+                        <strong>To save as PDF:</strong> Click the button below or press Ctrl+P (Windows) / Cmd+P (Mac).
+                    </div>
+                    <div class="button-group no-print">
+                        <button id="printPdfBtn" class="pdf-btn">Save as PDF / Print</button>
+                    </div>
+                `;
+                
+                displayArea.scrollIntoView({ behavior: 'smooth' });
+                
+                // Clear form
+                document.getElementById('applicantName').value = '';
+                document.getElementById('companyName').value = '';
+                document.getElementById('applicationRef').value = '';
+                document.getElementById('applicantRep').value = '';
+                document.getElementById('applicantId').value = '';
+                document.getElementById('applicantWitness').value = '';
+                setDefaultDates();
+                
+                // Add print listener
+                document.getElementById('printPdfBtn').addEventListener('click', function() {
+                    window.print();
+                });
+                
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Development Permit';
+            }
+        }
+        
+        function staffLogout() {
+            sessionStorage.removeItem('staffEmail');
+            sessionStorage.removeItem('staffDisplayName');
+            window.location.href = 'index.html';
+        }
+        
+        function goBackToHome() {
+            window.location.href = 'index.html';
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            initSupabase();
+            
+            if (!checkStaffLogin()) return;
+            
+            setDefaultDates();
+            
+            document.getElementById('generateBtn').addEventListener('click', generatePermit);
+            document.getElementById('logoutBtn').addEventListener('click', staffLogout);
+            document.getElementById('backToHome').addEventListener('click', goBackToHome);
+        });
+    </script>
+</body>
+</html>
