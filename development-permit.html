@@ -252,7 +252,7 @@
                     }
                 }
                 
-                // Call the Edge Function - using the service role key
+                // Call the Edge Function - NO AUTH HEADER needed
                 var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
