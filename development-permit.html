@@ -30,7 +30,7 @@
 </head>
 <body>
     <div class="back-link">
-        <a href="index.html">← Back to Document Management</a>
+        <a href="index.html">&#8592; Back to Document Management</a>
     </div>
     
     <div class="container">
@@ -42,7 +42,7 @@
             
             <div id="formSection">
                 <div class="warning">
-                    ⚠️ <strong>Important:</strong> Please complete all required fields below.
+                    &#9888; <strong>Important:</strong> Please complete all required fields below.
                 </div>
                 
                 <div class="form-grid">
@@ -108,7 +108,7 @@
                     </div>
                 </div>
                 
-                <button class="generate-btn" onclick="generateAndDownload()">Generate & Download Permit</button>
+                <button class="generate-btn" onclick="generateAndDownload(event)">Generate & Download Permit</button>
                 
                 <div id="issueResult"></div>
             </div>
@@ -172,7 +172,7 @@
             return 'MANY/' + random + '/' + year;
         }
         
-        async function generateAndDownload() {
+        async function generateAndDownload(event) {
             var resultDiv = document.getElementById('issueResult');
             var generateBtn = event.target;
             
@@ -252,7 +252,7 @@
                     }
                 }
                 
-                // Call the Edge Function - NO AUTH HEADER needed
+                // Call the Edge Function - outputs binary PDF format directly
                 var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
@@ -270,18 +270,18 @@
                     throw new Error('PDF generation failed: ' + errorText);
                 }
                 
-                // Download the file
+                // Read response directly as a blob payload
                 var blob = await response.blob();
                 var url = URL.createObjectURL(blob);
                 var a = document.createElement('a');
                 a.href = url;
-                a.download = 'Development_Permit_' + permitNumber + '.html';
+                a.download = 'Development_Permit_' + permitNumber + '.pdf';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 
-                resultDiv.innerHTML = '<div class="success"><strong>✅ Permit ' + permitNumber + ' issued successfully!</strong><br><br>The document has been downloaded. Open the HTML file and press Ctrl+P to save as PDF.</div>';
+                resultDiv.innerHTML = '<div class="success"><strong>&#9989; Permit ' + permitNumber + ' issued successfully!</strong><br><br>The official PDF document has been compiled and downloaded.</div>';
                 
                 // Clear form fields
                 document.getElementById('applicantName').value = '';
