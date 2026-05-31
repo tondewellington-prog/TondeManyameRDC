@@ -346,29 +346,64 @@
             margin: 10px 0;
         }
         
+        /* ============================================ */
+        /* PRINT STYLES - ONLY THE PERMIT SHOWS */
+        /* ============================================ */
         @media print {
+            /* Hide everything except the permit document */
             body {
                 background: white;
                 padding: 0;
                 margin: 0;
             }
-            .no-print, .back-link, .staff-info, .form-grid, .generate-btn, .button-group, .logout-btn {
-                display: none;
+            
+            /* Hide all non-permit elements */
+            .no-print, 
+            .back-link, 
+            .staff-info, 
+            .form-grid, 
+            .generate-btn, 
+            .button-group, 
+            .logout-btn,
+            .warning,
+            .success,
+            .error,
+            .loading,
+            .container,
+            .content,
+            #formSection,
+            #issueResult,
+            .print-area > .button-group,
+            .pdf-btn {
+                display: none !important;
             }
+            
+            /* Show only the permit document */
+            .print-area {
+                display: block !important;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            
             .permit-document {
+                display: block !important;
                 padding: 20px;
                 margin: 0;
                 border: none;
                 box-shadow: none;
             }
-            .print-area {
-                background: white;
-                padding: 0;
-                margin: 0;
+            
+            /* Ensure QR code prints properly */
+            .qr-container img {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
             }
-            .container {
-                box-shadow: none;
-                border-radius: 0;
+            
+            /* Ensure header image prints */
+            .council-header-img img {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
             }
         }
     </style>
@@ -707,6 +742,10 @@
             `;
         }
         
+        function printPermitOnly() {
+            window.print();
+        }
+        
         async function generatePermit() {
             const resultDiv = document.getElementById('issueResult');
             const displayArea = document.getElementById('permitDisplayArea');
@@ -804,7 +843,7 @@
                 displayArea.classList.remove('hidden');
                 
                 resultDiv.innerHTML = `
-                    <div class="success">
+                    <div class="success no-print">
                         <strong>✅ Permit ${permitNumber} issued successfully!</strong><br><br>
                         <strong>To save as PDF:</strong> Click the button below or press Ctrl+P (Windows) / Cmd+P (Mac).
                     </div>
