@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manyame RDC - Issue Development Permit</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; min-height: 100vh; padding: 20px; }
@@ -44,7 +42,7 @@
             
             <div id="formSection">
                 <div class="warning">
-                    &#9888; <strong>Important:</strong> Please complete all required fields below.
+                    &#9888; <strong>Important:</strong> Please complete all required fields below to issue the permanent permit document.
                 </div>
                 
                 <div class="form-grid">
@@ -132,7 +130,7 @@
                 document.getElementById('formSection').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
                 return false;
             }
-            document.getElementById('staffName').innerHTML = currentStaffName;
+            document.getElementById('staffName').textContent = currentStaffName;
             return true;
         }
         
@@ -170,7 +168,7 @@
         function generatePermitNumber() {
             var year = new Date().getFullYear();
             var random = Math.floor(Math.random() * 900) + 100;
-            return 'MANY/' + random + '/' + year;
+            return 'MANY_' + random + '/' + year;
         }
         
         async function generateAndDownload(event) {
@@ -199,8 +197,8 @@
             }
             
             generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating...';
-            resultDiv.innerHTML = '<div class="loading">Fetching data and parsing layout structure...</div>';
+            generateBtn.textContent = 'Generating PDF...';
+            resultDiv.innerHTML = '<div class="loading">Processing data pipeline & compiling server-side PDF layers...</div>';
             
             try {
                 initSupabase();
@@ -247,11 +245,11 @@
                                 verification_url: verificationUrl
                             }]);
                     } catch(dbError) {
-                        console.log('Database verification bypass note:', dbError);
+                        console.warn('Database log hook note:', dbError);
                     }
                 }
                 
-                // Using route name without 'pdf' or 'generate' filters to evade AdBlockers
+                // Using route endpoint named specifically to safely evade aggressive client AdBlocker extension rules
                 var functionUrl = SUPABASE_URL + '/functions/v1/permit-service';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
@@ -263,44 +261,24 @@
                 });
                 
                 if (!response.ok) {
-                    var errorText = await response.text();
-                    throw new Error('Template loading mismatch: ' + errorText);
+                    var errorJson = await response.json();
+                    throw new Error(errorJson.error || 'Server processing error occurred.');
                 }
                 
-                // Retrieve the raw HTML response string container template
-                var rawHtmlPayload = await response.text();
+                // Read response stream as a clean binary file blob
+                var pdfBlob = await response.blob();
+                var url = window.URL.createObjectURL(pdfBlob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'Development_Permit_' + permitNumber + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
                 
-                // Mount temporary sandbox DOM branch structure
-                var offscreenContainer = document.createElement('div');
-                offscreenContainer.style.position = 'absolute';
-                offscreenContainer.style.left = '-9999px';
-                offscreenContainer.style.width = '794px'; // Core A4 width representation
-                offscreenContainer.innerHTML = rawHtmlPayload;
-                document.body.appendChild(offscreenContainer);
+                resultDiv.innerHTML = '<div class="success"><strong>&#9989; Permit ' + permitNumber + ' issued successfully!</strong><br><br>The official signed document has been downloaded directly to your computer.</div>';
                 
-                // Initialize the native browser-side jsPDF layout vector engine
-                var nativeDoc = new window.jspdf.jsPDF({
-                    orientation: 'p',
-                    unit: 'mm',
-                    format: 'a4'
-                });
-                
-                await nativeDoc.html(offscreenContainer, {
-                    margin: [15, 15, 15, 15],
-                    autoPaging: 'text',
-                    x: 0,
-                    y: 0,
-                    width: 180,
-                    windowWidth: 794
-                });
-                
-                // Save out the structural vector layer representation natively
-                nativeDoc.save('Development_Permit_' + permitNumber + '.pdf');
-                document.body.removeChild(offscreenContainer);
-                
-                resultDiv.innerHTML = '<div class="success"><strong>&#9989; Permit ' + permitNumber + ' issued successfully!</strong><br><br>The official signed document has been downloaded directly to your downloads tray.</div>';
-                
-                // Reset form fields safely
+                // Clear variable inputs
                 document.getElementById('applicantName').value = '';
                 document.getElementById('companyName').value = '';
                 document.getElementById('applicationRef').value = '';
@@ -310,7 +288,7 @@
                 setDefaultDates();
                 
             } catch (error) {
-                console.error('Execution fault sequence logged:', error);
+                console.error('Execution fault logged:', error);
                 resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
             } finally {
                 generateBtn.disabled = false;
@@ -319,7 +297,7 @@
         }
         
         if (!checkStaffLogin()) {
-            // Execution halt sequence active
+            // Halt logic active
         } else {
             setDefaultDates();
         }
