@@ -250,7 +250,7 @@
                 }
                 
                 // Using route endpoint named specifically to safely evade aggressive client AdBlocker extension rules
-                var functionUrl = SUPABASE_URL + '/functions/v1/permit-service';
+                var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
