@@ -203,7 +203,7 @@
             try {
                 initSupabase();
                 var permitNumber = generatePermitNumber();
-                var verificationUrl = window.location.origin + '/index.html?id=' + permitNumber;
+                var verificationUrl = window.location.origin + '/TondeManyameRDC/index.html?id=' + permitNumber;
                 var qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(verificationUrl);
                 
                 var documentData = {
