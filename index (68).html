@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manyame RDC - Document Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .tabs {
+            max-width: 700px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header h2 {
+            font-size: 14px;
+            font-weight: normal;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .valid {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .invalid {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .staff-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logout-btn {
+            background: #6c757d;
+            width: auto;
+            padding: 8px 15px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .doc-type-select {
+            margin: 20px 0;
+        }
+        
+        .continue-btn {
+            background: #28a745;
+            margin-top: 10px;
+        }
+        
+        .continue-btn:hover {
+            background: #218838;
+        }
+        
+        @media print {
+            .tabs, .no-print {
+                display: none;
+            }
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="tabs no-print">
+        <button class="tab-btn active" onclick="showTab('verify')">Verify Document</button>
+        <button class="tab-btn" onclick="showTab('staff')">Staff Login</button>
+    </div>
+    
+    <div id="verifyTab" class="container">
+        <div class="header">
+            <div class="seal"></div>
+            <h1>Manyame Rural District Council</h1>
+            <h2>Planning Department - Official Document Verification</h2>
+        </div>
+        <div class="content">
+            <div class="form-group">
+                <label>Enter Document ID to Verify</label>
+                <input type="text" id="verifyDocId" placeholder="Example: MANY/123/2026">
+            </div>
+            <button onclick="verifyDocument()">Verify Document</button>
+            <div id="verifyResult"></div>
+            <div class="footer">
+                This is an official verification system of Manyame Rural District Council.
+            </div>
+        </div>
+    </div>
+    
+    <div id="staffTab" class="container hidden">
+        <div class="header">
+            <h1>Manyame RDC Planning Department</h1>
+            <h2>Staff Document Issuance System</h2>
+        </div>
+        <div class="content">
+            <div id="staffLoginSection">
+                <div class="warning">
+                    <strong>Authorized Access Only</strong><br>
+                    This system is for Manyame RDC Planning Department staff only.
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="staff@manyame.gov.zw">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter your password">
+                </div>
+                <button onclick="staffLogin()">Login to System</button>
+                <div id="loginError"></div>
+            </div>
+            
+            <div id="issuanceSection" class="hidden">
+                <div class="staff-info">
+                    <span>Welcome, <strong id="staffName"></strong></span>
+                    <button class="logout-btn" onclick="staffLogout()">Logout</button>
+                </div>
+                
+                <div class="form-group doc-type-select">
+                    <label>Select Document Type to Issue</label>
+                    <select id="documentType">
+                        <option value="">-- Select Document Type --</option>
+                        <option value="development_permit">Development Permit (Change of Use)</option>
+                    </select>
+                </div>
+                
+                <button class="continue-btn" onclick="goToDocumentForm()">Continue to Document Form</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+        
+        let supabaseClient = null;
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch(e) {
+            console.log("Supabase connection note");
+        }
+        
+        let currentStaffUser = sessionStorage.getItem('staffEmail');
+        
+        function showTab(tab) {
+            const verifyTab = document.getElementById('verifyTab');
+            const staffTab = document.getElementById('staffTab');
+            const btns = document.querySelectorAll('.tab-btn');
+            
+            if (tab === 'verify') {
+                verifyTab.classList.remove('hidden');
+                staffTab.classList.add('hidden');
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            } else {
+                verifyTab.classList.add('hidden');
+                staffTab.classList.remove('hidden');
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+                checkStaffLoginState();
+            }
+        }
+        
+        function checkStaffLoginState() {
+            const cachedName = sessionStorage.getItem('staffDisplayName');
+            if (currentStaffUser && cachedName) {
+                showIssuanceForm(currentStaffUser, cachedName);
+            } else {
+                showStaffLoginForm();
+            }
+        }
+        
+        function showStaffLoginForm() {
+            document.getElementById('staffLoginSection').classList.remove('hidden');
+            document.getElementById('issuanceSection').classList.add('hidden');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').innerHTML = '';
+        }
+        
+        function showIssuanceForm(email, displayName) {
+            document.getElementById('staffLoginSection').classList.add('hidden');
+            document.getElementById('issuanceSection').classList.remove('hidden');
+            document.getElementById('staffName').innerHTML = displayName;
+        }
+        
+        async function staffLogin() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.innerHTML = '<div class="loading">Authenticating user...</div>';
+            
+            try {
+                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (authError) throw authError;
+                
+                const { data: profileData } = await supabaseClient
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('email', email)
+                    .maybeSingle();
+                
+                const displayName = (profileData && profileData.full_name) ? profileData.full_name : email.split('@')[0];
+                
+                currentStaffUser = email;
+                sessionStorage.setItem('staffEmail', email);
+                sessionStorage.setItem('staffDisplayName', displayName);
+                
+                errorDiv.innerHTML = '';
+                showIssuanceForm(email, displayName);
+                
+            } catch (error) {
+                errorDiv.innerHTML = `<div class="error">${error.message || 'Invalid credentials'}</div>`;
+                document.getElementById('loginPassword').value = '';
+            }
+        }
+        
+        async function staffLogout() {
+            if(supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
+            sessionStorage.removeItem('staffEmail');
+            sessionStorage.removeItem('staffDisplayName');
+            currentStaffUser = null;
+            showStaffLoginForm();
+        }
+        
+        async function verifyDocument() {
+            const docId = document.getElementById('verifyDocId').value.trim();
+            const resultDiv = document.getElementById('verifyResult');
+            
+            if (!docId) {
+                resultDiv.innerHTML = '<div class="error">Please enter a Document ID.</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="loading">Querying official records database...</div>';
+            
+            try {
+                // Try to find in issued_documents table (new permits)
+                let { data: newData, error: newError } = await supabaseClient
+                    .from('issued_documents')
+                    .select('*')
+                    .eq('document_number', docId);
+                
+                // If not found, try alternate format (replace _ with /)
+                if ((!newData || newData.length === 0) && docId.includes('_')) {
+                    const alternateId = docId.replace(/_/g, '/');
+                    const { data: altData } = await supabaseClient
+                        .from('issued_documents')
+                        .select('*')
+                        .eq('document_number', alternateId);
+                    if (altData && altData.length > 0) {
+                        newData = altData;
+                    }
+                }
+                
+                // If still not found, try old documents table
+                if (!newData || newData.length === 0) {
+                    const { data: oldData } = await supabaseClient
+                        .from('documents')
+                        .select('*')
+                        .eq('doc_id', docId);
+                    if (oldData && oldData.length > 0) {
+                        newData = oldData;
+                    }
+                }
+                
+                if (!newData || newData.length === 0) {
+                    resultDiv.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
+                    return;
+                }
+                
+                const doc = newData[0];
+                const isValid = doc.status === 'active' && (!doc.expiry_date || new Date(doc.expiry_date) >= new Date());
+                
+                let docTypeName = '';
+                let issuedToName = '';
+                let propertyLoc = '';
+                
+                if (doc.document_type === 'development_permit') {
+                    docTypeName = 'Development Permit (Change of Use)';
+                    issuedToName = doc.document_data ? doc.document_data.applicant_name : doc.issued_to;
+                    propertyLoc = doc.document_data ? doc.document_data.property_location : doc.property_location;
+                } else if (doc.doc_type === 'BP') {
+                    docTypeName = 'Building Permit';
+                    issuedToName = doc.issued_to;
+                    propertyLoc = doc.property_location;
+                } else if (doc.doc_type === 'SDP') {
+                    docTypeName = 'Site Development Plan';
+                    issuedToName = doc.issued_to;
+                    propertyLoc = doc.property_location;
+                } else {
+                    docTypeName = 'Council Document';
+                    issuedToName = doc.issued_to || 'N/A';
+                    propertyLoc = doc.property_location || 'Not specified';
+                }
+                
+                if (isValid) {
+                    resultDiv.innerHTML = `
+                        <div class="valid">
+                            <strong>VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
+                            <strong>Document ID:</strong> ${escapeHtml(doc.document_number || doc.doc_id)}<br>
+                            <strong>Type:</strong> ${docTypeName}<br>
+                            <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
+                            <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
+                            <strong>Issue Date:</strong> ${new Date(doc.issue_date).toLocaleDateString()}<br>
+                            <strong>Expiry Date:</strong> ${doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : 'N/A'}<br>
+                            <strong>Status:</strong> Active Council Record
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="invalid">INVALID - This document has expired or been revoked.</div>`;
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                resultDiv.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
+            }
+        }
+        
+        function goToDocumentForm() {
+            const docType = document.getElementById('documentType').value;
+            
+            if (!docType) {
+                alert('Please select a document type.');
+                return;
+            }
+            
+            if (!currentStaffUser) {
+                alert('Please login first.');
+                return;
+            }
+            
+            if (docType === 'development_permit') {
+                window.location.href = 'development-permit.html';
+            }
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // Check for URL verification parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const docIdParam = urlParams.get('id');
+        if (docIdParam && document.getElementById('verifyDocId')) {
+            document.getElementById('verifyDocId').value = docIdParam;
+            verifyDocument();
+        }
+    </script>
+</body>
+</html>
