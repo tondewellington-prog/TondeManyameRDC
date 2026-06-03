@@ -211,22 +211,22 @@
 </head>
 <body>
     <div class="tabs no-print">
-        <button class="tab-btn active" onclick="showTab('verify')">🔍 Verify Document</button>
-        <button class="tab-btn" onclick="showTab('staff')">👨‍💼 Staff Login</button>
+        <button class="tab-btn active" onclick="showTab('verify')">Verify Document</button>
+        <button class="tab-btn" onclick="showTab('staff')">Staff Login</button>
     </div>
     
     <div id="verifyTab" class="container">
         <div class="header">
-            <div class="seal">🏛️</div>
+            <div class="seal"></div>
             <h1>Manyame Rural District Council</h1>
             <h2>Planning Department - Official Document Verification</h2>
         </div>
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MANY/123/2026">
+                <input type="text" id="verifyDocId" placeholder="Example: MANY_123/2026 or MANY/123/2026">
             </div>
-            <button onclick="verifyDocument()">🔍 Verify Document</button>
+            <button onclick="verifyDocument()">Verify Document</button>
             <div id="verifyResult"></div>
             <div class="footer">
                 This is an official verification system of Manyame Rural District Council.
@@ -236,13 +236,13 @@
     
     <div id="staffTab" class="container hidden">
         <div class="header">
-            <h1>🏛️ Manyame RDC Planning Department</h1>
+            <h1>Manyame RDC Planning Department</h1>
             <h2>Staff Document Issuance System</h2>
         </div>
         <div class="content">
             <div id="staffLoginSection">
                 <div class="warning">
-                    ⚠️ <strong>Authorized Access Only</strong><br>
+                    <strong>Authorized Access Only</strong><br>
                     This system is for Manyame RDC Planning Department staff only.
                 </div>
                 <div class="form-group">
@@ -253,14 +253,14 @@
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button onclick="staffLogin()">🔐 Login to System</button>
+                <button onclick="staffLogin()">Login to System</button>
                 <div id="loginError"></div>
             </div>
             
             <div id="issuanceSection" class="hidden">
                 <div class="staff-info">
                     <span>Welcome, <strong id="staffName"></strong></span>
-                    <button class="logout-btn" onclick="staffLogout()">🚪 Logout</button>
+                    <button class="logout-btn" onclick="staffLogout()">Logout</button>
                 </div>
                 
                 <div class="form-group doc-type-select">
@@ -278,12 +278,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // ============================================
-        // MANYAME RDC - DOCUMENT MANAGEMENT SYSTEM
-        // Using same pattern as index(65).html
-        // ============================================
-        
-        // Supabase Configuration (SAME as your working version)
+        // Supabase Configuration
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -297,9 +292,7 @@
         }
         
         let currentStaffUser = sessionStorage.getItem('staffEmail');
-        const today = new Date().toISOString().split('T')[0];
         
-        // Tab switching
         function showTab(tab) {
             const verifyTab = document.getElementById('verifyTab');
             const staffTab = document.getElementById('staffTab');
@@ -342,13 +335,12 @@
             document.getElementById('staffName').innerHTML = displayName;
         }
         
-        // Staff Authentication via Supabase (SAME as original)
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             
-            errorDiv.innerHTML = '<div class="loading">⏳ Authenticating user...</div>';
+            errorDiv.innerHTML = '<div class="loading">Authenticating user...</div>';
             
             try {
                 const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
@@ -374,7 +366,7 @@
                 showIssuanceForm(email, displayName);
                 
             } catch (error) {
-                errorDiv.innerHTML = `<div class="error">❌ ${error.message || 'Invalid credentials'}</div>`;
+                errorDiv.innerHTML = `<div class="error">${error.message || 'Invalid credentials'}</div>`;
                 document.getElementById('loginPassword').value = '';
             }
         }
@@ -389,7 +381,6 @@
             showStaffLoginForm();
         }
         
-        // Verification function (updated to check issued_documents table)
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
             const resultDiv = document.getElementById('verifyResult');
@@ -399,75 +390,87 @@
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="loading">⏳ Querying official records database...</div>';
+            resultDiv.innerHTML = '<div class="loading">Querying official records database...</div>';
             
             try {
-                // Check both tables for backward compatibility
-                let data = null;
-                let error = null;
-                
-                // First try issued_documents table
-                const { data: newData, error: newError } = await supabaseClient
+                // Try to find in issued_documents table (new permits)
+                let { data: newData, error: newError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('document_number', docId);
                 
-                if (!newError && newData && newData.length > 0) {
-                    data = newData;
-                } else {
-                    // Fall back to old documents table
-                    const { data: oldData, error: oldError } = await supabaseClient
-                        .from('documents')
+                // If not found, try alternate format (replace _ with /)
+                if ((!newData || newData.length === 0) && docId.includes('_')) {
+                    const alternateId = docId.replace(/_/g, '/');
+                    const { data: altData } = await supabaseClient
+                        .from('issued_documents')
                         .select('*')
-                        .eq('doc_id', docId);
-                    
-                    if (!oldError && oldData && oldData.length > 0) {
-                        data = oldData;
-                    } else {
-                        throw new Error('Not found');
+                        .eq('document_number', alternateId);
+                    if (altData && altData.length > 0) {
+                        newData = altData;
                     }
                 }
                 
-                if (!data || data.length === 0) {
-                    resultDiv.innerHTML = `<div class="invalid">❌ INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
+                // If still not found, try old documents table
+                if (!newData || newData.length === 0) {
+                    const { data: oldData } = await supabaseClient
+                        .from('documents')
+                        .select('*')
+                        .eq('doc_id', docId);
+                    if (oldData && oldData.length > 0) {
+                        newData = oldData;
+                    }
+                }
+                
+                if (!newData || newData.length === 0) {
+                    resultDiv.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
                     return;
                 }
                 
-                const doc = data[0];
+                const doc = newData[0];
                 const isValid = doc.status === 'active' && (!doc.expiry_date || new Date(doc.expiry_date) >= new Date());
                 
-                // Determine document type name
                 let docTypeName = '';
+                let issuedToName = '';
+                let propertyLoc = '';
+                
                 if (doc.document_type === 'development_permit') {
                     docTypeName = 'Development Permit (Change of Use)';
+                    issuedToName = doc.document_data ? doc.document_data.applicant_name : doc.issued_to;
+                    propertyLoc = doc.document_data ? doc.document_data.property_location : doc.property_location;
                 } else if (doc.doc_type === 'BP') {
                     docTypeName = 'Building Permit';
+                    issuedToName = doc.issued_to;
+                    propertyLoc = doc.property_location;
                 } else if (doc.doc_type === 'SDP') {
                     docTypeName = 'Site Development Plan';
+                    issuedToName = doc.issued_to;
+                    propertyLoc = doc.property_location;
                 } else {
                     docTypeName = 'Council Document';
+                    issuedToName = doc.issued_to || 'N/A';
+                    propertyLoc = doc.property_location || 'Not specified';
                 }
-                
-                const issuedToName = doc.issued_to || (doc.document_data ? doc.document_data.applicant_name : 'N/A');
-                const propertyLoc = doc.property_location || (doc.document_data ? doc.document_data.property_location : 'Not specified');
                 
                 if (isValid) {
                     resultDiv.innerHTML = `
                         <div class="valid">
-                            <strong>✅ VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
+                            <strong>VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
                             <strong>Document ID:</strong> ${escapeHtml(doc.document_number || doc.doc_id)}<br>
                             <strong>Type:</strong> ${docTypeName}<br>
                             <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
                             <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
                             <strong>Issue Date:</strong> ${new Date(doc.issue_date).toLocaleDateString()}<br>
-                            <strong>Status:</strong> ✅ Active Council Record
+                            <strong>Expiry Date:</strong> ${doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : 'N/A'}<br>
+                            <strong>Status:</strong> Active Council Record
                         </div>
                     `;
                 } else {
-                    resultDiv.innerHTML = `<div class="invalid">❌ INVALID - This document has expired or been revoked.</div>`;
+                    resultDiv.innerHTML = `<div class="invalid">INVALID - This document has expired or been revoked.</div>`;
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">❌ Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
+                console.error('Verification error:', error);
+                resultDiv.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
             }
         }
         
@@ -484,7 +487,6 @@
                 return;
             }
             
-            // Redirect to the appropriate template page
             if (docType === 'development_permit') {
                 window.location.href = 'development-permit.html';
             }
