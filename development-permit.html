@@ -168,7 +168,7 @@
         function generatePermitNumber() {
             var year = new Date().getFullYear();
             var random = Math.floor(Math.random() * 900) + 100;
-            return 'MANY_' + random + '/' + year;
+            return 'MANY/' + random + '/' + year;
         }
         
         async function generateAndDownload(event) {
