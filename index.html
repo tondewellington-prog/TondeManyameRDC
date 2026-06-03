@@ -211,22 +211,21 @@
 </head>
 <body>
     <div class="tabs no-print">
-        <button class="tab-btn active" onclick="showTab('verify')">Verify Document</button>
-        <button class="tab-btn" onclick="showTab('staff')">Staff Login</button>
+        <button class="tab-btn active" id="btnVerify">Verify Document</button>
+        <button class="tab-btn" id="btnStaff">Staff Login</button>
     </div>
     
-    <div id="verifyTab" class="container">
+    <div id="verifyPanel" class="container">
         <div class="header">
-            <div class="seal"></div>
             <h1>Manyame Rural District Council</h1>
             <h2>Planning Department - Official Document Verification</h2>
         </div>
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MANY/123/2026">
+                <input type="text" id="verifyDocId" placeholder="Example: MANY/311/2026">
             </div>
-            <button onclick="verifyDocument()">Verify Document</button>
+            <button id="verifyBtn">Verify Document</button>
             <div id="verifyResult"></div>
             <div class="footer">
                 This is an official verification system of Manyame Rural District Council.
@@ -234,13 +233,13 @@
         </div>
     </div>
     
-    <div id="staffTab" class="container hidden">
+    <div id="staffPanel" class="container hidden">
         <div class="header">
             <h1>Manyame RDC Planning Department</h1>
             <h2>Staff Document Issuance System</h2>
         </div>
         <div class="content">
-            <div id="staffLoginSection">
+            <div id="loginSection">
                 <div class="warning">
                     <strong>Authorized Access Only</strong><br>
                     This system is for Manyame RDC Planning Department staff only.
@@ -253,14 +252,14 @@
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter your password">
                 </div>
-                <button onclick="staffLogin()">Login to System</button>
+                <button id="loginBtn">Login to System</button>
                 <div id="loginError"></div>
             </div>
             
             <div id="issuanceSection" class="hidden">
                 <div class="staff-info">
                     <span>Welcome, <strong id="staffName"></strong></span>
-                    <button class="logout-btn" onclick="staffLogout()">Logout</button>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
                 </div>
                 
                 <div class="form-group doc-type-select">
@@ -271,7 +270,7 @@
                     </select>
                 </div>
                 
-                <button class="continue-btn" onclick="goToDocumentForm()">Continue to Document Form</button>
+                <button id="continueBtn" class="continue-btn">Continue to Document Form</button>
             </div>
         </div>
     </div>
@@ -283,180 +282,166 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
         let supabaseClient = null;
+        let currentStaffUser = sessionStorage.getItem('staffEmail');
+        let currentStaffName = sessionStorage.getItem('staffDisplayName');
+        
+        // Initialize Supabase
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log("Supabase initialized");
             }
         } catch(e) {
             console.log("Supabase connection note");
         }
         
-        let currentStaffUser = sessionStorage.getItem('staffEmail');
+        // DOM Elements
+        const verifyPanel = document.getElementById('verifyPanel');
+        const staffPanel = document.getElementById('staffPanel');
+        const btnVerify = document.getElementById('btnVerify');
+        const btnStaff = document.getElementById('btnStaff');
+        const loginSection = document.getElementById('loginSection');
+        const issuanceSection = document.getElementById('issuanceSection');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const continueBtn = document.getElementById('continueBtn');
+        const staffNameSpan = document.getElementById('staffName');
+        const loginError = document.getElementById('loginError');
+        const verifyResult = document.getElementById('verifyResult');
         
-        function showTab(tab) {
-            const verifyTab = document.getElementById('verifyTab');
-            const staffTab = document.getElementById('staffTab');
-            const btns = document.querySelectorAll('.tab-btn');
-            
-            if (tab === 'verify') {
-                verifyTab.classList.remove('hidden');
-                staffTab.classList.add('hidden');
-                btns[0].classList.add('active');
-                btns[1].classList.remove('active');
+        // Tab switching
+        function showVerifyTab() {
+            verifyPanel.classList.remove('hidden');
+            staffPanel.classList.add('hidden');
+            btnVerify.classList.add('active');
+            btnStaff.classList.remove('active');
+        }
+        
+        function showStaffTab() {
+            verifyPanel.classList.add('hidden');
+            staffPanel.classList.remove('hidden');
+            btnVerify.classList.remove('active');
+            btnStaff.classList.add('active');
+            checkLoginState();
+        }
+        
+        function checkLoginState() {
+            if (currentStaffUser && currentStaffName) {
+                loginSection.classList.add('hidden');
+                issuanceSection.classList.remove('hidden');
+                staffNameSpan.innerHTML = currentStaffName;
             } else {
-                verifyTab.classList.add('hidden');
-                staffTab.classList.remove('hidden');
-                btns[0].classList.remove('active');
-                btns[1].classList.add('active');
-                checkStaffLoginState();
+                loginSection.classList.remove('hidden');
+                issuanceSection.classList.add('hidden');
             }
         }
         
-        function checkStaffLoginState() {
-            const cachedName = sessionStorage.getItem('staffDisplayName');
-            if (currentStaffUser && cachedName) {
-                showIssuanceForm(currentStaffUser, cachedName);
-            } else {
-                showStaffLoginForm();
-            }
-        }
-        
-        function showStaffLoginForm() {
-            document.getElementById('staffLoginSection').classList.remove('hidden');
-            document.getElementById('issuanceSection').classList.add('hidden');
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
-            document.getElementById('loginError').innerHTML = '';
-        }
-        
-        function showIssuanceForm(email, displayName) {
-            document.getElementById('staffLoginSection').classList.add('hidden');
-            document.getElementById('issuanceSection').classList.remove('hidden');
-            document.getElementById('staffName').innerHTML = displayName;
-        }
-        
+        // Staff Login
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
-            const errorDiv = document.getElementById('loginError');
             
-            errorDiv.innerHTML = '<div class="loading">Authenticating user...</div>';
+            if (!email || !password) {
+                loginError.innerHTML = '<div class="error">Please enter email and password.</div>';
+                return;
+            }
+            
+            if (!supabaseClient) {
+                loginError.innerHTML = '<div class="error">Database connection error. Please refresh.</div>';
+                return;
+            }
+            
+            loginError.innerHTML = '<div class="loading">Authenticating...</div>';
             
             try {
-                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
                 
-                if (authError) throw authError;
+                if (error) throw error;
                 
-                const { data: profileData } = await supabaseClient
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('email', email)
-                    .maybeSingle();
+                let displayName = email.split('@')[0];
                 
-                const displayName = (profileData && profileData.full_name) ? profileData.full_name : email.split('@')[0];
+                try {
+                    const { data: profile } = await supabaseClient
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('email', email)
+                        .maybeSingle();
+                    if (profile && profile.full_name) displayName = profile.full_name;
+                } catch(e) {}
                 
                 currentStaffUser = email;
+                currentStaffName = displayName;
                 sessionStorage.setItem('staffEmail', email);
                 sessionStorage.setItem('staffDisplayName', displayName);
                 
-                errorDiv.innerHTML = '';
-                showIssuanceForm(email, displayName);
+                loginError.innerHTML = '';
+                loginSection.classList.add('hidden');
+                issuanceSection.classList.remove('hidden');
+                staffNameSpan.innerHTML = displayName;
                 
             } catch (error) {
-                errorDiv.innerHTML = `<div class="error">${error.message || 'Invalid credentials'}</div>`;
+                loginError.innerHTML = `<div class="error">${error.message || 'Invalid credentials'}</div>`;
                 document.getElementById('loginPassword').value = '';
             }
         }
         
+        // Staff Logout
         async function staffLogout() {
-            if(supabaseClient) {
-                await supabaseClient.auth.signOut();
+            if (supabaseClient) {
+                try { await supabaseClient.auth.signOut(); } catch(e) {}
             }
             sessionStorage.removeItem('staffEmail');
             sessionStorage.removeItem('staffDisplayName');
             currentStaffUser = null;
-            showStaffLoginForm();
+            currentStaffName = null;
+            loginSection.classList.remove('hidden');
+            issuanceSection.classList.add('hidden');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            loginError.innerHTML = '';
         }
         
+        // Verify Document
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
-            const resultDiv = document.getElementById('verifyResult');
             
             if (!docId) {
-                resultDiv.innerHTML = '<div class="error">Please enter a Document ID.</div>';
+                verifyResult.innerHTML = '<div class="error">Please enter a Document ID.</div>';
                 return;
             }
             
-            resultDiv.innerHTML = '<div class="loading">Querying official records database...</div>';
+            verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
             
             try {
-                // Try to find in issued_documents table (new permits)
-                let { data: newData, error: newError } = await supabaseClient
+                // Search in issued_documents table
+                const { data, error } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('document_number', docId);
                 
-                // If not found, try alternate format (replace _ with /)
-                if ((!newData || newData.length === 0) && docId.includes('_')) {
-                    const alternateId = docId.replace(/_/g, '/');
-                    const { data: altData } = await supabaseClient
-                        .from('issued_documents')
-                        .select('*')
-                        .eq('document_number', alternateId);
-                    if (altData && altData.length > 0) {
-                        newData = altData;
-                    }
-                }
+                if (error) throw error;
                 
-                // If still not found, try old documents table
-                if (!newData || newData.length === 0) {
-                    const { data: oldData } = await supabaseClient
-                        .from('documents')
-                        .select('*')
-                        .eq('doc_id', docId);
-                    if (oldData && oldData.length > 0) {
-                        newData = oldData;
-                    }
-                }
-                
-                if (!newData || newData.length === 0) {
-                    resultDiv.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
+                if (!data || data.length === 0) {
+                    verifyResult.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
                     return;
                 }
                 
-                const doc = newData[0];
+                const doc = data[0];
                 const isValid = doc.status === 'active' && (!doc.expiry_date || new Date(doc.expiry_date) >= new Date());
                 
-                let docTypeName = '';
-                let issuedToName = '';
-                let propertyLoc = '';
-                
-                if (doc.document_type === 'development_permit') {
-                    docTypeName = 'Development Permit (Change of Use)';
-                    issuedToName = doc.document_data ? doc.document_data.applicant_name : doc.issued_to;
-                    propertyLoc = doc.document_data ? doc.document_data.property_location : doc.property_location;
-                } else if (doc.doc_type === 'BP') {
-                    docTypeName = 'Building Permit';
-                    issuedToName = doc.issued_to;
-                    propertyLoc = doc.property_location;
-                } else if (doc.doc_type === 'SDP') {
-                    docTypeName = 'Site Development Plan';
-                    issuedToName = doc.issued_to;
-                    propertyLoc = doc.property_location;
-                } else {
-                    docTypeName = 'Council Document';
-                    issuedToName = doc.issued_to || 'N/A';
-                    propertyLoc = doc.property_location || 'Not specified';
-                }
+                let docTypeName = 'Development Permit';
+                let issuedToName = doc.document_data ? doc.document_data.applicant_name : doc.issued_to;
+                let propertyLoc = doc.document_data ? doc.document_data.property_location : doc.property_location;
                 
                 if (isValid) {
-                    resultDiv.innerHTML = `
+                    verifyResult.innerHTML = `
                         <div class="valid">
                             <strong>VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
-                            <strong>Document ID:</strong> ${escapeHtml(doc.document_number || doc.doc_id)}<br>
+                            <strong>Document ID:</strong> ${escapeHtml(doc.document_number)}<br>
                             <strong>Type:</strong> ${docTypeName}<br>
                             <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
                             <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
@@ -466,14 +451,14 @@
                         </div>
                     `;
                 } else {
-                    resultDiv.innerHTML = `<div class="invalid">INVALID - This document has expired or been revoked.</div>`;
+                    verifyResult.innerHTML = `<div class="invalid">INVALID - This document has expired or been revoked.</div>`;
                 }
             } catch (error) {
-                console.error('Verification error:', error);
-                resultDiv.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
+                verifyResult.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
             }
         }
         
+        // Go to document form
         function goToDocumentForm() {
             const docType = document.getElementById('documentType').value;
             
@@ -502,12 +487,24 @@
             });
         }
         
+        // Event Listeners
+        btnVerify.addEventListener('click', showVerifyTab);
+        btnStaff.addEventListener('click', showStaffTab);
+        loginBtn.addEventListener('click', staffLogin);
+        if (logoutBtn) logoutBtn.addEventListener('click', staffLogout);
+        verifyBtn.addEventListener('click', verifyDocument);
+        if (continueBtn) continueBtn.addEventListener('click', goToDocumentForm);
+        
+        // Check initial login state
+        checkLoginState();
+        
         // Check for URL verification parameter
         const urlParams = new URLSearchParams(window.location.search);
         const docIdParam = urlParams.get('id');
         if (docIdParam && document.getElementById('verifyDocId')) {
             document.getElementById('verifyDocId').value = docIdParam;
             verifyDocument();
+            showVerifyTab();
         }
     </script>
 </body>
