@@ -19,18 +19,24 @@
         textarea { resize: vertical; min-height: 80px; }
         button { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: transform 0.2s; }
         button:hover { transform: translateY(-2px); }
-        .generate-btn { background: #28a745; margin-top: 20px; }
+        .send-btn { background: #007bff; margin-top: 20px; }
+        .send-btn:hover { background: #0069d9; }
         .staff-info { background: #e9ecef; padding: 12px 15px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
         .logout-btn { background: #6c757d; width: auto; padding: 6px 15px; font-size: 13px; }
         .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #dc3545; }
         .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #28a745; }
         .loading { text-align: center; padding: 20px; color: #666; }
         .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; font-size: 14px; }
+        .info { background: #cce5ff; color: #004085; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
+        .approval-links { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .approval-links input { width: 100%; padding: 8px; margin: 5px 0; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; background: white; }
+        .copy-btn { background: #28a745; padding: 6px 12px; font-size: 12px; width: auto; margin-top: 5px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="back-link">
-        <a href="index.html">&#8592; Back to Document Management</a>
+        <a href="index.html">← Back to Document Management</a>
     </div>
     
     <div class="container">
@@ -41,8 +47,12 @@
             </div>
             
             <div id="formSection">
+                <div class="info">
+                    <strong>Approval Workflow:</strong> Officer creates permit → HOD approves → CEO approves → PDF generated automatically
+                </div>
+                
                 <div class="warning">
-                    &#9888; <strong>Important:</strong> Please complete all required fields below to issue the permanent permit document.
+                    <strong>Important:</strong> Please complete all required fields below. After submission, the permit will be sent to HOD for approval.
                 </div>
                 
                 <div class="form-grid">
@@ -108,7 +118,7 @@
                     </div>
                 </div>
                 
-                <button class="generate-btn" onclick="generateAndDownload(event)">Generate & Download Permit</button>
+                <button class="send-btn" onclick="sendForApproval(event)">Send for Approval (HOD → CEO)</button>
                 
                 <div id="issueResult"></div>
             </div>
@@ -171,9 +181,18 @@
             return 'MANY/' + random + '/' + year;
         }
         
-        async function generateAndDownload(event) {
+        function generateApprovalToken() {
+            return 'tok_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            alert('Link copied to clipboard!');
+        }
+        
+        async function sendForApproval(event) {
             var resultDiv = document.getElementById('issueResult');
-            var generateBtn = event.target;
+            var sendBtn = event.target;
             
             var propertyLocation = document.getElementById('propertyLocation').value.trim();
             var applicantName = document.getElementById('applicantName').value.trim();
@@ -196,14 +215,15 @@
                 return;
             }
             
-            generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating PDF...';
-            resultDiv.innerHTML = '<div class="loading">Processing data pipeline & compiling server-side PDF layers...</div>';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Creating permit and sending for approval...';
+            resultDiv.innerHTML = '<div class="loading">Creating permit and setting up approval workflow...</div>';
             
             try {
                 initSupabase();
                 var permitNumber = generatePermitNumber();
-                var verificationUrl = window.location.origin + '/TondeManyameRDC/index.html?id=' + permitNumber;
+                var baseUrl = window.location.origin + '/TondeManyameRDC';
+                var verificationUrl = baseUrl + '/index.html?id=' + permitNumber;
                 var qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(verificationUrl);
                 
                 var documentData = {
@@ -227,58 +247,157 @@
                     verification_url: verificationUrl
                 };
                 
-                if (supabaseClient) {
-                    try {
-                        await supabaseClient
-                            .from('issued_documents')
-                            .insert([{
-                                document_type: 'development_permit',
-                                document_number: permitNumber,
-                                document_data: documentData,
-                                issued_to: applicantName,
-                                issued_by_email: currentStaffUser,
-                                issued_by_name: currentStaffName,
-                                issue_date: issueDate,
-                                expiry_date: expiryDate,
-                                status: 'active',
-                                qr_code_url: qrApiUrl,
-                                verification_url: verificationUrl
-                            }]);
-                    } catch(dbError) {
-                        console.warn('Database log hook note:', dbError);
-                    }
-                }
-                
-                // Using route endpoint named specifically to safely evade aggressive client AdBlocker extension rules
-                var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
-                var response = await fetch(functionUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                // 1. Insert into issued_documents with pending status
+                var { data: permitData, error: permitError } = await supabaseClient
+                    .from('issued_documents')
+                    .insert([{
                         document_type: 'development_permit',
-                        data: documentData
-                    })
-                });
+                        document_number: permitNumber,
+                        document_data: documentData,
+                        issued_to: applicantName,
+                        issued_by_email: currentStaffUser,
+                        issued_by_name: currentStaffName,
+                        issue_date: issueDate,
+                        expiry_date: expiryDate,
+                        status: 'pending_approval',
+                        approval_status: 'pending_hod',
+                        hod_approved: false,
+                        ceo_approved: false,
+                        qr_code_url: qrApiUrl,
+                        verification_url: verificationUrl
+                    }])
+                    .select();
                 
-                if (!response.ok) {
-                    var errorJson = await response.json();
-                    throw new Error(errorJson.error || 'Server processing error occurred.');
+                if (permitError) throw permitError;
+                
+                var permitId = permitData[0].id;
+                
+                // 2. Get HOD from database
+                var { data: hodData, error: hodError } = await supabaseClient
+                    .from('hods')
+                    .select('*')
+                    .eq('is_active', true)
+                    .limit(1);
+                
+                if (hodError) throw hodError;
+                if (!hodData || hodData.length === 0) {
+                    // Create default HOD if none exists
+                    var { data: defaultHod, error: defaultHodError } = await supabaseClient
+                        .from('hods')
+                        .insert([{
+                            name: 'F. Guta',
+                            email: 'fguta@manyame.gov.zw',
+                            title: 'Director',
+                            department: 'Planning',
+                            is_active: true
+                        }])
+                        .select();
+                    
+                    if (defaultHodError) throw defaultHodError;
+                    hodData = defaultHod;
                 }
                 
-                // Read response stream as a clean binary file blob
-                var pdfBlob = await response.blob();
-                var url = window.URL.createObjectURL(pdfBlob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'Development_Permit_' + permitNumber + '.pdf';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+                var hod = hodData[0];
                 
-                resultDiv.innerHTML = '<div class="success"><strong>&#9989; Permit ' + permitNumber + ' issued successfully!</strong><br><br>The official signed document has been downloaded directly to your computer.</div>';
+                // 3. Get CEO from database
+                var { data: ceoData, error: ceoError } = await supabaseClient
+                    .from('ceos')
+                    .select('*')
+                    .eq('is_active', true)
+                    .limit(1);
                 
-                // Clear variable inputs
+                if (ceoError) throw ceoError;
+                if (!ceoData || ceoData.length === 0) {
+                    // Create default CEO if none exists
+                    var { data: defaultCeo, error: defaultCeoError } = await supabaseClient
+                        .from('ceos')
+                        .insert([{
+                            name: 'C. Murepa',
+                            email: 'cmurepa@manyame.gov.zw',
+                            title: 'Chief Executive Officer',
+                            is_active: true
+                        }])
+                        .select();
+                    
+                    if (defaultCeoError) throw defaultCeoError;
+                    ceoData = defaultCeo;
+                }
+                
+                var ceo = ceoData[0];
+                
+                // 4. Create HOD approval token
+                var hodToken = generateApprovalToken();
+                var tokenExpiry = new Date();
+                tokenExpiry.setDate(tokenExpiry.getDate() + 7);
+                
+                var { error: hodApprovalError } = await supabaseClient
+                    .from('approvals')
+                    .insert([{
+                        permit_id: permitId,
+                        permit_number: permitNumber,
+                        permit_data: documentData,
+                        approval_level: 'hod',
+                        status: 'pending',
+                        approver_name: hod.name,
+                        approver_email: hod.email,
+                        approver_title: hod.title,
+                        approval_token: hodToken,
+                        token_expires_at: tokenExpiry.toISOString()
+                    }]);
+                
+                if (hodApprovalError) throw hodApprovalError;
+                
+                // 5. Create CEO approval token
+                var ceoToken = generateApprovalToken();
+                
+                var { error: ceoApprovalError } = await supabaseClient
+                    .from('approvals')
+                    .insert([{
+                        permit_id: permitId,
+                        permit_number: permitNumber,
+                        permit_data: documentData,
+                        approval_level: 'ceo',
+                        status: 'pending',
+                        approver_name: ceo.name,
+                        approver_email: ceo.email,
+                        approver_title: ceo.title,
+                        approval_token: ceoToken,
+                        token_expires_at: tokenExpiry.toISOString()
+                    }]);
+                
+                if (ceoApprovalError) throw ceoApprovalError;
+                
+                // 6. Generate approval URLs
+                var hodApprovalUrl = baseUrl + '/approve-permit.html?token=' + hodToken + '&level=hod';
+                var ceoApprovalUrl = baseUrl + '/approve-permit.html?token=' + ceoToken + '&level=ceo';
+                
+                // 7. Display result with approval links
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>Permit Created Successfully!</strong><br><br>
+                        <strong>Permit Number:</strong> ${permitNumber}<br>
+                        <strong>Status:</strong> Waiting for HOD Approval<br><br>
+                        
+                        <div class="approval-links">
+                            <strong>Step 1: HOD Approval Link</strong><br>
+                            <input type="text" id="hodLink" value="${hodApprovalUrl}" readonly>
+                            <button class="copy-btn" onclick="copyToClipboard(document.getElementById('hodLink').value)">Copy Link</button>
+                            <br><br>
+                            <strong>Step 2: CEO Approval Link (activate after HOD approves)</strong><br>
+                            <input type="text" id="ceoLink" value="${ceoApprovalUrl}" readonly>
+                            <button class="copy-btn" onclick="copyToClipboard(document.getElementById('ceoLink').value)">Copy Link</button>
+                            <br><br>
+                            <small>Note: The CEO link will only work after the HOD has approved the permit.</small>
+                        </div>
+                        
+                        <p><strong>Next Steps:</strong><br>
+                        1. Share the HOD approval link with the Head of Department<br>
+                        2. After HOD approves, share the CEO link with the CEO<br>
+                        3. Once both approve, the final PDF will be generated automatically</p>
+                    </div>
+                `;
+                
+                // Clear form fields
                 document.getElementById('applicantName').value = '';
                 document.getElementById('companyName').value = '';
                 document.getElementById('applicationRef').value = '';
@@ -288,11 +407,11 @@
                 setDefaultDates();
                 
             } catch (error) {
-                console.error('Execution fault logged:', error);
+                console.error('Error:', error);
                 resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
             } finally {
-                generateBtn.disabled = false;
-                generateBtn.textContent = 'Generate & Download Permit';
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send for Approval (HOD → CEO)';
             }
         }
         
