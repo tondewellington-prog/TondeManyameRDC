@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Manyame RDC - Approve Permit</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 25px; text-align: center; }
+        .header h1 { font-size: 22px; }
+        .header h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
+        .content { padding: 30px; }
+        .permit-preview { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; max-height: 400px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+        .permit-preview h4 { margin-bottom: 10px; color: #1e3c72; }
+        .signature-area { margin: 30px 0; text-align: center; }
+        .signature-area h3 { margin-bottom: 15px; color: #333; }
+        canvas { border: 2px dashed #ccc; border-radius: 8px; background: white; cursor: crosshair; margin: 10px auto; display: block; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#ccc" font-size="14">Sign here</text></svg>'); background-repeat: no-repeat; background-position: center; }
+        .signature-controls { display: flex; gap: 10px; justify-content: center; margin: 15px 0; flex-wrap: wrap; }
+        button { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .approve-btn { background: #28a745; }
+        .approve-btn:hover { background: #218838; }
+        .reject-btn { background: #dc3545; }
+        .reject-btn:hover { background: #c82333; }
+        .clear-btn { background: #6c757d; }
+        .clear-btn:hover { background: #5a6268; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #dc3545; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #28a745; }
+        .info { background: #cce5ff; color: #004085; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; }
+        .status-pending { background: #ffc107; color: #856404; }
+        .status-approved { background: #28a745; color: white; }
+        @media (max-width: 600px) {
+            canvas { width: 100%; height: auto; }
+            .signature-controls button { padding: 10px 16px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Manyame Rural District Council</h1>
+            <h2>Permit Approval Portal</h2>
+        </div>
+        <div class="content" id="mainContent">
+            <div class="loading">Loading permit details...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
+        var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+        
+        var supabaseClient = null;
+        var canvas = null;
+        var ctx = null;
+        var drawing = false;
+        
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch(e) {}
+        
+        function getUrlParams() {
+            var params = new URLSearchParams(window.location.search);
+            return {
+                token: params.get('token'),
+                level: params.get('level')
+            };
+        }
+        
+        async function loadApproval() {
+            var params = getUrlParams();
+            var contentDiv = document.getElementById('mainContent');
+            
+            if (!params.token) {
+                contentDiv.innerHTML = '<div class="error">Invalid approval link. No token provided.</div>';
+                return;
+            }
+            
+            try {
+                var { data: approval, error } = await supabaseClient
+                    .from('approvals')
+                    .select('*')
+                    .eq('approval_token', params.token)
+                    .single();
+                
+                if (error || !approval) {
+                    contentDiv.innerHTML = '<div class="error">Invalid or expired approval link.</div>';
+                    return;
+                }
+                
+                if (approval.status !== 'pending') {
+                    var statusText = approval.status === 'approved' ? 'approved' : 'rejected';
+                    contentDiv.innerHTML = '<div class="error">This approval request has already been ' + statusText + '.</div>';
+                    return;
+                }
+                
+                if (new Date(approval.token_expires_at) < new Date()) {
+                    contentDiv.innerHTML = '<div class="error">This approval link has expired. Please request a new one.</div>';
+                    return;
+                }
+                
+                // For CEO approval, check if HOD already approved
+                if (params.level === 'ceo') {
+                    var { data: permitCheck, error: permitError } = await supabaseClient
+                        .from('issued_documents')
+                        .select('hod_approved, document_number')
+                        .eq('id', approval.permit_id)
+                        .single();
+                    
+                    if (permitError || !permitCheck.hod_approved) {
+                        contentDiv.innerHTML = `
+                            <div class="error">
+                                <strong>Cannot Approve Yet</strong><br><br>
+                                This permit is waiting for HOD approval first. Once the Head of Department approves, you will be able to sign.<br><br>
+                                <strong>Permit Number:</strong> ${permitCheck ? permitCheck.document_number : 'N/A'}
+                            </div>
+                        `;
+                        return;
+                    }
+                }
+                
+                var permitData = approval.permit_data;
+                var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
+                var statusClass = approval.status === 'pending' ? 'status-pending' : 'status-approved';
+                var statusText = approval.status === 'pending' ? 'Pending' : 'Approved';
+                
+                contentDiv.innerHTML = `
+                    <div class="info">
+                        <strong>Approval Required: ${levelName}</strong> <span class="status-badge ${statusClass}">${statusText}</span><br>
+                        <strong>Permit Number:</strong> ${permitData.permit_number}<br>
+                        <strong>Applicant:</strong> ${escapeHtml(permitData.applicant_name)}${permitData.company_name ? ' (' + escapeHtml(permitData.company_name) + ')' : ''}<br>
+                        <strong>Property:</strong> ${escapeHtml(permitData.property_location)}<br>
+                        <strong>Expiry:</strong> ${permitData.expiry_date}
+                    </div>
+                    
+                    <div class="permit-preview">
+                        <h4>Permit Summary</h4>
+                        <p><strong>Application Reference:</strong> ${escapeHtml(permitData.application_ref)}</p>
+                        <p><strong>Council Resolution:</strong> ${escapeHtml(permitData.council_resolution)}</p>
+                        <p><strong>Commercial Uses:</strong> ${escapeHtml(permitData.commercial_uses)}</p>
+                        <p><strong>Issue Date:</strong> ${permitData.issue_date}</p>
+                        <p><strong>Issued At:</strong> ${escapeHtml(permitData.issued_at_town)}</p>
+                        <hr>
+                        <p><strong>Applicant Representative:</strong> ${escapeHtml(permitData.applicant_rep)}</p>
+                        <p><strong>Council Representative:</strong> ${escapeHtml(permitData.council_rep)}</p>
+                        <hr>
+                        <p><em>Full permit document with all 20 conditions will be available after final approval.</em></p>
+                    </div>
+                    
+                    <div class="signature-area" id="signatureArea">
+                        <h3>Sign to Approve</h3>
+                        <p>Draw your signature below using your finger or mouse:</p>
+                        <canvas id="signatureCanvas" width="500" height="200" style="width:100%; max-width:500px; height:auto; border:2px solid #ccc; border-radius:8px; background:white;"></canvas>
+                        <div class="signature-controls">
+                            <button id="clearBtn" class="clear-btn">Clear Signature</button>
+                            <button id="approveBtn" class="approve-btn">Approve & Sign</button>
+                            <button id="rejectBtn" class="reject-btn">Reject</button>
+                        </div>
+                    </div>
+                `;
+                
+                initializeSignatureCanvas();
+                
+                document.getElementById('clearBtn').addEventListener('click', clearSignature);
+                document.getElementById('approveBtn').addEventListener('click', function() { submitApproval('approved', params.token, params.level, approval.permit_id); });
+                document.getElementById('rejectBtn').addEventListener('click', function() { 
+                    if (confirm('Are you sure you want to REJECT this permit?')) {
+                        submitApproval('rejected', params.token, params.level, approval.permit_id);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error:', error);
+                contentDiv.innerHTML = '<div class="error">Error loading approval request. Please check your link and try again.</div>';
+            }
+        }
+        
+        function initializeSignatureCanvas() {
+            canvas = document.getElementById('signatureCanvas');
+            ctx = canvas.getContext('2d');
+            
+            var containerWidth = canvas.parentElement.clientWidth;
+            canvas.width = Math.min(500, containerWidth - 40);
+            canvas.height = 200;
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            
+            function startDrawing(e) {
+                drawing = true;
+                var pos = getCanvasCoordinates(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            }
+            
+            function draw(e) {
+                if (!drawing) return;
+                e.preventDefault();
+                var pos = getCanvasCoordinates(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            }
+            
+            function stopDrawing() {
+                drawing = false;
+                ctx.beginPath();
+            }
+            
+            function getCanvasCoordinates(e) {
+                var rect = canvas.getBoundingClientRect();
+                var scaleX = canvas.width / rect.width;
+                var scaleY = canvas.height / rect.height;
+                
+                var clientX, clientY;
+                if (e.touches) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                
+                var x = (clientX - rect.left) * scaleX;
+                var y = (clientY - rect.top) * scaleY;
+                x = Math.max(0, Math.min(canvas.width, x));
+                y = Math.max(0, Math.min(canvas.height, y));
+                return { x: x, y: y };
+            }
+            
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+        
+        function clearSignature() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+        }
+        
+        async function submitApproval(status, token, level, permitId) {
+            var contentDiv = document.getElementById('mainContent');
+            contentDiv.innerHTML = '<div class="loading">Processing your decision...</div>';
+            
+            try {
+                var signatureDataUrl = null;
+                if (status === 'approved' && canvas) {
+                    signatureDataUrl = canvas.toDataURL('image/png');
+                }
+                
+                var userAgent = navigator.userAgent;
+                
+                var { error: updateError } = await supabaseClient
+                    .from('approvals')
+                    .update({
+                        status: status,
+                        signature_image_url: signatureDataUrl,
+                        signed_at: new Date().toISO
