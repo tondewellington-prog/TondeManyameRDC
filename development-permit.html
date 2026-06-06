@@ -28,9 +28,12 @@
         .loading { text-align: center; padding: 20px; color: #666; }
         .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; font-size: 14px; }
         .info { background: #cce5ff; color: #004085; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
-        .approval-links { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
-        .approval-links input { width: 100%; padding: 8px; margin: 5px 0; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; background: white; }
+        .approval-box { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .approval-box input { width: 100%; padding: 8px; margin: 5px 0; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; background: white; }
         .copy-btn { background: #28a745; padding: 6px 12px; font-size: 12px; width: auto; margin-top: 5px; }
+        .email-status { font-size: 12px; margin-top: 5px; padding: 5px; border-radius: 4px; }
+        .email-sent { background: #d4edda; color: #155724; }
+        .email-failed { background: #f8d7da; color: #721c24; }
         .hidden { display: none; }
     </style>
 </head>
@@ -48,11 +51,11 @@
             
             <div id="formSection">
                 <div class="info">
-                    <strong>Approval Workflow:</strong> Officer creates permit → HOD approves → CEO approves → PDF generated automatically
+                    <strong>Approval Workflow:</strong> Officer creates permit → Email sent to HOD → HOD approves → Email sent to CEO → CEO approves → PDF generated
                 </div>
                 
                 <div class="warning">
-                    <strong>Important:</strong> Please complete all required fields below. After submission, the permit will be sent to HOD for approval.
+                    <strong>Important:</strong> Please complete all required fields below.
                 </div>
                 
                 <div class="form-grid">
@@ -118,7 +121,7 @@
                     </div>
                 </div>
                 
-                <button class="send-btn" onclick="sendForApproval(event)">Send for Approval (HOD → CEO)</button>
+                <button class="send-btn" onclick="sendForApproval(event)">Send for Approval (Email to HOD)</button>
                 
                 <div id="issueResult"></div>
             </div>
@@ -216,8 +219,8 @@
             }
             
             sendBtn.disabled = true;
-            sendBtn.textContent = 'Creating permit and sending for approval...';
-            resultDiv.innerHTML = '<div class="loading">Creating permit and setting up approval workflow...</div>';
+            sendBtn.textContent = 'Creating permit and sending email...';
+            resultDiv.innerHTML = '<div class="loading">Creating permit and sending approval request...</div>';
             
             try {
                 initSupabase();
@@ -272,55 +275,29 @@
                 
                 var permitId = permitData[0].id;
                 
-                // 2. Get HOD from database
+                // 2. Get HOD from database (or use default)
                 var { data: hodData, error: hodError } = await supabaseClient
                     .from('hods')
                     .select('*')
                     .eq('is_active', true)
                     .limit(1);
                 
-                if (hodError) throw hodError;
-                if (!hodData || hodData.length === 0) {
-                    // Create default HOD if none exists
-                    var { data: defaultHod, error: defaultHodError } = await supabaseClient
-                        .from('hods')
-                        .insert([{
-                            name: 'F. Guta',
-                            email: 'fguta@manyame.gov.zw',
-                            title: 'Director',
-                            department: 'Planning',
-                            is_active: true
-                        }])
-                        .select();
-                    
-                    if (defaultHodError) throw defaultHodError;
-                    hodData = defaultHod;
+                if (hodError || !hodData || hodData.length === 0) {
+                    // Use default HOD
+                    hodData = [{ name: 'F. Guta', email: 'fguta@manyame.gov.zw', title: 'Director', department: 'Planning' }];
                 }
                 
                 var hod = hodData[0];
                 
-                // 3. Get CEO from database
+                // 3. Get CEO from database (or use default)
                 var { data: ceoData, error: ceoError } = await supabaseClient
                     .from('ceos')
                     .select('*')
                     .eq('is_active', true)
                     .limit(1);
                 
-                if (ceoError) throw ceoError;
-                if (!ceoData || ceoData.length === 0) {
-                    // Create default CEO if none exists
-                    var { data: defaultCeo, error: defaultCeoError } = await supabaseClient
-                        .from('ceos')
-                        .insert([{
-                            name: 'C. Murepa',
-                            email: 'cmurepa@manyame.gov.zw',
-                            title: 'Chief Executive Officer',
-                            is_active: true
-                        }])
-                        .select();
-                    
-                    if (defaultCeoError) throw defaultCeoError;
-                    ceoData = defaultCeo;
+                if (ceoError || !ceoData || ceoData.length === 0) {
+                    ceoData = [{ name: 'C. Murepa', email: 'cmurepa@manyame.gov.zw', title: 'Chief Executive Officer' }];
                 }
                 
                 var ceo = ceoData[0];
@@ -371,28 +348,57 @@
                 var hodApprovalUrl = baseUrl + '/approve-permit.html?token=' + hodToken + '&level=hod';
                 var ceoApprovalUrl = baseUrl + '/approve-permit.html?token=' + ceoToken + '&level=ceo';
                 
-                // 7. Display result with approval links
+                // 7. Send email to HOD using your Edge Function
+                var emailSent = false;
+                var emailError = null;
+                
+                try {
+                    var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to: hod.email,
+                            subject: 'Permit Approval Required - ' + permitNumber,
+                            permitNumber: permitNumber,
+                            approvalUrl: hodApprovalUrl,
+                            approverName: hod.name,
+                            level: 'hod'
+                        })
+                    });
+                    
+                    var emailResult = await emailResponse.json();
+                    emailSent = emailResult.success;
+                    if (!emailSent) emailError = emailResult.error;
+                } catch(e) {
+                    emailError = e.message;
+                }
+                
+                // 8. Display result
+                var emailStatusHtml = emailSent ? 
+                    '<div class="email-status email-sent">✓ Email sent to HOD (' + hod.email + ')</div>' : 
+                    '<div class="email-status email-failed">✗ Email failed: ' + (emailError || 'Unknown error') + '<br>Use the link below instead.</div>';
+                
                 resultDiv.innerHTML = `
                     <div class="success">
                         <strong>Permit Created Successfully!</strong><br><br>
                         <strong>Permit Number:</strong> ${permitNumber}<br>
                         <strong>Status:</strong> Waiting for HOD Approval<br><br>
                         
-                        <div class="approval-links">
-                            <strong>Step 1: HOD Approval Link</strong><br>
+                        ${emailStatusHtml}
+                        
+                        <div class="approval-box">
+                            <strong>HOD Approval Link:</strong><br>
                             <input type="text" id="hodLink" value="${hodApprovalUrl}" readonly>
                             <button class="copy-btn" onclick="copyToClipboard(document.getElementById('hodLink').value)">Copy Link</button>
                             <br><br>
-                            <strong>Step 2: CEO Approval Link (activate after HOD approves)</strong><br>
+                            <strong>CEO Approval Link (activate after HOD approves):</strong><br>
                             <input type="text" id="ceoLink" value="${ceoApprovalUrl}" readonly>
                             <button class="copy-btn" onclick="copyToClipboard(document.getElementById('ceoLink').value)">Copy Link</button>
-                            <br><br>
-                            <small>Note: The CEO link will only work after the HOD has approved the permit.</small>
                         </div>
                         
                         <p><strong>Next Steps:</strong><br>
-                        1. Share the HOD approval link with the Head of Department<br>
-                        2. After HOD approves, share the CEO link with the CEO<br>
+                        1. HOD clicks the approval link and signs<br>
+                        2. After HOD approves, CEO will receive email and can approve<br>
                         3. Once both approve, the final PDF will be generated automatically</p>
                     </div>
                 `;
@@ -411,7 +417,7 @@
                 resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
             } finally {
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Send for Approval (HOD → CEO)';
+                sendBtn.textContent = 'Send for Approval (Email to HOD)';
             }
         }
         
