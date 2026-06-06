@@ -13,7 +13,6 @@
         .header h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
         .content { padding: 30px; }
         
-        /* Client Details Card */
         .info-card {
             background: #cce5ff;
             border-left: 5px solid #007bff;
@@ -22,7 +21,6 @@
             margin-bottom: 20px;
         }
         
-        /* Permit Details Card */
         .details-card {
             background: #f8f9fa;
             border-radius: 12px;
@@ -55,19 +53,12 @@
             text-transform: uppercase;
             margin-bottom: 4px;
         }
-        .detail-value {
-            font-size: 14px;
-        }
         
-        /* Approval Status Card */
         .status-card {
             background: #e9ecef;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
-        }
-        .status-card h3 {
-            margin-bottom: 15px;
         }
         .status-row {
             display: flex;
@@ -95,7 +86,6 @@
             color: white;
         }
         
-        /* Signature Area */
         .signature-area { margin: 30px 0; text-align: center; }
         .signature-area h3 { margin-bottom: 15px; color: #333; }
         canvas { border: 2px dashed #ccc; border-radius: 8px; background: white; cursor: crosshair; margin: 10px auto; display: block; }
@@ -233,19 +223,17 @@
                     return;
                 }
                 
-                // Build the complete display
+                // Build the display
                 contentDiv.innerHTML = `
-                    <!-- Client Information Card -->
                     <div class="info-card">
-                        <strong>📋 PERMIT APPROVAL REQUIRED</strong><br>
+                        <strong>PERMIT APPROVAL REQUIRED</strong><br>
                         <strong>Approver:</strong> ${levelName}<br>
                         <strong>Permit Number:</strong> ${escapeHtml(permitData.permit_number)}<br>
                         <strong>Status:</strong> ${params.level === 'hod' ? 'Awaiting HOD Signature' : 'Awaiting CEO Signature'}
                     </div>
                     
-                    <!-- CLIENT / APPLICANT DETAILS -->
                     <div class="details-card">
-                        <h3>👤 Client / Applicant Details</h3>
+                        <h3>Client / Applicant Details</h3>
                         <div class="details-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Applicant Name</span>
@@ -263,20 +251,11 @@
                                 <span class="detail-label">Commercial Uses</span>
                                 <span class="detail-value">${escapeHtml(permitData.commercial_uses)}</span>
                             </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Application Reference</span>
-                                <span class="detail-value">${escapeHtml(permitData.application_ref)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Application Date</span>
-                                <span class="detail-value">${permitData.application_date}</span>
-                            </div>
                         </div>
                     </div>
                     
-                    <!-- PERMIT DETAILS -->
                     <div class="details-card">
-                        <h3>📄 Permit Details</h3>
+                        <h3>Permit Details</h3>
                         <div class="details-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Permit Number</span>
@@ -291,19 +270,14 @@
                                 <span class="detail-value">${permitData.expiry_date}</span>
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Issued At</span>
-                                <span class="detail-value">${escapeHtml(permitData.issued_at_town)}</span>
-                            </div>
-                            <div class="detail-item">
                                 <span class="detail-label">Council Resolution</span>
                                 <span class="detail-value">${escapeHtml(permitData.council_resolution)}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- OFFICER WHO CREATED THE REQUEST -->
                     <div class="details-card">
-                        <h3>👨‍💼 Request Created By</h3>
+                        <h3>Request Created By</h3>
                         <div class="details-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Officer Name</span>
@@ -313,61 +287,32 @@
                                 <span class="detail-label">Officer Email</span>
                                 <span class="detail-value">${escapeHtml(permit.issued_by_email)}</span>
                             </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Date Created</span>
-                                <span class="detail-value">${new Date(permit.created_at).toLocaleString()}</span>
-                            </div>
                         </div>
                     </div>
                     
-                    <!-- SIGNATURES AND WITNESSES -->
-                    <div class="details-card">
-                        <h3>✍️ Signatures & Witnesses</h3>
-                        <div class="details-grid">
-                            <div class="detail-item">
-                                <span class="detail-label">Applicant Representative</span>
-                                <span class="detail-value">${escapeHtml(permitData.applicant_rep)} (ID: ${escapeHtml(permitData.applicant_id)})</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Applicant Witness</span>
-                                <span class="detail-value">${escapeHtml(permitData.applicant_witness)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Council Representative</span>
-                                <span class="detail-value">${escapeHtml(permitData.council_rep)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Council Witness</span>
-                                <span class="detail-value">${escapeHtml(permitData.council_witness)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- APPROVAL STATUS -->
                     <div class="status-card">
-                        <h3>✅ Approval Status</h3>
+                        <h3>Approval Status</h3>
                         <div class="status-row">
                             <span class="status-label">HOD Approval:</span>
                             <span class="status-badge ${permit.hod_approved ? 'status-approved' : 'status-pending'}">
-                                ${permit.hod_approved ? '✓ Approved' : '⏳ Pending'}
+                                ${permit.hod_approved ? 'Approved' : 'Pending'}
                             </span>
                         </div>
                         <div class="status-row">
                             <span class="status-label">CEO Approval:</span>
                             <span class="status-badge ${permit.ceo_approved ? 'status-approved' : (permit.hod_approved ? 'status-pending' : 'status-waiting')}">
-                                ${permit.ceo_approved ? '✓ Approved' : (permit.hod_approved ? '⏳ Pending' : 'Waiting for HOD')}
+                                ${permit.ceo_approved ? 'Approved' : (permit.hod_approved ? 'Pending' : 'Waiting for HOD')}
                             </span>
                         </div>
                     </div>
                     
-                    <!-- SIGNATURE SECTION -->
                     <div class="signature-area">
-                        <h3>✍️ Sign to Approve as ${levelName}</h3>
+                        <h3>Sign to Approve as ${levelName}</h3>
                         <p>Draw your signature below using your finger or mouse:</p>
                         <canvas id="signatureCanvas" width="500" height="200" style="width:100%; max-width:500px; height:auto; border:2px solid #ccc; border-radius:8px; background:white;"></canvas>
                         <div class="signature-controls">
                             <button id="clearBtn" class="clear-btn">Clear Signature</button>
-                            <button id="approveBtn" class="approve-btn">Approve & Sign</button>
+                            <button id="approveBtn" class="approve-btn">Approve and Sign</button>
                             <button id="rejectBtn" class="reject-btn">Reject</button>
                         </div>
                     </div>
@@ -495,6 +440,7 @@
                 
                 // Update the permit based on which level approved
                 if (level === 'hod' && status === 'approved') {
+                    // Update permit to show HOD approved
                     await supabaseClient
                         .from('issued_documents')
                         .update({
@@ -503,29 +449,41 @@
                         })
                         .eq('id', permitId);
                     
-                    // Get CEO email and send notification
-                    var { data: ceoData } = await supabaseClient
+                    // Get CEO email from database
+                    var { data: ceoData, error: ceoError } = await supabaseClient
                         .from('ceos')
                         .select('*')
                         .eq('is_active', true)
                         .limit(1);
                     
-                    var ceo = ceoData && ceoData[0] ? ceoData[0] : null;
+                    if (ceoError) {
+                        console.error('Error fetching CEO:', ceoError);
+                    }
                     
-                    if (ceo) {
-                        var { data: ceoApproval } = await supabaseClient
+                    var ceo = (ceoData && ceoData[0]) ? ceoData[0] : null;
+                    
+                    if (ceo && ceo.email) {
+                        // Get CEO approval token
+                        var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
                             .from('approvals')
                             .select('approval_token')
                             .eq('permit_id', permitId)
                             .eq('approval_level', 'ceo')
                             .single();
                         
-                        if (ceoApproval) {
+                        if (ceoApprovalError) {
+                            console.error('Error fetching CEO approval token:', ceoApprovalError);
+                        }
+                        
+                        if (ceoApproval && ceoApproval.approval_token) {
                             var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
                             
-                            // Send email to CEO
+                            console.log('Sending email to CEO:', ceo.email);
+                            console.log('CEO Approval URL:', ceoApprovalUrl);
+                            
+                            // Send email to CEO using Edge Function
                             try {
-                                await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                                var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
@@ -537,8 +495,23 @@
                                         level: 'ceo'
                                     })
                                 });
-                            } catch(e) {}
+                                
+                                var emailResult = await emailResponse.json();
+                                console.log('Email send result:', emailResult);
+                                
+                                if (emailResult.success) {
+                                    console.log('CEO email sent successfully');
+                                } else {
+                                    console.error('Failed to send CEO email:', emailResult.error);
+                                }
+                            } catch(e) {
+                                console.error('Error sending CEO email:', e);
+                            }
+                        } else {
+                            console.error('CEO approval token not found for permit:', permitId);
                         }
+                    } else {
+                        console.error('CEO not found in database. Please add CEO email to ceos table.');
                     }
                 }
                 
@@ -556,21 +529,21 @@
                 if (status === 'approved') {
                     var message = level === 'hod' 
                         ? 'HOD approval successful! An email has been sent to the CEO for final approval.'
-                        : 'CEO approval successful! The permit has been fully approved.';
+                        : 'CEO approval successful! The permit has been fully approved. The officer can now download the PDF.';
                     
                     contentDiv.innerHTML = `
                         <div class="success">
-                            <strong>✅ ${level === 'hod' ? 'HOD' : 'CEO'} Approval Successful!</strong><br><br>
+                            <strong>Approval Successful!</strong><br><br>
                             ${message}<br><br>
-                            <a href="index.html" style="color: #155724;">Return to Home</a>
+                            <a href="index.html" style="color: #155724;">Return to Dashboard</a>
                         </div>
                     `;
                 } else {
                     contentDiv.innerHTML = `
                         <div class="error">
-                            <strong>❌ Permit Rejected</strong><br><br>
+                            <strong>Permit Rejected</strong><br><br>
                             The permit has been rejected.<br><br>
-                            <a href="index.html" style="color: #721c24;">Return to Home</a>
+                            <a href="index.html" style="color: #721c24;">Return to Dashboard</a>
                         </div>
                     `;
                 }
