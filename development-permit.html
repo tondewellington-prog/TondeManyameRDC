@@ -5,43 +5,188 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manyame RDC - Issue Development Permit</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; min-height: 100vh; padding: 20px; }
-        .back-link { max-width: 1100px; margin: 0 auto 15px auto; }
-        .back-link a { color: #1e3c72; text-decoration: none; font-weight: bold; }
-        .container { max-width: 1100px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
-        .content { padding: 30px; }
-        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        .form-group { margin-bottom: 5px; }
-        .form-group.full-width { grid-column: span 2; }
-        label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; font-size: 13px; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
-        textarea { resize: vertical; min-height: 80px; }
-        button { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: transform 0.2s; }
-        button:hover { transform: translateY(-2px); }
-        .send-btn { background: #007bff; margin-top: 20px; }
-        .send-btn:hover { background: #0069d9; }
-        .staff-info { background: #e9ecef; padding: 12px 15px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .logout-btn { background: #6c757d; width: auto; padding: 6px 15px; font-size: 13px; }
-        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #dc3545; }
-        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #28a745; }
-        .loading { text-align: center; padding: 20px; color: #666; }
-        .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; font-size: 14px; }
-        .info { background: #cce5ff; color: #004085; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
-        .hidden { display: none; }
-
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .back-link {
+            max-width: 1100px;
+            margin: 0 auto 15px auto;
+        }
+        
+        .back-link a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 5px;
+        }
+        
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .send-btn {
+            background: #007bff;
+            margin-top: 20px;
+        }
+        
+        .send-btn:hover {
+            background: #0069d9;
+        }
+        
+        .staff-info {
+            background: #e9ecef;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logout-btn {
+            background: #6c757d;
+            width: auto;
+            padding: 6px 15px;
+            font-size: 13px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+            font-size: 14px;
+        }
+        
+        .info {
+            background: #cce5ff;
+            color: #004085;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #007bff;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Progress Bar Styles */
         .progress-container {
             background: #e9ecef;
-            border-radius: 10px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 25px;
             margin-bottom: 25px;
         }
+        
         .progress-steps {
             display: flex;
             justify-content: space-between;
             position: relative;
             margin-bottom: 30px;
         }
+        
         .progress-steps::before {
             content: '';
             position: absolute;
@@ -52,12 +197,14 @@
             background: #dee2e6;
             z-index: 1;
         }
+        
         .step {
             position: relative;
             z-index: 2;
             text-align: center;
             flex: 1;
         }
+        
         .step-icon {
             width: 50px;
             height: 50px;
@@ -73,27 +220,33 @@
             color: #6c757d;
             background: white;
         }
+        
         .step.active .step-icon {
             border-color: #007bff;
             background: #007bff;
             color: white;
         }
+        
         .step.completed .step-icon {
             border-color: #28a745;
             background: #28a745;
             color: white;
         }
+        
         .step-label {
             font-size: 12px;
             font-weight: 600;
             color: #6c757d;
         }
+        
         .step.active .step-label {
             color: #007bff;
         }
+        
         .step.completed .step-label {
             color: #28a745;
         }
+        
         .status-message {
             text-align: center;
             padding: 12px;
@@ -101,22 +254,28 @@
             margin-top: 15px;
             font-weight: 500;
         }
+        
         .status-pending {
             background: #fff3cd;
             color: #856404;
         }
+        
         .status-hod {
             background: #cce5ff;
             color: #004085;
         }
+        
         .status-ceo {
             background: #cce5ff;
             color: #004085;
         }
+        
         .status-approved {
             background: #d4edda;
             color: #155724;
         }
+        
+        /* Permit Card Styles */
         .permit-card {
             background: #f8f9fa;
             border-radius: 12px;
@@ -124,46 +283,89 @@
             margin-top: 20px;
             border: 1px solid #dee2e6;
         }
+        
         .permit-card h4 {
             color: #1e3c72;
             margin-bottom: 15px;
         }
+        
         .permit-details {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             font-size: 14px;
         }
+        
         .refresh-btn {
             background: #6c757d;
             margin-top: 15px;
             font-size: 14px;
             padding: 8px;
         }
+        
         .download-btn {
             background: #28a745;
             margin-top: 15px;
         }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .permit-details {
+                grid-template-columns: 1fr;
+            }
+            .progress-steps {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .progress-steps::before {
+                display: none;
+            }
+            .step {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .step-icon {
+                margin: 0;
+            }
+        }
+        
+        @media print {
+            .no-print, .back-link, .staff-info, .form-grid, .send-btn, .refresh-btn, .logout-btn {
+                display: none;
+            }
+            .permit-card {
+                border: none;
+                padding: 0;
+            }
+            .progress-container {
+                background: none;
+                padding: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="back-link">
-        <a href="index.html">Back to Document Management</a>
+    <div class="back-link no-print">
+        <a href="index.html">← Back to Document Management</a>
     </div>
     
     <div class="container">
         <div class="content">
-            <div id="staffInfoSection" class="staff-info">
+            <div id="staffInfoSection" class="staff-info no-print">
                 <span>Logged in as: <strong id="staffName"></strong></span>
                 <button class="logout-btn" onclick="staffLogout()">Logout</button>
             </div>
             
+            <!-- Form Section -->
             <div id="formSection">
-                <div class="info">
-                    <strong>Approval Workflow:</strong> Create permit -> Email sent to HOD -> HOD approves -> Email sent to CEO -> CEO approves -> PDF ready
+                <div class="info no-print">
+                    <strong>Approval Workflow:</strong> Create permit → Email sent to HOD → HOD approves → Email sent to CEO → CEO approves → PDF ready
                 </div>
                 
-                <div class="warning">
+                <div class="warning no-print">
                     <strong>Important:</strong> Please complete all required fields below.
                 </div>
                 
@@ -230,11 +432,12 @@
                     </div>
                 </div>
                 
-                <button class="send-btn" onclick="sendForApproval(event)">Create Permit and Send to HOD</button>
+                <button class="send-btn no-print" onclick="sendForApproval(event)">Create Permit and Send to HOD</button>
                 
                 <div id="issueResult"></div>
             </div>
             
+            <!-- Tracking Section -->
             <div id="trackingSection" class="hidden">
                 <div class="progress-container">
                     <div class="progress-steps">
@@ -262,22 +465,23 @@
                 
                 <div class="permit-card">
                     <h4>Permit Information</h4>
-                    <div class="permit-details" id="permitDetails">
+                    <div class="permit-details">
                         <div><strong>Permit Number:</strong> <span id="displayPermitNumber">-</span></div>
                         <div><strong>Status:</strong> <span id="displayStatus">-</span></div>
                         <div><strong>HOD Approval:</strong> <span id="displayHODStatus">Pending</span></div>
                         <div><strong>CEO Approval:</strong> <span id="displayCEOStatus">Pending</span></div>
                     </div>
-                    <button class="refresh-btn" onclick="checkPermitStatus()">Refresh Status</button>
+                    <button class="refresh-btn no-print" onclick="checkPermitStatus()">⟳ Refresh Status</button>
                 </div>
                 
-                <button id="downloadPdfBtn" class="download-btn hidden" onclick="downloadFinalPDF()">Download Final Permit (PDF)</button>
+                <button id="downloadPdfBtn" class="download-btn no-print hidden" onclick="downloadFinalPDF()">Download Final Permit (PDF)</button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase Configuration
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -291,6 +495,16 @@
         var currentPermitData = null;
         var checkInterval = null;
         
+        // Initialize Supabase
+        function initSupabase() {
+            if (!supabaseClient && typeof window.supabase !== 'undefined') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log("Supabase initialized");
+            }
+            return supabaseClient;
+        }
+        
+        // Check staff login
         function checkStaffLogin() {
             if (!currentStaffUser || !currentStaffName) {
                 document.getElementById('formSection').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
@@ -300,13 +514,7 @@
             return true;
         }
         
-        function initSupabase() {
-            if (!supabaseClient && typeof window.supabase !== 'undefined') {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-            return supabaseClient;
-        }
-        
+        // Staff logout
         function staffLogout() {
             if(supabaseClient) supabaseClient.auth.signOut();
             sessionStorage.removeItem('staffEmail');
@@ -314,6 +522,7 @@
             window.location.href = 'index.html';
         }
         
+        // Set default dates
         function setDefaultDates() {
             var appDate = document.getElementById('applicationDate');
             var issueDate = document.getElementById('issueDate');
@@ -331,16 +540,30 @@
             }
         }
         
+        // Generate permit number
         function generatePermitNumber() {
             var year = new Date().getFullYear();
             var random = Math.floor(Math.random() * 900) + 100;
             return 'MANY/' + random + '/' + year;
         }
         
+        // Generate approval token
         function generateApprovalToken() {
             return 'tok_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
         }
         
+        // Escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // Update progress bar
         function updateProgressBar(status, hodApproved, ceoApproved) {
             var stepDraft = document.getElementById('stepDraft');
             var stepHOD = document.getElementById('stepHOD');
@@ -355,7 +578,7 @@
                 stepCEO.classList.add('completed');
                 stepComplete.classList.add('completed');
                 statusMessage.className = 'status-message status-approved';
-                statusMessage.innerHTML = 'Permit FULLY APPROVED. You can now download the final PDF.';
+                statusMessage.innerHTML = 'Permit FULLY APPROVED! You can now download the final PDF.';
                 document.getElementById('downloadPdfBtn').classList.remove('hidden');
             } else if (hodApproved) {
                 stepHOD.classList.add('completed');
@@ -375,6 +598,7 @@
             document.getElementById('displayCEOStatus').textContent = ceoApproved ? 'Approved' : (hodApproved ? 'Pending' : 'Waiting for HOD');
         }
         
+        // Check permit status
         async function checkPermitStatus() {
             if (!currentPermitId) return;
             
@@ -398,9 +622,10 @@
             }
         }
         
+        // Download final PDF
         async function downloadFinalPDF() {
             if (!currentPermitData) {
-                alert('No permit data available.');
+                alert('No permit data available. Please refresh and try again.');
                 return;
             }
             
@@ -428,11 +653,15 @@
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
+                
+                alert('PDF downloaded successfully!');
             } catch (error) {
+                console.error('Download error:', error);
                 alert('Error downloading PDF: ' + error.message);
             }
         }
         
+        // Check for tracking parameter
         function checkForTracking() {
             var urlParams = new URLSearchParams(window.location.search);
             var trackId = urlParams.get('track');
@@ -444,6 +673,7 @@
             return false;
         }
         
+        // Load permit for tracking
         async function loadPermitForTracking(permitId) {
             var { data: permit, error } = await supabaseClient
                 .from('issued_documents')
@@ -467,10 +697,12 @@
             }
         }
         
+        // Send for approval (ONLY to HOD)
         async function sendForApproval(event) {
             var resultDiv = document.getElementById('issueResult');
             var sendBtn = event.target;
             
+            // Get form values
             var propertyLocation = document.getElementById('propertyLocation').value.trim();
             var applicantName = document.getElementById('applicantName').value.trim();
             var companyName = document.getElementById('companyName').value.trim();
@@ -487,6 +719,7 @@
             var councilWitness = document.getElementById('councilWitness').value.trim();
             var expiryDate = document.getElementById('expiryDate').value;
             
+            // Validate
             if (!propertyLocation || !applicantName || !applicationDate || !applicationRef || !councilResolution || !commercialUses || !issuedAtTown || !issueDate || !applicantRep || !applicantId || !applicantWitness || !councilRep || !councilWitness || !expiryDate) {
                 resultDiv.innerHTML = '<div class="error">Please fill in all required fields.</div>';
                 return;
@@ -498,6 +731,7 @@
             
             try {
                 initSupabase();
+                
                 var permitNumber = generatePermitNumber();
                 var baseUrl = window.location.origin + '/TondeManyameRDC';
                 var verificationUrl = baseUrl + '/index.html?id=' + permitNumber;
@@ -524,6 +758,7 @@
                     verification_url: verificationUrl
                 };
                 
+                // Insert into issued_documents
                 var { data: permitData, error: permitError } = await supabaseClient
                     .from('issued_documents')
                     .insert([{
@@ -550,22 +785,33 @@
                 currentPermitNumber = permitNumber;
                 currentPermitData = permitData[0];
                 
-                var { data: hodData } = await supabaseClient
+                // Get HOD from database
+                var { data: hodData, error: hodError } = await supabaseClient
                     .from('hods')
                     .select('*')
                     .eq('is_active', true)
                     .limit(1);
                 
-                var hod = hodData && hodData[0] ? hodData[0] : { name: 'F. Guta', email: 'fguta@manyame.gov.zw', title: 'Director' };
+                if (hodError || !hodData || hodData.length === 0) {
+                    hodData = [{ name: 'F. Guta', email: 'fguta@manyame.gov.zw', title: 'Director', department: 'Planning' }];
+                }
                 
-                var { data: ceoData } = await supabaseClient
+                var hod = hodData[0];
+                
+                // Get CEO from database
+                var { data: ceoData, error: ceoError } = await supabaseClient
                     .from('ceos')
                     .select('*')
                     .eq('is_active', true)
                     .limit(1);
                 
-                var ceo = ceoData && ceoData[0] ? ceoData[0] : { name: 'C. Murepa', email: 'cmurepa@manyame.gov.zw', title: 'CEO' };
+                if (ceoError || !ceoData || ceoData.length === 0) {
+                    ceoData = [{ name: 'C. Murepa', email: 'cmurepa@manyame.gov.zw', title: 'Chief Executive Officer' }];
+                }
                 
+                var ceo = ceoData[0];
+                
+                // Create approval tokens
                 var hodToken = generateApprovalToken();
                 var ceoToken = generateApprovalToken();
                 var tokenExpiry = new Date();
@@ -602,7 +848,9 @@
                 
                 var hodApprovalUrl = baseUrl + '/approve-permit.html?token=' + hodToken + '&level=hod';
                 
-                // ONLY send email to HOD (NOT to CEO)
+                // ONLY send email to HOD - NOT to CEO
+                console.log('Sending email to HOD:', hod.email);
+                
                 try {
                     var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
                         method: 'POST',
@@ -616,11 +864,20 @@
                             level: 'hod'
                         })
                     });
-                    console.log('HOD email sent to:', hod.email);
+                    
+                    var emailResult = await emailResponse.json();
+                    console.log('Email send result:', emailResult);
+                    
+                    if (emailResult.success) {
+                        console.log('HOD email sent successfully to:', hod.email);
+                    } else {
+                        console.error('Failed to send HOD email:', emailResult.error);
+                    }
                 } catch(e) {
                     console.error('HOD email error:', e);
                 }
                 
+                // Show tracking section
                 document.getElementById('formSection').classList.add('hidden');
                 document.getElementById('trackingSection').classList.remove('hidden');
                 document.getElementById('displayPermitNumber').textContent = permitNumber;
@@ -640,12 +897,15 @@
             }
         }
         
+        // Initialize
+        initSupabase();
+        
         if (!checkStaffLogin()) {
-            // Halt
+            // Staff not logged in
         } else {
             setDefaultDates();
             if (!checkForTracking()) {
-                // Normal mode
+                // Normal new permit mode
             }
         }
     </script>
