@@ -19,7 +19,7 @@
         }
         
         .tabs {
-            max-width: 700px;
+            max-width: 1000px;
             margin: 0 auto 20px auto;
             display: flex;
             gap: 10px;
@@ -45,7 +45,7 @@
         }
         
         .container {
-            max-width: 700px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             border-radius: 16px;
@@ -196,17 +196,88 @@
             background: #218838;
         }
         
-        @media print {
-            .tabs, .no-print {
-                display: none;
-            }
+        /* Dashboard Table Styles */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
-        
+        .create-btn {
+            background: #28a745;
+            width: auto;
+            padding: 10px 20px;
+        }
+        .create-btn:hover {
+            background: #218838;
+        }
+        .permit-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .permit-table th, .permit-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .permit-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        .permit-table tr:hover {
+            background: #f8f9fa;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-hod {
+            background: #ffc107;
+            color: #856404;
+        }
+        .status-ceo {
+            background: #17a2b8;
+            color: white;
+        }
+        .status-approved {
+            background: #28a745;
+            color: white;
+        }
+        .action-btn {
+            background: #6c757d;
+            padding: 6px 12px;
+            font-size: 12px;
+            width: auto;
+            margin-right: 5px;
+        }
+        .action-btn.download {
+            background: #28a745;
+        }
+        .action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .empty-row td {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
         .footer {
             text-align: center;
             margin-top: 20px;
             font-size: 12px;
             color: #666;
+        }
+        
+        @media print {
+            .tabs, .no-print {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -216,6 +287,7 @@
         <button class="tab-btn" id="btnStaff">Staff Login</button>
     </div>
     
+    <!-- Verify Panel -->
     <div id="verifyPanel" class="container">
         <div class="header">
             <h1>Manyame Rural District Council</h1>
@@ -229,15 +301,16 @@
             <button id="verifyBtn">Verify Document</button>
             <div id="verifyResult"></div>
             <div class="footer">
-                This is an official verification system of Manyame Rural District Council Created By TONDEREAI NAMANDI.
+                This is an official verification system of Manyame Rural District Council.
             </div>
         </div>
     </div>
     
+    <!-- Staff Panel with Dashboard -->
     <div id="staffPanel" class="container hidden">
         <div class="header">
             <h1>Manyame RDC Planning Department</h1>
-            <h2>Staff Document Issuance System</h2>
+            <h2>Staff Dashboard - My Permits</h2>
         </div>
         <div class="content">
             <div id="loginSection">
@@ -257,44 +330,54 @@
                 <div id="loginError"></div>
             </div>
             
-            <div id="issuanceSection" class="hidden">
+            <div id="dashboardSection" class="hidden">
                 <div class="staff-info">
                     <span>Welcome, <strong id="staffName"></strong></span>
                     <button id="logoutBtn" class="logout-btn">Logout</button>
                 </div>
                 
-                <div class="form-group doc-type-select">
-                    <label>Select Document Type to Issue</label>
-                    <select id="documentType">
-                        <option value="">-- Select Document Type --</option>
-                        <option value="development_permit">Development Permit (Change of Use)</option>
-                    </select>
+                <div class="dashboard-header">
+                    <h3>My Permits</h3>
+                    <button id="createNewBtn" class="create-btn">+ Create New Permit</button>
                 </div>
                 
-                <button id="continueBtn" class="continue-btn">Continue to Document Form</button>
+                <div id="permitsList">
+                    <table class="permit-table">
+                        <thead>
+                            <tr>
+                                <th>Permit Number</th>
+                                <th>Property Location</th>
+                                <th>Applicant</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="permitsTableBody">
+                            <tr class="empty-row">
+                                <td colspan="5">Loading permits...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Supabase Configuration
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
         let supabaseClient = null;
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
+        let allPermits = [];
         
-        // Initialize Supabase
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                console.log("Supabase initialized");
             }
-        } catch(e) {
-            console.log("Supabase connection note");
-        }
+        } catch(e) {}
         
         // DOM Elements
         const verifyPanel = document.getElementById('verifyPanel');
@@ -302,14 +385,15 @@
         const btnVerify = document.getElementById('btnVerify');
         const btnStaff = document.getElementById('btnStaff');
         const loginSection = document.getElementById('loginSection');
-        const issuanceSection = document.getElementById('issuanceSection');
+        const dashboardSection = document.getElementById('dashboardSection');
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const verifyBtn = document.getElementById('verifyBtn');
-        const continueBtn = document.getElementById('continueBtn');
+        const createNewBtn = document.getElementById('createNewBtn');
         const staffNameSpan = document.getElementById('staffName');
         const loginError = document.getElementById('loginError');
         const verifyResult = document.getElementById('verifyResult');
+        const permitsTableBody = document.getElementById('permitsTableBody');
         
         // Tab switching
         function showVerifyTab() {
@@ -330,11 +414,12 @@
         function checkLoginState() {
             if (currentStaffUser && currentStaffName) {
                 loginSection.classList.add('hidden');
-                issuanceSection.classList.remove('hidden');
+                dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = currentStaffName;
+                loadMyPermits();
             } else {
                 loginSection.classList.remove('hidden');
-                issuanceSection.classList.add('hidden');
+                dashboardSection.classList.add('hidden');
             }
         }
         
@@ -381,8 +466,9 @@
                 
                 loginError.innerHTML = '';
                 loginSection.classList.add('hidden');
-                issuanceSection.classList.remove('hidden');
+                dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = displayName;
+                loadMyPermits();
                 
             } catch (error) {
                 loginError.innerHTML = `<div class="error">${error.message || 'Invalid credentials'}</div>`;
@@ -400,10 +486,139 @@
             currentStaffUser = null;
             currentStaffName = null;
             loginSection.classList.remove('hidden');
-            issuanceSection.classList.add('hidden');
+            dashboardSection.classList.add('hidden');
             document.getElementById('loginEmail').value = '';
             document.getElementById('loginPassword').value = '';
             loginError.innerHTML = '';
+        }
+        
+        // Load My Permits (only show permits that are NOT downloaded/archived)
+        async function loadMyPermits() {
+            if (!supabaseClient || !currentStaffUser) return;
+            
+            permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading permits...</td></tr>';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('issued_documents')
+                    .select('*')
+                    .eq('issued_by_email', currentStaffUser)
+                    .neq('status', 'downloaded')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                allPermits = data || [];
+                renderPermitsTable();
+                
+            } catch (error) {
+                console.error('Error loading permits:', error);
+                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">Error loading permits. Please refresh.</td></tr>';
+            }
+        }
+        
+        // Render permits table
+        function renderPermitsTable() {
+            if (!allPermits || allPermits.length === 0) {
+                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No permits found. Click "Create New Permit" to start.</td></tr>';
+                return;
+            }
+            
+            permitsTableBody.innerHTML = '';
+            
+            for (var i = 0; i < allPermits.length; i++) {
+                var permit = allPermits[i];
+                var permitData = permit.document_data || {};
+                var statusText = '';
+                var statusClass = '';
+                var showDownload = false;
+                
+                if (permit.ceo_approved && permit.hod_approved) {
+                    statusText = 'Approved';
+                    statusClass = 'status-approved';
+                    showDownload = true;
+                } else if (permit.hod_approved) {
+                    statusText = 'CEO Pending';
+                    statusClass = 'status-ceo';
+                    showDownload = false;
+                } else {
+                    statusText = 'HOD Pending';
+                    statusClass = 'status-hod';
+                    showDownload = false;
+                }
+                
+                var row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td><strong>${escapeHtml(permit.document_number)}</strong></td>
+                    <td>${escapeHtml(permitData.property_location || permit.property_location || '-')}</td>
+                    <td>${escapeHtml(permitData.applicant_name || permit.issued_to || '-')}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button class="action-btn" onclick="viewPermitProgress('${permit.id}', '${permit.document_number}')">View Progress</button>
+                        ${showDownload ? `<button class="action-btn download" onclick="downloadPermit('${permit.id}', '${permit.document_number}')">Download PDF</button>` : ''}
+                    </td>
+                `;
+                
+                permitsTableBody.appendChild(row);
+            }
+        }
+        
+        // View permit progress (shows detailed tracking)
+        function viewPermitProgress(permitId, permitNumber) {
+            window.location.href = 'development-permit.html?track=' + permitId;
+        }
+        
+        // Download permit and remove from list
+        async function downloadPermit(permitId, permitNumber) {
+            try {
+                var { data: permit, error } = await supabaseClient
+                    .from('issued_documents')
+                    .select('*')
+                    .eq('id', permitId)
+                    .single();
+                
+                if (error) throw error;
+                
+                // Generate PDF
+                var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
+                var response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        document_type: 'development_permit',
+                        data: permit.document_data
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('PDF generation failed');
+                }
+                
+                // Download PDF
+                var pdfBlob = await response.blob();
+                var url = window.URL.createObjectURL(pdfBlob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'Development_Permit_' + permitNumber + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                // Mark as downloaded (remove from pending list)
+                await supabaseClient
+                    .from('issued_documents')
+                    .update({ status: 'downloaded' })
+                    .eq('id', permitId);
+                
+                // Refresh the list (remove downloaded permit)
+                loadMyPermits();
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Error downloading permit: ' + error.message);
+            }
         }
         
         // Verify Document
@@ -418,7 +633,6 @@
             verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
             
             try {
-                // Search in issued_documents table
                 const { data, error } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -438,7 +652,7 @@
                 let issuedToName = doc.document_data ? doc.document_data.applicant_name : doc.issued_to;
                 let propertyLoc = doc.document_data ? doc.document_data.property_location : doc.property_location;
                 
-                if (isValid) {
+                if (isValid && doc.ceo_approved && doc.hod_approved) {
                     verifyResult.innerHTML = `
                         <div class="valid">
                             <strong>VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
@@ -452,30 +666,16 @@
                         </div>
                     `;
                 } else {
-                    verifyResult.innerHTML = `<div class="invalid">INVALID - This document has expired or been revoked.</div>`;
+                    verifyResult.innerHTML = `<div class="invalid">INVALID - This document has not been fully approved or has expired.</div>`;
                 }
             } catch (error) {
                 verifyResult.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
             }
         }
         
-        // Go to document form
-        function goToDocumentForm() {
-            const docType = document.getElementById('documentType').value;
-            
-            if (!docType) {
-                alert('Please select a document type.');
-                return;
-            }
-            
-            if (!currentStaffUser) {
-                alert('Please login first.');
-                return;
-            }
-            
-            if (docType === 'development_permit') {
-                window.location.href = 'development-permit.html';
-            }
+        // Go to create new permit
+        function goToCreateNew() {
+            window.location.href = 'development-permit.html';
         }
         
         function escapeHtml(str) {
@@ -494,7 +694,7 @@
         loginBtn.addEventListener('click', staffLogin);
         if (logoutBtn) logoutBtn.addEventListener('click', staffLogout);
         verifyBtn.addEventListener('click', verifyDocument);
-        if (continueBtn) continueBtn.addEventListener('click', goToDocumentForm);
+        if (createNewBtn) createNewBtn.addEventListener('click', goToCreateNew);
         
         // Check initial login state
         checkLoginState();
