@@ -13,78 +13,19 @@
         .header h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
         .content { padding: 30px; }
         
-        .info-card {
-            background: #cce5ff;
-            border-left: 5px solid #007bff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
+        .info-card { background: #cce5ff; border-left: 5px solid #007bff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .details-card { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #dee2e6; }
+        .details-card h3 { color: #1e3c72; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #1e3c72; }
+        .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px; }
+        .detail-item { padding: 8px; background: white; border-radius: 6px; }
+        .detail-label { font-weight: bold; color: #1e3c72; display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 4px; }
         
-        .details-card {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #dee2e6;
-        }
-        .details-card h3 {
-            color: #1e3c72;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #1e3c72;
-        }
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            font-size: 14px;
-        }
-        .detail-item {
-            padding: 8px;
-            background: white;
-            border-radius: 6px;
-        }
-        .detail-label {
-            font-weight: bold;
-            color: #1e3c72;
-            display: block;
-            font-size: 11px;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        
-        .status-card {
-            background: #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .status-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .status-approved {
-            background: #28a745;
-            color: white;
-        }
-        .status-pending {
-            background: #ffc107;
-            color: #856404;
-        }
-        .status-waiting {
-            background: #6c757d;
-            color: white;
-        }
+        .status-card { background: #e9ecef; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .status-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #dee2e6; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .status-approved { background: #28a745; color: white; }
+        .status-pending { background: #ffc107; color: #856404; }
+        .status-waiting { background: #6c757d; color: white; }
         
         .signature-area { margin: 30px 0; text-align: center; }
         .signature-area h3 { margin-bottom: 15px; color: #333; }
@@ -168,7 +109,6 @@
             }
             
             try {
-                // Get the specific approval record
                 var { data: approval, error } = await supabaseClient
                     .from('approvals')
                     .select('*')
@@ -181,20 +121,17 @@
                     return;
                 }
                 
-                // Check if already processed
                 if (approval.status !== 'pending') {
                     var statusText = approval.status === 'approved' ? 'already approved' : 'rejected';
                     contentDiv.innerHTML = '<div class="error">This approval request has already been ' + statusText + '.</div>';
                     return;
                 }
                 
-                // Check if token expired
                 if (new Date(approval.token_expires_at) < new Date()) {
                     contentDiv.innerHTML = '<div class="error">This approval link has expired. Please request a new one.</div>';
                     return;
                 }
                 
-                // Get the full permit details
                 var { data: permit, error: permitError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -209,7 +146,6 @@
                 var permitData = approval.permit_data;
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
                 
-                // Check if CEO can approve (HOD must approve first)
                 if (params.level === 'ceo' && !permit.hod_approved) {
                     contentDiv.innerHTML = `
                         <div class="warning">
@@ -223,7 +159,6 @@
                     return;
                 }
                 
-                // Build the display
                 contentDiv.innerHTML = `
                     <div class="info-card">
                         <strong>PERMIT APPROVAL REQUIRED</strong><br>
@@ -423,7 +358,6 @@
                 
                 var userAgent = navigator.userAgent;
                 
-                // Update the specific approval record for this level
                 var { error: updateError } = await supabaseClient
                     .from('approvals')
                     .update({
@@ -438,9 +372,8 @@
                 
                 if (updateError) throw updateError;
                 
-                // Update the permit based on which level approved
+                // HOD approved - send email to CEO
                 if (level === 'hod' && status === 'approved') {
-                    // Update permit to show HOD approved
                     await supabaseClient
                         .from('issued_documents')
                         .update({
@@ -456,14 +389,9 @@
                         .eq('is_active', true)
                         .limit(1);
                     
-                    if (ceoError) {
-                        console.error('Error fetching CEO:', ceoError);
-                    }
-                    
                     var ceo = (ceoData && ceoData[0]) ? ceoData[0] : null;
                     
                     if (ceo && ceo.email) {
-                        // Get CEO approval token
                         var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
                             .from('approvals')
                             .select('approval_token')
@@ -471,17 +399,10 @@
                             .eq('approval_level', 'ceo')
                             .single();
                         
-                        if (ceoApprovalError) {
-                            console.error('Error fetching CEO approval token:', ceoApprovalError);
-                        }
-                        
                         if (ceoApproval && ceoApproval.approval_token) {
                             var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
                             
-                            console.log('Sending email to CEO:', ceo.email);
-                            console.log('CEO Approval URL:', ceoApprovalUrl);
-                            
-                            // Send email to CEO using Edge Function
+                            // Send email to CEO (ONLY after HOD approves)
                             try {
                                 var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
                                     method: 'POST',
@@ -495,23 +416,11 @@
                                         level: 'ceo'
                                     })
                                 });
-                                
-                                var emailResult = await emailResponse.json();
-                                console.log('Email send result:', emailResult);
-                                
-                                if (emailResult.success) {
-                                    console.log('CEO email sent successfully');
-                                } else {
-                                    console.error('Failed to send CEO email:', emailResult.error);
-                                }
+                                console.log('CEO email sent to:', ceo.email);
                             } catch(e) {
-                                console.error('Error sending CEO email:', e);
+                                console.error('CEO email error:', e);
                             }
-                        } else {
-                            console.error('CEO approval token not found for permit:', permitId);
                         }
-                    } else {
-                        console.error('CEO not found in database. Please add CEO email to ceos table.');
                     }
                 }
                 
@@ -528,12 +437,12 @@
                 
                 if (status === 'approved') {
                     var message = level === 'hod' 
-                        ? 'HOD approval successful! An email has been sent to the CEO for final approval.'
-                        : 'CEO approval successful! The permit has been fully approved. The officer can now download the PDF.';
+                        ? 'HOD approval successful. An email has been sent to the CEO for final approval.'
+                        : 'CEO approval successful. The permit has been fully approved. The officer can now download the PDF.';
                     
                     contentDiv.innerHTML = `
                         <div class="success">
-                            <strong>Approval Successful!</strong><br><br>
+                            <strong>Approval Successful</strong><br><br>
                             ${message}<br><br>
                             <a href="index.html" style="color: #155724;">Return to Dashboard</a>
                         </div>
