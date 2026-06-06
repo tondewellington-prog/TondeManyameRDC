@@ -21,8 +21,6 @@
         button:hover { transform: translateY(-2px); }
         .send-btn { background: #007bff; margin-top: 20px; }
         .send-btn:hover { background: #0069d9; }
-        .download-btn { background: #28a745; margin-top: 20px; }
-        .download-btn:hover { background: #218838; }
         .staff-info { background: #e9ecef; padding: 12px 15px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
         .logout-btn { background: #6c757d; width: auto; padding: 6px 15px; font-size: 13px; }
         .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #dc3545; }
@@ -32,7 +30,6 @@
         .info { background: #cce5ff; color: #004085; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
         .hidden { display: none; }
 
-        /* Progress Bar Styles */
         .progress-container {
             background: #e9ecef;
             border-radius: 10px;
@@ -120,8 +117,6 @@
             background: #d4edda;
             color: #155724;
         }
-
-        /* Permit Card Styles */
         .permit-card {
             background: #f8f9fa;
             border-radius: 12px;
@@ -145,11 +140,15 @@
             font-size: 14px;
             padding: 8px;
         }
+        .download-btn {
+            background: #28a745;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="back-link">
-        <a href="index.html">← Back to Document Management</a>
+        <a href="index.html">Back to Document Management</a>
     </div>
     
     <div class="container">
@@ -160,8 +159,12 @@
             </div>
             
             <div id="formSection">
+                <div class="info">
+                    <strong>Approval Workflow:</strong> Create permit -> Email sent to HOD -> HOD approves -> Email sent to CEO -> CEO approves -> PDF ready
+                </div>
+                
                 <div class="warning">
-                    <strong>Important:</strong> Please complete all required fields below to create a new permit.
+                    <strong>Important:</strong> Please complete all required fields below.
                 </div>
                 
                 <div class="form-grid">
@@ -227,12 +230,11 @@
                     </div>
                 </div>
                 
-                <button class="send-btn" onclick="createAndSendPermit(event)">Create Permit & Send to HOD</button>
+                <button class="send-btn" onclick="sendForApproval(event)">Create Permit and Send to HOD</button>
                 
                 <div id="issueResult"></div>
             </div>
             
-            <!-- Permit Tracking Section (shown after permit is created) -->
             <div id="trackingSection" class="hidden">
                 <div class="progress-container">
                     <div class="progress-steps">
@@ -254,7 +256,7 @@
                         </div>
                     </div>
                     <div id="statusMessage" class="status-message status-pending">
-                        ⏳ Permit created. Waiting for HOD approval...
+                        Permit created. Waiting for HOD approval...
                     </div>
                 </div>
                 
@@ -266,62 +268,18 @@
                         <div><strong>HOD Approval:</strong> <span id="displayHODStatus">Pending</span></div>
                         <div><strong>CEO Approval:</strong> <span id="displayCEOStatus">Pending</span></div>
                     </div>
-                    <button class="refresh-btn" onclick="checkPermitStatus()">⟳ Refresh Status</button>
+                    <button class="refresh-btn" onclick="checkPermitStatus()">Refresh Status</button>
                 </div>
                 
-                <button id="downloadPdfBtn" class="download-btn hidden" onclick="downloadFinalPDF()">📄 Download Final Permit (PDF)</button>
+                <button id="downloadPdfBtn" class="download-btn hidden" onclick="downloadFinalPDF()">Download Final Permit (PDF)</button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-       
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
-       
-        // Add this at the beginning of the script section
-function checkForTracking() {
-    var urlParams = new URLSearchParams(window.location.search);
-    var trackId = urlParams.get('track');
-    
-    if (trackId) {
-        // Load existing permit for tracking
-        loadPermitForTracking(trackId);
-        return true;
-    }
-    return false;
-}
-
-async function loadPermitForTracking(permitId) {
-    var { data: permit, error } = await supabaseClient
-        .from('issued_documents')
-        .select('*')
-        .eq('id', permitId)
-        .single();
-    
-    if (permit) {
-        currentPermitId = permit.id;
-        currentPermitNumber = permit.document_number;
-        currentPermitData = permit;
-        
-        // Hide form, show tracking
-        document.getElementById('formSection').classList.add('hidden');
-        document.getElementById('trackingSection').classList.remove('hidden');
-        document.getElementById('displayPermitNumber').textContent = permit.document_number;
-        
-        updateProgressBar(permit.approval_status, permit.hod_approved, permit.ceo_approved);
-        
-        // Start polling
-        if (checkInterval) clearInterval(checkInterval);
-        checkInterval = setInterval(checkPermitStatus, 10000);
-    }
-}
-
-// Call this after initSupabase
-if (!checkForTracking()) {
-    // Normal new permit flow
-}
         
         var supabaseClient = null;
         var currentStaffUser = sessionStorage.getItem('staffEmail');
@@ -390,41 +348,31 @@ if (!checkForTracking()) {
             var stepComplete = document.getElementById('stepComplete');
             var statusMessage = document.getElementById('statusMessage');
             
-            // Reset all
-            [stepDraft, stepHOD, stepCEO, stepComplete].forEach(step => {
-                step.classList.remove('active', 'completed');
-            });
-            
-            // Draft is always completed
             stepDraft.classList.add('completed');
             
             if (hodApproved && ceoApproved) {
-                // Fully approved
                 stepHOD.classList.add('completed');
                 stepCEO.classList.add('completed');
                 stepComplete.classList.add('completed');
                 statusMessage.className = 'status-message status-approved';
-                statusMessage.innerHTML = '✓ Permit FULLY APPROVED! Both HOD and CEO have signed. You can now download the final PDF.';
+                statusMessage.innerHTML = 'Permit FULLY APPROVED. You can now download the final PDF.';
                 document.getElementById('downloadPdfBtn').classList.remove('hidden');
             } else if (hodApproved) {
-                // HOD approved, waiting for CEO
                 stepHOD.classList.add('completed');
                 stepCEO.classList.add('active');
                 statusMessage.className = 'status-message status-ceo';
-                statusMessage.innerHTML = '⏳ HOD approved. Waiting for CEO approval...';
+                statusMessage.innerHTML = 'HOD approved. Waiting for CEO approval...';
                 document.getElementById('downloadPdfBtn').classList.add('hidden');
-            } else if (status === 'pending_hod') {
-                // Waiting for HOD
+            } else {
                 stepHOD.classList.add('active');
                 statusMessage.className = 'status-message status-hod';
-                statusMessage.innerHTML = '⏳ Permit created. Waiting for HOD approval...';
+                statusMessage.innerHTML = 'Permit created. Waiting for HOD approval...';
                 document.getElementById('downloadPdfBtn').classList.add('hidden');
             }
             
-            // Update display text
             document.getElementById('displayStatus').textContent = hodApproved && ceoApproved ? 'Fully Approved' : (hodApproved ? 'HOD Approved, Waiting CEO' : 'Pending HOD');
-            document.getElementById('displayHODStatus').textContent = hodApproved ? '✓ Approved' : '⏳ Pending';
-            document.getElementById('displayCEOStatus').textContent = ceoApproved ? '✓ Approved' : (hodApproved ? '⏳ Pending' : 'Waiting for HOD');
+            document.getElementById('displayHODStatus').textContent = hodApproved ? 'Approved' : 'Pending';
+            document.getElementById('displayCEOStatus').textContent = ceoApproved ? 'Approved' : (hodApproved ? 'Pending' : 'Waiting for HOD');
         }
         
         async function checkPermitStatus() {
@@ -442,7 +390,6 @@ if (!checkForTracking()) {
                 currentPermitData = permit;
                 updateProgressBar(permit.approval_status, permit.hod_approved, permit.ceo_approved);
                 
-                // If fully approved, stop checking
                 if (permit.hod_approved && permit.ceo_approved) {
                     if (checkInterval) clearInterval(checkInterval);
                 }
@@ -453,7 +400,7 @@ if (!checkForTracking()) {
         
         async function downloadFinalPDF() {
             if (!currentPermitData) {
-                alert('No permit data available. Please refresh and try again.');
+                alert('No permit data available.');
                 return;
             }
             
@@ -486,7 +433,41 @@ if (!checkForTracking()) {
             }
         }
         
-        async function createAndSendPermit(event) {
+        function checkForTracking() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var trackId = urlParams.get('track');
+            
+            if (trackId) {
+                loadPermitForTracking(trackId);
+                return true;
+            }
+            return false;
+        }
+        
+        async function loadPermitForTracking(permitId) {
+            var { data: permit, error } = await supabaseClient
+                .from('issued_documents')
+                .select('*')
+                .eq('id', permitId)
+                .single();
+            
+            if (permit) {
+                currentPermitId = permit.id;
+                currentPermitNumber = permit.document_number;
+                currentPermitData = permit;
+                
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('trackingSection').classList.remove('hidden');
+                document.getElementById('displayPermitNumber').textContent = permit.document_number;
+                
+                updateProgressBar(permit.approval_status, permit.hod_approved, permit.ceo_approved);
+                
+                if (checkInterval) clearInterval(checkInterval);
+                checkInterval = setInterval(checkPermitStatus, 10000);
+            }
+        }
+        
+        async function sendForApproval(event) {
             var resultDiv = document.getElementById('issueResult');
             var sendBtn = event.target;
             
@@ -513,7 +494,7 @@ if (!checkForTracking()) {
             
             sendBtn.disabled = true;
             sendBtn.textContent = 'Creating permit...';
-            resultDiv.innerHTML = '<div class="loading">Creating permit and sending approval request...</div>';
+            resultDiv.innerHTML = '<div class="loading">Creating permit and sending to HOD...</div>';
             
             try {
                 initSupabase();
@@ -543,7 +524,6 @@ if (!checkForTracking()) {
                     verification_url: verificationUrl
                 };
                 
-                // Insert into issued_documents
                 var { data: permitData, error: permitError } = await supabaseClient
                     .from('issued_documents')
                     .insert([{
@@ -570,7 +550,6 @@ if (!checkForTracking()) {
                 currentPermitNumber = permitNumber;
                 currentPermitData = permitData[0];
                 
-                // Get HOD and CEO
                 var { data: hodData } = await supabaseClient
                     .from('hods')
                     .select('*')
@@ -587,7 +566,6 @@ if (!checkForTracking()) {
                 
                 var ceo = ceoData && ceoData[0] ? ceoData[0] : { name: 'C. Murepa', email: 'cmurepa@manyame.gov.zw', title: 'CEO' };
                 
-                // Create approval tokens
                 var hodToken = generateApprovalToken();
                 var ceoToken = generateApprovalToken();
                 var tokenExpiry = new Date();
@@ -624,9 +602,9 @@ if (!checkForTracking()) {
                 
                 var hodApprovalUrl = baseUrl + '/approve-permit.html?token=' + hodToken + '&level=hod';
                 
-                // Send email to HOD
+                // ONLY send email to HOD (NOT to CEO)
                 try {
-                    await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                    var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -638,17 +616,17 @@ if (!checkForTracking()) {
                             level: 'hod'
                         })
                     });
-                } catch(e) {}
+                    console.log('HOD email sent to:', hod.email);
+                } catch(e) {
+                    console.error('HOD email error:', e);
+                }
                 
-                // Hide form, show tracking
                 document.getElementById('formSection').classList.add('hidden');
                 document.getElementById('trackingSection').classList.remove('hidden');
                 document.getElementById('displayPermitNumber').textContent = permitNumber;
                 
-                // Start progress bar
                 updateProgressBar('pending_hod', false, false);
                 
-                // Start polling for status every 10 seconds
                 if (checkInterval) clearInterval(checkInterval);
                 checkInterval = setInterval(checkPermitStatus, 10000);
                 
@@ -658,14 +636,17 @@ if (!checkForTracking()) {
                 console.error('Error:', error);
                 resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Create Permit & Send to HOD';
+                sendBtn.textContent = 'Create Permit and Send to HOD';
             }
         }
         
         if (!checkStaffLogin()) {
-            // Halt logic active
+            // Halt
         } else {
             setDefaultDates();
+            if (!checkForTracking()) {
+                // Normal mode
+            }
         }
     </script>
 </body>
