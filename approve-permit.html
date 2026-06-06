@@ -12,8 +12,90 @@
         .header h1 { font-size: 22px; }
         .header h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
         .content { padding: 30px; }
-        .permit-preview { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; max-height: 400px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
-        .permit-preview h4 { margin-bottom: 10px; color: #1e3c72; }
+        
+        /* Client Details Card */
+        .info-card {
+            background: #cce5ff;
+            border-left: 5px solid #007bff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        /* Permit Details Card */
+        .details-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .details-card h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1e3c72;
+        }
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            font-size: 14px;
+        }
+        .detail-item {
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #1e3c72;
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .detail-value {
+            font-size: 14px;
+        }
+        
+        /* Approval Status Card */
+        .status-card {
+            background: #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .status-card h3 {
+            margin-bottom: 15px;
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-approved {
+            background: #28a745;
+            color: white;
+        }
+        .status-pending {
+            background: #ffc107;
+            color: #856404;
+        }
+        .status-waiting {
+            background: #6c757d;
+            color: white;
+        }
+        
+        /* Signature Area */
         .signature-area { margin: 30px 0; text-align: center; }
         .signature-area h3 { margin-bottom: 15px; color: #333; }
         canvas { border: 2px dashed #ccc; border-radius: 8px; background: white; cursor: crosshair; margin: 10px auto; display: block; }
@@ -25,15 +107,14 @@
         .reject-btn:hover { background: #c82333; }
         .clear-btn { background: #6c757d; }
         .clear-btn:hover { background: #5a6268; }
-        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #dc3545; }
-        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #28a745; }
-        .info { background: #cce5ff; color: #004085; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; }
         .loading { text-align: center; padding: 40px; color: #666; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; }
-        .status-pending { background: #ffc107; color: #856404; }
+        
         @media (max-width: 600px) {
+            .details-grid { grid-template-columns: 1fr; }
             canvas { width: 100%; height: auto; }
-            .signature-controls button { padding: 10px 16px; font-size: 12px; }
         }
     </style>
 </head>
@@ -72,6 +153,16 @@
             };
         }
         
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
         async function loadApproval() {
             var params = getUrlParams();
             var contentDiv = document.getElementById('mainContent');
@@ -81,76 +172,197 @@
                 return;
             }
             
+            if (!params.level || (params.level !== 'hod' && params.level !== 'ceo')) {
+                contentDiv.innerHTML = '<div class="error">Invalid approval link. Invalid approval level.</div>';
+                return;
+            }
+            
             try {
+                // Get the specific approval record
                 var { data: approval, error } = await supabaseClient
                     .from('approvals')
                     .select('*')
                     .eq('approval_token', params.token)
+                    .eq('approval_level', params.level)
                     .single();
                 
                 if (error || !approval) {
-                    contentDiv.innerHTML = '<div class="error">Invalid or expired approval link.</div>';
+                    contentDiv.innerHTML = '<div class="error">Invalid or expired approval link. Please contact the planning department.</div>';
                     return;
                 }
                 
+                // Check if already processed
                 if (approval.status !== 'pending') {
-                    contentDiv.innerHTML = '<div class="error">This approval request has already been ' + approval.status + '.</div>';
+                    var statusText = approval.status === 'approved' ? 'already approved' : 'rejected';
+                    contentDiv.innerHTML = '<div class="error">This approval request has already been ' + statusText + '.</div>';
                     return;
                 }
                 
+                // Check if token expired
                 if (new Date(approval.token_expires_at) < new Date()) {
                     contentDiv.innerHTML = '<div class="error">This approval link has expired. Please request a new one.</div>';
                     return;
                 }
                 
-                // For CEO approval, check if HOD already approved
-                if (params.level === 'ceo') {
-                    var { data: permitCheck, error: permitError } = await supabaseClient
-                        .from('issued_documents')
-                        .select('hod_approved, document_number')
-                        .eq('id', approval.permit_id)
-                        .single();
-                    
-                    if (permitError || !permitCheck.hod_approved) {
-                        contentDiv.innerHTML = `
-                            <div class="error">
-                                <strong>Cannot Approve Yet</strong><br><br>
-                                This permit is waiting for HOD approval first. Once the Head of Department approves, you will be able to sign.<br><br>
-                                <strong>Permit Number:</strong> ${permitCheck ? permitCheck.document_number : 'N/A'}
-                            </div>
-                        `;
-                        return;
-                    }
+                // Get the full permit details
+                var { data: permit, error: permitError } = await supabaseClient
+                    .from('issued_documents')
+                    .select('*')
+                    .eq('id', approval.permit_id)
+                    .single();
+                
+                if (permitError || !permit) {
+                    contentDiv.innerHTML = '<div class="error">Permit not found.</div>';
+                    return;
                 }
                 
                 var permitData = approval.permit_data;
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
                 
+                // Check if CEO can approve (HOD must approve first)
+                if (params.level === 'ceo' && !permit.hod_approved) {
+                    contentDiv.innerHTML = `
+                        <div class="warning">
+                            <strong>Cannot Approve Yet</strong><br><br>
+                            This permit is waiting for HOD approval first.<br><br>
+                            <strong>Current Status:</strong> HOD Approval Pending<br>
+                            <strong>Permit Number:</strong> ${escapeHtml(permit.document_number)}<br><br>
+                            You will receive an email notification once the HOD has approved.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Build the complete display
                 contentDiv.innerHTML = `
-                    <div class="info">
-                        <strong>Approval Required: ${levelName}</strong> <span class="status-badge status-pending">Pending</span><br>
-                        <strong>Permit Number:</strong> ${permitData.permit_number}<br>
-                        <strong>Applicant:</strong> ${escapeHtml(permitData.applicant_name)}${permitData.company_name ? ' (' + escapeHtml(permitData.company_name) + ')' : ''}<br>
-                        <strong>Property:</strong> ${escapeHtml(permitData.property_location)}<br>
-                        <strong>Expiry:</strong> ${permitData.expiry_date}
+                    <!-- Client Information Card -->
+                    <div class="info-card">
+                        <strong>📋 PERMIT APPROVAL REQUIRED</strong><br>
+                        <strong>Approver:</strong> ${levelName}<br>
+                        <strong>Permit Number:</strong> ${escapeHtml(permitData.permit_number)}<br>
+                        <strong>Status:</strong> ${params.level === 'hod' ? 'Awaiting HOD Signature' : 'Awaiting CEO Signature'}
                     </div>
                     
-                    <div class="permit-preview">
-                        <h4>Permit Summary</h4>
-                        <p><strong>Application Reference:</strong> ${escapeHtml(permitData.application_ref)}</p>
-                        <p><strong>Council Resolution:</strong> ${escapeHtml(permitData.council_resolution)}</p>
-                        <p><strong>Commercial Uses:</strong> ${escapeHtml(permitData.commercial_uses)}</p>
-                        <p><strong>Issue Date:</strong> ${permitData.issue_date}</p>
-                        <p><strong>Issued At:</strong> ${escapeHtml(permitData.issued_at_town)}</p>
-                        <hr>
-                        <p><strong>Applicant Representative:</strong> ${escapeHtml(permitData.applicant_rep)}</p>
-                        <p><strong>Council Representative:</strong> ${escapeHtml(permitData.council_rep)}</p>
-                        <hr>
-                        <p><em>Full permit document with all 20 conditions will be available after final approval.</em></p>
+                    <!-- CLIENT / APPLICANT DETAILS -->
+                    <div class="details-card">
+                        <h3>👤 Client / Applicant Details</h3>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Applicant Name</span>
+                                <span class="detail-value">${escapeHtml(permitData.applicant_name)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Company Name</span>
+                                <span class="detail-value">${permitData.company_name ? escapeHtml(permitData.company_name) : 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Property Location</span>
+                                <span class="detail-value">${escapeHtml(permitData.property_location)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Commercial Uses</span>
+                                <span class="detail-value">${escapeHtml(permitData.commercial_uses)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Application Reference</span>
+                                <span class="detail-value">${escapeHtml(permitData.application_ref)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Application Date</span>
+                                <span class="detail-value">${permitData.application_date}</span>
+                            </div>
+                        </div>
                     </div>
                     
+                    <!-- PERMIT DETAILS -->
+                    <div class="details-card">
+                        <h3>📄 Permit Details</h3>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Permit Number</span>
+                                <span class="detail-value">${escapeHtml(permitData.permit_number)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Issue Date</span>
+                                <span class="detail-value">${permitData.issue_date}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Expiry Date</span>
+                                <span class="detail-value">${permitData.expiry_date}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Issued At</span>
+                                <span class="detail-value">${escapeHtml(permitData.issued_at_town)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Council Resolution</span>
+                                <span class="detail-value">${escapeHtml(permitData.council_resolution)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OFFICER WHO CREATED THE REQUEST -->
+                    <div class="details-card">
+                        <h3>👨‍💼 Request Created By</h3>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Officer Name</span>
+                                <span class="detail-value">${escapeHtml(permit.issued_by_name)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Officer Email</span>
+                                <span class="detail-value">${escapeHtml(permit.issued_by_email)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Date Created</span>
+                                <span class="detail-value">${new Date(permit.created_at).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SIGNATURES AND WITNESSES -->
+                    <div class="details-card">
+                        <h3>✍️ Signatures & Witnesses</h3>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Applicant Representative</span>
+                                <span class="detail-value">${escapeHtml(permitData.applicant_rep)} (ID: ${escapeHtml(permitData.applicant_id)})</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Applicant Witness</span>
+                                <span class="detail-value">${escapeHtml(permitData.applicant_witness)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Council Representative</span>
+                                <span class="detail-value">${escapeHtml(permitData.council_rep)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Council Witness</span>
+                                <span class="detail-value">${escapeHtml(permitData.council_witness)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- APPROVAL STATUS -->
+                    <div class="status-card">
+                        <h3>✅ Approval Status</h3>
+                        <div class="status-row">
+                            <span class="status-label">HOD Approval:</span>
+                            <span class="status-badge ${permit.hod_approved ? 'status-approved' : 'status-pending'}">
+                                ${permit.hod_approved ? '✓ Approved' : '⏳ Pending'}
+                            </span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-label">CEO Approval:</span>
+                            <span class="status-badge ${permit.ceo_approved ? 'status-approved' : (permit.hod_approved ? 'status-pending' : 'status-waiting')}">
+                                ${permit.ceo_approved ? '✓ Approved' : (permit.hod_approved ? '⏳ Pending' : 'Waiting for HOD')}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- SIGNATURE SECTION -->
                     <div class="signature-area">
-                        <h3>Sign to Approve</h3>
+                        <h3>✍️ Sign to Approve as ${levelName}</h3>
                         <p>Draw your signature below using your finger or mouse:</p>
                         <canvas id="signatureCanvas" width="500" height="200" style="width:100%; max-width:500px; height:auto; border:2px solid #ccc; border-radius:8px; background:white;"></canvas>
                         <div class="signature-controls">
@@ -164,10 +376,12 @@
                 initializeSignatureCanvas();
                 
                 document.getElementById('clearBtn').addEventListener('click', clearSignature);
-                document.getElementById('approveBtn').addEventListener('click', function() { submitApproval('approved', params.token, params.level, approval.permit_id, permitData.permit_number); });
+                document.getElementById('approveBtn').addEventListener('click', function() { 
+                    submitApproval('approved', params.token, params.level, approval.permit_id, permit.document_number); 
+                });
                 document.getElementById('rejectBtn').addEventListener('click', function() { 
                     if (confirm('Are you sure you want to REJECT this permit?')) {
-                        submitApproval('rejected', params.token, params.level, approval.permit_id, permitData.permit_number);
+                        submitApproval('rejected', params.token, params.level, approval.permit_id, permit.document_number);
                     }
                 });
                 
@@ -264,6 +478,7 @@
                 
                 var userAgent = navigator.userAgent;
                 
+                // Update the specific approval record for this level
                 var { error: updateError } = await supabaseClient
                     .from('approvals')
                     .update({
@@ -273,10 +488,12 @@
                         ip_address: 'client-side',
                         user_agent: userAgent
                     })
-                    .eq('approval_token', token);
+                    .eq('approval_token', token)
+                    .eq('approval_level', level);
                 
                 if (updateError) throw updateError;
                 
+                // Update the permit based on which level approved
                 if (level === 'hod' && status === 'approved') {
                     await supabaseClient
                         .from('issued_documents')
@@ -286,39 +503,42 @@
                         })
                         .eq('id', permitId);
                     
-                    // Send email to CEO
+                    // Get CEO email and send notification
                     var { data: ceoData } = await supabaseClient
                         .from('ceos')
                         .select('*')
                         .eq('is_active', true)
                         .limit(1);
                     
-                    var ceo = ceoData && ceoData[0] ? ceoData[0] : { name: 'CEO', email: 'ceo@manyame.gov.zw' };
-                    var { data: approvalData } = await supabaseClient
-                        .from('approvals')
-                        .select('approval_token')
-                        .eq('permit_id', permitId)
-                        .eq('approval_level', 'ceo')
-                        .single();
+                    var ceo = ceoData && ceoData[0] ? ceoData[0] : null;
                     
-                    if (approvalData) {
-                        var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + approvalData.approval_token + '&level=ceo';
+                    if (ceo) {
+                        var { data: ceoApproval } = await supabaseClient
+                            .from('approvals')
+                            .select('approval_token')
+                            .eq('permit_id', permitId)
+                            .eq('approval_level', 'ceo')
+                            .single();
                         
-                        // Send email to CEO
-                        try {
-                            await fetch(SUPABASE_URL + '/functions/v1/send-email', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    to: ceo.email,
-                                    subject: 'Permit Final Approval Required - ' + permitNumber,
-                                    permitNumber: permitNumber,
-                                    approvalUrl: ceoApprovalUrl,
-                                    approverName: ceo.name,
-                                    level: 'ceo'
-                                })
-                            });
-                        } catch(e) {}
+                        if (ceoApproval) {
+                            var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
+                            
+                            // Send email to CEO
+                            try {
+                                await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        to: ceo.email,
+                                        subject: 'Permit Final Approval Required - ' + permitNumber,
+                                        permitNumber: permitNumber,
+                                        approvalUrl: ceoApprovalUrl,
+                                        approverName: ceo.name,
+                                        level: 'ceo'
+                                    })
+                                });
+                            } catch(e) {}
+                        }
                     }
                 }
                 
@@ -331,51 +551,26 @@
                             status: 'active'
                         })
                         .eq('id', permitId);
-                    
-                    // Get full permit data and generate PDF
-                    var { data: permitFull } = await supabaseClient
-                        .from('issued_documents')
-                        .select('*')
-                        .eq('id', permitId)
-                        .single();
-                    
-                    if (permitFull && permitFull.hod_approved && permitFull.ceo_approved) {
-                        contentDiv.innerHTML = '<div class="loading">Generating final PDF...</div>';
-                        
-                        var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
-                        var response = await fetch(functionUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                document_type: 'development_permit',
-                                data: permitFull.document_data
-                            })
-                        });
-                        
-                        if (response.ok) {
-                            var pdfBlob = await response.blob();
-                            var url = window.URL.createObjectURL(pdfBlob);
-                            var a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'Development_Permit_' + permitNumber + '.pdf';
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                        }
-                    }
                 }
                 
                 if (status === 'approved') {
+                    var message = level === 'hod' 
+                        ? 'HOD approval successful! An email has been sent to the CEO for final approval.'
+                        : 'CEO approval successful! The permit has been fully approved.';
+                    
                     contentDiv.innerHTML = `
                         <div class="success">
-                            <strong>Approval Successful!</strong><br><br>
-                            ${level === 'hod' ? 'The permit has been approved by HOD. An email has been sent to the CEO for final approval.' : 'The permit has been fully approved! The PDF is being generated and will download shortly.'}
+                            <strong>✅ ${level === 'hod' ? 'HOD' : 'CEO'} Approval Successful!</strong><br><br>
+                            ${message}<br><br>
+                            <a href="index.html" style="color: #155724;">Return to Home</a>
                         </div>
                     `;
                 } else {
                     contentDiv.innerHTML = `
                         <div class="error">
-                            <strong>Permit Rejected</strong><br><br>
-                            The permit has been rejected. The officer has been notified.
+                            <strong>❌ Permit Rejected</strong><br><br>
+                            The permit has been rejected.<br><br>
+                            <a href="index.html" style="color: #721c24;">Return to Home</a>
                         </div>
                     `;
                 }
@@ -384,16 +579,6 @@
                 console.error('Error:', error);
                 contentDiv.innerHTML = '<div class="error">Error processing approval: ' + error.message + '</div>';
             }
-        }
-        
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
         }
         
         loadApproval();
