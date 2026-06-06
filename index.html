@@ -19,7 +19,7 @@
         }
         
         .tabs {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto 20px auto;
             display: flex;
             gap: 10px;
@@ -45,7 +45,7 @@
         }
         
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
             background: white;
             border-radius: 16px;
@@ -196,7 +196,7 @@
             background: #218838;
         }
         
-        /* Dashboard Table Styles */
+        /* Dashboard Styles */
         .dashboard-header {
             display: flex;
             justify-content: space-between;
@@ -205,31 +205,28 @@
             flex-wrap: wrap;
             gap: 15px;
         }
-        .create-btn {
-            background: #28a745;
-            width: auto;
-            padding: 10px 20px;
-        }
-        .create-btn:hover {
-            background: #218838;
-        }
+        
         .permit-table {
             width: 100%;
             border-collapse: collapse;
         }
+        
         .permit-table th, .permit-table td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #dee2e6;
         }
+        
         .permit-table th {
             background: #f8f9fa;
             font-weight: 600;
             color: #1e3c72;
         }
+        
         .permit-table tr:hover {
             background: #f8f9fa;
         }
+        
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
@@ -237,18 +234,22 @@
             font-size: 12px;
             font-weight: bold;
         }
+        
         .status-hod {
             background: #ffc107;
             color: #856404;
         }
+        
         .status-ceo {
             background: #17a2b8;
             color: white;
         }
+        
         .status-approved {
             background: #28a745;
             color: white;
         }
+        
         .action-btn {
             background: #6c757d;
             padding: 6px 12px;
@@ -256,22 +257,37 @@
             width: auto;
             margin-right: 5px;
         }
+        
         .action-btn.download {
             background: #28a745;
         }
+        
         .action-btn:hover {
             transform: translateY(-1px);
         }
+        
         .empty-row td {
             text-align: center;
             padding: 40px;
             color: #666;
         }
+        
         .footer {
             text-align: center;
             margin-top: 20px;
             font-size: 12px;
             color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .permit-table th, .permit-table td {
+                padding: 8px;
+                font-size: 12px;
+            }
+            .action-btn {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
         }
         
         @media print {
@@ -310,9 +326,10 @@
     <div id="staffPanel" class="container hidden">
         <div class="header">
             <h1>Manyame RDC Planning Department</h1>
-            <h2>Staff Dashboard - My Permits</h2>
+            <h2>Staff Dashboard</h2>
         </div>
         <div class="content">
+            <!-- Login Section -->
             <div id="loginSection">
                 <div class="warning">
                     <strong>Authorized Access Only</strong><br>
@@ -330,6 +347,7 @@
                 <div id="loginError"></div>
             </div>
             
+            <!-- Dashboard Section -->
             <div id="dashboardSection" class="hidden">
                 <div class="staff-info">
                     <span>Welcome, <strong id="staffName"></strong></span>
@@ -338,10 +356,21 @@
                 
                 <div class="dashboard-header">
                     <h3>My Permits</h3>
-                    <button id="createNewBtn" class="create-btn">+ Create New Permit</button>
                 </div>
                 
+                <!-- Document Type Selection for New Permit -->
+                <div class="doc-type-select">
+                    <label>Create New Document</label>
+                    <select id="documentType">
+                        <option value="">-- Select Document Type --</option>
+                        <option value="development_permit">Development Permit (Change of Use)</option>
+                    </select>
+                    <button id="continueBtn" class="continue-btn">Continue to Document Form</button>
+                </div>
+                
+                <!-- Permits Table -->
                 <div id="permitsList">
+                    <h3 style="margin: 25px 0 15px 0;">Recent Permits</h3>
                     <table class="permit-table">
                         <thead>
                             <tr>
@@ -365,6 +394,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase Configuration
         const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -373,11 +403,14 @@
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
         let allPermits = [];
         
+        // Initialize Supabase
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             }
-        } catch(e) {}
+        } catch(e) {
+            console.log("Supabase connection note");
+        }
         
         // DOM Elements
         const verifyPanel = document.getElementById('verifyPanel');
@@ -389,7 +422,8 @@
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const verifyBtn = document.getElementById('verifyBtn');
-        const createNewBtn = document.getElementById('createNewBtn');
+        const continueBtn = document.getElementById('continueBtn');
+        const documentTypeSelect = document.getElementById('documentType');
         const staffNameSpan = document.getElementById('staffName');
         const loginError = document.getElementById('loginError');
         const verifyResult = document.getElementById('verifyResult');
@@ -492,7 +526,7 @@
             loginError.innerHTML = '';
         }
         
-        // Load My Permits (only show permits that are NOT downloaded/archived)
+        // Load My Permits
         async function loadMyPermits() {
             if (!supabaseClient || !currentStaffUser) return;
             
@@ -520,7 +554,7 @@
         // Render permits table
         function renderPermitsTable() {
             if (!allPermits || allPermits.length === 0) {
-                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No permits found. Click "Create New Permit" to start.</td></tr>';
+                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No permits found. Create a new permit using the form above.</td></tr>';
                 return;
             }
             
@@ -549,22 +583,27 @@
                 
                 var row = document.createElement('tr');
                 
+                var actionsHtml = `
+                    <button class="action-btn" onclick="viewPermitProgress('${permit.id}', '${permit.document_number}')">View Progress</button>
+                `;
+                
+                if (showDownload) {
+                    actionsHtml += `<button class="action-btn download" onclick="downloadPermit('${permit.id}', '${permit.document_number}')">Download PDF</button>`;
+                }
+                
                 row.innerHTML = `
                     <td><strong>${escapeHtml(permit.document_number)}</strong></td>
                     <td>${escapeHtml(permitData.property_location || permit.property_location || '-')}</td>
                     <td>${escapeHtml(permitData.applicant_name || permit.issued_to || '-')}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="action-btn" onclick="viewPermitProgress('${permit.id}', '${permit.document_number}')">View Progress</button>
-                        ${showDownload ? `<button class="action-btn download" onclick="downloadPermit('${permit.id}', '${permit.document_number}')">Download PDF</button>` : ''}
-                    </td>
+                    <td>${actionsHtml}</td>
                 `;
                 
                 permitsTableBody.appendChild(row);
             }
         }
         
-        // View permit progress (shows detailed tracking)
+        // View permit progress
         function viewPermitProgress(permitId, permitNumber) {
             window.location.href = 'development-permit.html?track=' + permitId;
         }
@@ -606,13 +645,13 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
                 
-                // Mark as downloaded (remove from pending list)
+                // Mark as downloaded
                 await supabaseClient
                     .from('issued_documents')
                     .update({ status: 'downloaded' })
                     .eq('id', permitId);
                 
-                // Refresh the list (remove downloaded permit)
+                // Refresh the list
                 loadMyPermits();
                 
             } catch (error) {
@@ -673,9 +712,23 @@
             }
         }
         
-        // Go to create new permit
-        function goToCreateNew() {
-            window.location.href = 'development-permit.html';
+        // Go to document form
+        function goToDocumentForm() {
+            const docType = documentTypeSelect.value;
+            
+            if (!docType) {
+                alert('Please select a document type.');
+                return;
+            }
+            
+            if (!currentStaffUser) {
+                alert('Please login first.');
+                return;
+            }
+            
+            if (docType === 'development_permit') {
+                window.location.href = 'development-permit.html';
+            }
         }
         
         function escapeHtml(str) {
@@ -694,7 +747,11 @@
         loginBtn.addEventListener('click', staffLogin);
         if (logoutBtn) logoutBtn.addEventListener('click', staffLogout);
         verifyBtn.addEventListener('click', verifyDocument);
-        if (createNewBtn) createNewBtn.addEventListener('click', goToCreateNew);
+        if (continueBtn) continueBtn.addEventListener('click', goToDocumentForm);
+        
+        // Make functions global for onclick handlers
+        window.viewPermitProgress = viewPermitProgress;
+        window.downloadPermit = downloadPermit;
         
         // Check initial login state
         checkLoginState();
