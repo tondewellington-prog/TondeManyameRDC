@@ -276,8 +276,52 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+       
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+       
+        // Add this at the beginning of the script section
+function checkForTracking() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var trackId = urlParams.get('track');
+    
+    if (trackId) {
+        // Load existing permit for tracking
+        loadPermitForTracking(trackId);
+        return true;
+    }
+    return false;
+}
+
+async function loadPermitForTracking(permitId) {
+    var { data: permit, error } = await supabaseClient
+        .from('issued_documents')
+        .select('*')
+        .eq('id', permitId)
+        .single();
+    
+    if (permit) {
+        currentPermitId = permit.id;
+        currentPermitNumber = permit.document_number;
+        currentPermitData = permit;
+        
+        // Hide form, show tracking
+        document.getElementById('formSection').classList.add('hidden');
+        document.getElementById('trackingSection').classList.remove('hidden');
+        document.getElementById('displayPermitNumber').textContent = permit.document_number;
+        
+        updateProgressBar(permit.approval_status, permit.hod_approved, permit.ceo_approved);
+        
+        // Start polling
+        if (checkInterval) clearInterval(checkInterval);
+        checkInterval = setInterval(checkPermitStatus, 10000);
+    }
+}
+
+// Call this after initSupabase
+if (!checkForTracking()) {
+    // Normal new permit flow
+}
         
         var supabaseClient = null;
         var currentStaffUser = sessionStorage.getItem('staffEmail');
