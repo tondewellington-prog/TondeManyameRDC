@@ -145,6 +145,7 @@
                 
                 var permitData = approval.permit_data;
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
+                var currentApproverName = params.level === 'hod' ? approval.approver_name : 'CEO';
                 
                 if (params.level === 'ceo' && !permit.hod_approved) {
                     contentDiv.innerHTML = `
@@ -382,45 +383,83 @@
                         })
                         .eq('id', permitId);
                     
-                    // Get CEO email from database
+                    // Get CEO from database - FRESH QUERY to ensure correct data
                     var { data: ceoData, error: ceoError } = await supabaseClient
                         .from('ceos')
                         .select('*')
                         .eq('is_active', true)
                         .limit(1);
                     
-                    var ceo = (ceoData && ceoData[0]) ? ceoData[0] : null;
+                    console.log('CEO Data from database:', JSON.stringify(ceoData));
                     
-                    if (ceo && ceo.email) {
-                        var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
-                            .from('approvals')
-                            .select('approval_token')
-                            .eq('permit_id', permitId)
-                            .eq('approval_level', 'ceo')
-                            .single();
+                    if (ceoError) {
+                        console.error('Error fetching CEO:', ceoError);
+                    }
+                    
+                    if (!ceoData || ceoData.length === 0) {
+                        console.error('No CEO found in ceos table');
+                        contentDiv.innerHTML = '<div class="error">CEO not found in system. Please add CEO to database.</div>';
+                        return;
+                    }
+                    
+                    var ceo = ceoData[0];
+                    
+                    // Get CEO approval token - THIS IS THE KEY FIX
+                    var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
+                        .from('approvals')
+                        .select('approval_token')
+                        .eq('permit_id', permitId)
+                        .eq('approval_level', 'ceo')
+                        .single();
+                    
+                    if (ceoApprovalError) {
+                        console.error('Error fetching CEO approval:', ceoApprovalError);
+                        contentDiv.innerHTML = '<div class="error">CEO approval record not found.</div>';
+                        return;
+                    }
+                    
+                    if (!ceoApproval || !ceoApproval.approval_token) {
+                        console.error('CEO approval token is missing');
+                        contentDiv.innerHTML = '<div class="error">CEO approval token not found.</div>';
+                        return;
+                    }
+                    
+                    var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
+                    
+                    // Debug logging
+                    console.log('========== SENDING CEO EMAIL ==========');
+                    console.log('CEO Email:', ceo.email);
+                    console.log('CEO Name:', ceo.name);
+                    console.log('CEO Title:', ceo.title);
+                    console.log('Permit Number:', permitNumber);
+                    console.log('CEO Approval URL:', ceoApprovalUrl);
+                    console.log('========================================');
+                    
+                    // Send email to CEO with CORRECT CEO name
+                    try {
+                        var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                to: ceo.email,
+                                subject: 'Permit Final Approval Required - ' + permitNumber,
+                                permitNumber: permitNumber,
+                                approvalUrl: ceoApprovalUrl,
+                                approverName: ceo.name,  // Now using CEO's name, not HOD's
+                                level: 'ceo'
+                            })
+                        });
                         
-                        if (ceoApproval && ceoApproval.approval_token) {
-                            var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
-                            
-                            // Send email to CEO (ONLY after HOD approves)
-                            try {
-                                var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        to: ceo.email,
-                                        subject: 'Permit Final Approval Required - ' + permitNumber,
-                                        permitNumber: permitNumber,
-                                        approvalUrl: ceoApprovalUrl,
-                                        approverName: ceo.name,
-                                        level: 'ceo'
-                                    })
-                                });
-                                console.log('CEO email sent to:', ceo.email);
-                            } catch(e) {
-                                console.error('CEO email error:', e);
-                            }
+                        var emailResult = await emailResponse.json();
+                        console.log('Email send result:', emailResult);
+                        
+                        if (emailResult.success) {
+                            console.log('SUCCESS: CEO email sent to', ceo.email, 'with name', ceo.name);
+                        } else {
+                            console.error('FAILED: CEO email error:', emailResult.error);
                         }
+                    } catch(e) {
+                        console.error('CEO email exception:', e);
                     }
                 }
                 
