@@ -16,7 +16,7 @@
         .permit-preview h4 { margin-bottom: 10px; color: #1e3c72; }
         .signature-area { margin: 30px 0; text-align: center; }
         .signature-area h3 { margin-bottom: 15px; color: #333; }
-        canvas { border: 2px dashed #ccc; border-radius: 8px; background: white; cursor: crosshair; margin: 10px auto; display: block; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#ccc" font-size="14">Sign here</text></svg>'); background-repeat: no-repeat; background-position: center; }
+        canvas { border: 2px dashed #ccc; border-radius: 8px; background: white; cursor: crosshair; margin: 10px auto; display: block; }
         .signature-controls { display: flex; gap: 10px; justify-content: center; margin: 15px 0; flex-wrap: wrap; }
         button { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
         .approve-btn { background: #28a745; }
@@ -29,10 +29,8 @@
         .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #28a745; }
         .info { background: #cce5ff; color: #004085; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
         .loading { text-align: center; padding: 40px; color: #666; }
-        .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; }
         .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; }
         .status-pending { background: #ffc107; color: #856404; }
-        .status-approved { background: #28a745; color: white; }
         @media (max-width: 600px) {
             canvas { width: 100%; height: auto; }
             .signature-controls button { padding: 10px 16px; font-size: 12px; }
@@ -96,8 +94,7 @@
                 }
                 
                 if (approval.status !== 'pending') {
-                    var statusText = approval.status === 'approved' ? 'approved' : 'rejected';
-                    contentDiv.innerHTML = '<div class="error">This approval request has already been ' + statusText + '.</div>';
+                    contentDiv.innerHTML = '<div class="error">This approval request has already been ' + approval.status + '.</div>';
                     return;
                 }
                 
@@ -128,12 +125,10 @@
                 
                 var permitData = approval.permit_data;
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
-                var statusClass = approval.status === 'pending' ? 'status-pending' : 'status-approved';
-                var statusText = approval.status === 'pending' ? 'Pending' : 'Approved';
                 
                 contentDiv.innerHTML = `
                     <div class="info">
-                        <strong>Approval Required: ${levelName}</strong> <span class="status-badge ${statusClass}">${statusText}</span><br>
+                        <strong>Approval Required: ${levelName}</strong> <span class="status-badge status-pending">Pending</span><br>
                         <strong>Permit Number:</strong> ${permitData.permit_number}<br>
                         <strong>Applicant:</strong> ${escapeHtml(permitData.applicant_name)}${permitData.company_name ? ' (' + escapeHtml(permitData.company_name) + ')' : ''}<br>
                         <strong>Property:</strong> ${escapeHtml(permitData.property_location)}<br>
@@ -154,7 +149,7 @@
                         <p><em>Full permit document with all 20 conditions will be available after final approval.</em></p>
                     </div>
                     
-                    <div class="signature-area" id="signatureArea">
+                    <div class="signature-area">
                         <h3>Sign to Approve</h3>
                         <p>Draw your signature below using your finger or mouse:</p>
                         <canvas id="signatureCanvas" width="500" height="200" style="width:100%; max-width:500px; height:auto; border:2px solid #ccc; border-radius:8px; background:white;"></canvas>
@@ -169,16 +164,16 @@
                 initializeSignatureCanvas();
                 
                 document.getElementById('clearBtn').addEventListener('click', clearSignature);
-                document.getElementById('approveBtn').addEventListener('click', function() { submitApproval('approved', params.token, params.level, approval.permit_id); });
+                document.getElementById('approveBtn').addEventListener('click', function() { submitApproval('approved', params.token, params.level, approval.permit_id, permitData.permit_number); });
                 document.getElementById('rejectBtn').addEventListener('click', function() { 
                     if (confirm('Are you sure you want to REJECT this permit?')) {
-                        submitApproval('rejected', params.token, params.level, approval.permit_id);
+                        submitApproval('rejected', params.token, params.level, approval.permit_id, permitData.permit_number);
                     }
                 });
                 
             } catch (error) {
                 console.error('Error:', error);
-                contentDiv.innerHTML = '<div class="error">Error loading approval request. Please check your link and try again.</div>';
+                contentDiv.innerHTML = '<div class="error">Error loading approval request. Please try again.</div>';
             }
         }
         
@@ -257,7 +252,7 @@
             ctx.lineWidth = 2;
         }
         
-        async function submitApproval(status, token, level, permitId) {
+        async function submitApproval(status, token, level, permitId, permitNumber) {
             var contentDiv = document.getElementById('mainContent');
             contentDiv.innerHTML = '<div class="loading">Processing your decision...</div>';
             
@@ -274,4 +269,134 @@
                     .update({
                         status: status,
                         signature_image_url: signatureDataUrl,
-                        signed_at: new Date().toISO
+                        signed_at: new Date().toISOString(),
+                        ip_address: 'client-side',
+                        user_agent: userAgent
+                    })
+                    .eq('approval_token', token);
+                
+                if (updateError) throw updateError;
+                
+                if (level === 'hod' && status === 'approved') {
+                    await supabaseClient
+                        .from('issued_documents')
+                        .update({
+                            hod_approved: true,
+                            approval_status: 'pending_ceo'
+                        })
+                        .eq('id', permitId);
+                    
+                    // Send email to CEO
+                    var { data: ceoData } = await supabaseClient
+                        .from('ceos')
+                        .select('*')
+                        .eq('is_active', true)
+                        .limit(1);
+                    
+                    var ceo = ceoData && ceoData[0] ? ceoData[0] : { name: 'CEO', email: 'ceo@manyame.gov.zw' };
+                    var { data: approvalData } = await supabaseClient
+                        .from('approvals')
+                        .select('approval_token')
+                        .eq('permit_id', permitId)
+                        .eq('approval_level', 'ceo')
+                        .single();
+                    
+                    if (approvalData) {
+                        var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + approvalData.approval_token + '&level=ceo';
+                        
+                        // Send email to CEO
+                        try {
+                            await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    to: ceo.email,
+                                    subject: 'Permit Final Approval Required - ' + permitNumber,
+                                    permitNumber: permitNumber,
+                                    approvalUrl: ceoApprovalUrl,
+                                    approverName: ceo.name,
+                                    level: 'ceo'
+                                })
+                            });
+                        } catch(e) {}
+                    }
+                }
+                
+                if (level === 'ceo' && status === 'approved') {
+                    await supabaseClient
+                        .from('issued_documents')
+                        .update({
+                            ceo_approved: true,
+                            approval_status: 'approved',
+                            status: 'active'
+                        })
+                        .eq('id', permitId);
+                    
+                    // Get full permit data and generate PDF
+                    var { data: permitFull } = await supabaseClient
+                        .from('issued_documents')
+                        .select('*')
+                        .eq('id', permitId)
+                        .single();
+                    
+                    if (permitFull && permitFull.hod_approved && permitFull.ceo_approved) {
+                        contentDiv.innerHTML = '<div class="loading">Generating final PDF...</div>';
+                        
+                        var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
+                        var response = await fetch(functionUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                document_type: 'development_permit',
+                                data: permitFull.document_data
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            var pdfBlob = await response.blob();
+                            var url = window.URL.createObjectURL(pdfBlob);
+                            var a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'Development_Permit_' + permitNumber + '.pdf';
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                        }
+                    }
+                }
+                
+                if (status === 'approved') {
+                    contentDiv.innerHTML = `
+                        <div class="success">
+                            <strong>Approval Successful!</strong><br><br>
+                            ${level === 'hod' ? 'The permit has been approved by HOD. An email has been sent to the CEO for final approval.' : 'The permit has been fully approved! The PDF is being generated and will download shortly.'}
+                        </div>
+                    `;
+                } else {
+                    contentDiv.innerHTML = `
+                        <div class="error">
+                            <strong>Permit Rejected</strong><br><br>
+                            The permit has been rejected. The officer has been notified.
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                contentDiv.innerHTML = '<div class="error">Error processing approval: ' + error.message + '</div>';
+            }
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        loadApproval();
+    </script>
+</body>
+</html>
