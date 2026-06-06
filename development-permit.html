@@ -21,6 +21,8 @@
         button:hover { transform: translateY(-2px); }
         .send-btn { background: #007bff; margin-top: 20px; }
         .send-btn:hover { background: #0069d9; }
+        .download-btn { background: #28a745; margin-top: 20px; }
+        .download-btn:hover { background: #218838; }
         .staff-info { background: #e9ecef; padding: 12px 15px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
         .logout-btn { background: #6c757d; width: auto; padding: 6px 15px; font-size: 13px; }
         .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #dc3545; }
@@ -28,13 +30,121 @@
         .loading { text-align: center; padding: 20px; color: #666; }
         .warning { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; font-size: 14px; }
         .info { background: #cce5ff; color: #004085; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #007bff; }
-        .approval-box { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
-        .approval-box input { width: 100%; padding: 8px; margin: 5px 0; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; background: white; }
-        .copy-btn { background: #28a745; padding: 6px 12px; font-size: 12px; width: auto; margin-top: 5px; }
-        .email-status { font-size: 12px; margin-top: 5px; padding: 5px; border-radius: 4px; }
-        .email-sent { background: #d4edda; color: #155724; }
-        .email-failed { background: #f8d7da; color: #721c24; }
         .hidden { display: none; }
+
+        /* Progress Bar Styles */
+        .progress-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 30px;
+        }
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #dee2e6;
+            z-index: 1;
+        }
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: 3px solid #dee2e6;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: #6c757d;
+            background: white;
+        }
+        .step.active .step-icon {
+            border-color: #007bff;
+            background: #007bff;
+            color: white;
+        }
+        .step.completed .step-icon {
+            border-color: #28a745;
+            background: #28a745;
+            color: white;
+        }
+        .step-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .step.active .step-label {
+            color: #007bff;
+        }
+        .step.completed .step-label {
+            color: #28a745;
+        }
+        .status-message {
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-hod {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .status-ceo {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        /* Permit Card Styles */
+        .permit-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .permit-card h4 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+        .permit-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 14px;
+        }
+        .refresh-btn {
+            background: #6c757d;
+            margin-top: 15px;
+            font-size: 14px;
+            padding: 8px;
+        }
     </style>
 </head>
 <body>
@@ -50,12 +160,8 @@
             </div>
             
             <div id="formSection">
-                <div class="info">
-                    <strong>Approval Workflow:</strong> Officer creates permit → Email sent to HOD → HOD approves → Email sent to CEO → CEO approves → PDF generated
-                </div>
-                
                 <div class="warning">
-                    <strong>Important:</strong> Please complete all required fields below.
+                    <strong>Important:</strong> Please complete all required fields below to create a new permit.
                 </div>
                 
                 <div class="form-grid">
@@ -121,9 +227,49 @@
                     </div>
                 </div>
                 
-                <button class="send-btn" onclick="sendForApproval(event)">Send for Approval (Email to HOD)</button>
+                <button class="send-btn" onclick="createAndSendPermit(event)">Create Permit & Send to HOD</button>
                 
                 <div id="issueResult"></div>
+            </div>
+            
+            <!-- Permit Tracking Section (shown after permit is created) -->
+            <div id="trackingSection" class="hidden">
+                <div class="progress-container">
+                    <div class="progress-steps">
+                        <div class="step" id="stepDraft">
+                            <div class="step-icon">1</div>
+                            <div class="step-label">Draft Created</div>
+                        </div>
+                        <div class="step" id="stepHOD">
+                            <div class="step-icon">2</div>
+                            <div class="step-label">HOD Approval</div>
+                        </div>
+                        <div class="step" id="stepCEO">
+                            <div class="step-icon">3</div>
+                            <div class="step-label">CEO Approval</div>
+                        </div>
+                        <div class="step" id="stepComplete">
+                            <div class="step-icon">✓</div>
+                            <div class="step-label">Complete</div>
+                        </div>
+                    </div>
+                    <div id="statusMessage" class="status-message status-pending">
+                        ⏳ Permit created. Waiting for HOD approval...
+                    </div>
+                </div>
+                
+                <div class="permit-card">
+                    <h4>Permit Information</h4>
+                    <div class="permit-details" id="permitDetails">
+                        <div><strong>Permit Number:</strong> <span id="displayPermitNumber">-</span></div>
+                        <div><strong>Status:</strong> <span id="displayStatus">-</span></div>
+                        <div><strong>HOD Approval:</strong> <span id="displayHODStatus">Pending</span></div>
+                        <div><strong>CEO Approval:</strong> <span id="displayCEOStatus">Pending</span></div>
+                    </div>
+                    <button class="refresh-btn" onclick="checkPermitStatus()">⟳ Refresh Status</button>
+                </div>
+                
+                <button id="downloadPdfBtn" class="download-btn hidden" onclick="downloadFinalPDF()">📄 Download Final Permit (PDF)</button>
             </div>
         </div>
     </div>
@@ -137,6 +283,11 @@
         var currentStaffUser = sessionStorage.getItem('staffEmail');
         var currentStaffName = sessionStorage.getItem('staffDisplayName');
         var today = new Date().toISOString().split('T')[0];
+        
+        var currentPermitId = null;
+        var currentPermitNumber = null;
+        var currentPermitData = null;
+        var checkInterval = null;
         
         function checkStaffLogin() {
             if (!currentStaffUser || !currentStaffName) {
@@ -188,12 +339,110 @@
             return 'tok_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
         }
         
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
-            alert('Link copied to clipboard!');
+        function updateProgressBar(status, hodApproved, ceoApproved) {
+            var stepDraft = document.getElementById('stepDraft');
+            var stepHOD = document.getElementById('stepHOD');
+            var stepCEO = document.getElementById('stepCEO');
+            var stepComplete = document.getElementById('stepComplete');
+            var statusMessage = document.getElementById('statusMessage');
+            
+            // Reset all
+            [stepDraft, stepHOD, stepCEO, stepComplete].forEach(step => {
+                step.classList.remove('active', 'completed');
+            });
+            
+            // Draft is always completed
+            stepDraft.classList.add('completed');
+            
+            if (hodApproved && ceoApproved) {
+                // Fully approved
+                stepHOD.classList.add('completed');
+                stepCEO.classList.add('completed');
+                stepComplete.classList.add('completed');
+                statusMessage.className = 'status-message status-approved';
+                statusMessage.innerHTML = '✓ Permit FULLY APPROVED! Both HOD and CEO have signed. You can now download the final PDF.';
+                document.getElementById('downloadPdfBtn').classList.remove('hidden');
+            } else if (hodApproved) {
+                // HOD approved, waiting for CEO
+                stepHOD.classList.add('completed');
+                stepCEO.classList.add('active');
+                statusMessage.className = 'status-message status-ceo';
+                statusMessage.innerHTML = '⏳ HOD approved. Waiting for CEO approval...';
+                document.getElementById('downloadPdfBtn').classList.add('hidden');
+            } else if (status === 'pending_hod') {
+                // Waiting for HOD
+                stepHOD.classList.add('active');
+                statusMessage.className = 'status-message status-hod';
+                statusMessage.innerHTML = '⏳ Permit created. Waiting for HOD approval...';
+                document.getElementById('downloadPdfBtn').classList.add('hidden');
+            }
+            
+            // Update display text
+            document.getElementById('displayStatus').textContent = hodApproved && ceoApproved ? 'Fully Approved' : (hodApproved ? 'HOD Approved, Waiting CEO' : 'Pending HOD');
+            document.getElementById('displayHODStatus').textContent = hodApproved ? '✓ Approved' : '⏳ Pending';
+            document.getElementById('displayCEOStatus').textContent = ceoApproved ? '✓ Approved' : (hodApproved ? '⏳ Pending' : 'Waiting for HOD');
         }
         
-        async function sendForApproval(event) {
+        async function checkPermitStatus() {
+            if (!currentPermitId) return;
+            
+            try {
+                var { data: permit, error } = await supabaseClient
+                    .from('issued_documents')
+                    .select('*')
+                    .eq('id', currentPermitId)
+                    .single();
+                
+                if (error) throw error;
+                
+                currentPermitData = permit;
+                updateProgressBar(permit.approval_status, permit.hod_approved, permit.ceo_approved);
+                
+                // If fully approved, stop checking
+                if (permit.hod_approved && permit.ceo_approved) {
+                    if (checkInterval) clearInterval(checkInterval);
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }
+        
+        async function downloadFinalPDF() {
+            if (!currentPermitData) {
+                alert('No permit data available. Please refresh and try again.');
+                return;
+            }
+            
+            try {
+                var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
+                var response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        document_type: 'development_permit',
+                        data: currentPermitData.document_data
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('PDF generation failed');
+                }
+                
+                var pdfBlob = await response.blob();
+                var url = window.URL.createObjectURL(pdfBlob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'Development_Permit_' + currentPermitNumber + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('Error downloading PDF: ' + error.message);
+            }
+        }
+        
+        async function createAndSendPermit(event) {
             var resultDiv = document.getElementById('issueResult');
             var sendBtn = event.target;
             
@@ -219,7 +468,7 @@
             }
             
             sendBtn.disabled = true;
-            sendBtn.textContent = 'Creating permit and sending email...';
+            sendBtn.textContent = 'Creating permit...';
             resultDiv.innerHTML = '<div class="loading">Creating permit and sending approval request...</div>';
             
             try {
@@ -250,7 +499,7 @@
                     verification_url: verificationUrl
                 };
                 
-                // 1. Insert into issued_documents with pending status
+                // Insert into issued_documents
                 var { data: permitData, error: permitError } = await supabaseClient
                     .from('issued_documents')
                     .insert([{
@@ -273,87 +522,67 @@
                 
                 if (permitError) throw permitError;
                 
-                var permitId = permitData[0].id;
+                currentPermitId = permitData[0].id;
+                currentPermitNumber = permitNumber;
+                currentPermitData = permitData[0];
                 
-                // 2. Get HOD from database (or use default)
-                var { data: hodData, error: hodError } = await supabaseClient
+                // Get HOD and CEO
+                var { data: hodData } = await supabaseClient
                     .from('hods')
                     .select('*')
                     .eq('is_active', true)
                     .limit(1);
                 
-                if (hodError || !hodData || hodData.length === 0) {
-                    // Use default HOD
-                    hodData = [{ name: 'F. Guta', email: 'fguta@manyame.gov.zw', title: 'Director', department: 'Planning' }];
-                }
+                var hod = hodData && hodData[0] ? hodData[0] : { name: 'F. Guta', email: 'fguta@manyame.gov.zw', title: 'Director' };
                 
-                var hod = hodData[0];
-                
-                // 3. Get CEO from database (or use default)
-                var { data: ceoData, error: ceoError } = await supabaseClient
+                var { data: ceoData } = await supabaseClient
                     .from('ceos')
                     .select('*')
                     .eq('is_active', true)
                     .limit(1);
                 
-                if (ceoError || !ceoData || ceoData.length === 0) {
-                    ceoData = [{ name: 'C. Murepa', email: 'cmurepa@manyame.gov.zw', title: 'Chief Executive Officer' }];
-                }
+                var ceo = ceoData && ceoData[0] ? ceoData[0] : { name: 'C. Murepa', email: 'cmurepa@manyame.gov.zw', title: 'CEO' };
                 
-                var ceo = ceoData[0];
-                
-                // 4. Create HOD approval token
+                // Create approval tokens
                 var hodToken = generateApprovalToken();
+                var ceoToken = generateApprovalToken();
                 var tokenExpiry = new Date();
                 tokenExpiry.setDate(tokenExpiry.getDate() + 7);
                 
-                var { error: hodApprovalError } = await supabaseClient
+                await supabaseClient
                     .from('approvals')
-                    .insert([{
-                        permit_id: permitId,
-                        permit_number: permitNumber,
-                        permit_data: documentData,
-                        approval_level: 'hod',
-                        status: 'pending',
-                        approver_name: hod.name,
-                        approver_email: hod.email,
-                        approver_title: hod.title,
-                        approval_token: hodToken,
-                        token_expires_at: tokenExpiry.toISOString()
-                    }]);
+                    .insert([
+                        {
+                            permit_id: currentPermitId,
+                            permit_number: permitNumber,
+                            permit_data: documentData,
+                            approval_level: 'hod',
+                            status: 'pending',
+                            approver_name: hod.name,
+                            approver_email: hod.email,
+                            approver_title: hod.title,
+                            approval_token: hodToken,
+                            token_expires_at: tokenExpiry.toISOString()
+                        },
+                        {
+                            permit_id: currentPermitId,
+                            permit_number: permitNumber,
+                            permit_data: documentData,
+                            approval_level: 'ceo',
+                            status: 'pending',
+                            approver_name: ceo.name,
+                            approver_email: ceo.email,
+                            approver_title: ceo.title,
+                            approval_token: ceoToken,
+                            token_expires_at: tokenExpiry.toISOString()
+                        }
+                    ]);
                 
-                if (hodApprovalError) throw hodApprovalError;
-                
-                // 5. Create CEO approval token
-                var ceoToken = generateApprovalToken();
-                
-                var { error: ceoApprovalError } = await supabaseClient
-                    .from('approvals')
-                    .insert([{
-                        permit_id: permitId,
-                        permit_number: permitNumber,
-                        permit_data: documentData,
-                        approval_level: 'ceo',
-                        status: 'pending',
-                        approver_name: ceo.name,
-                        approver_email: ceo.email,
-                        approver_title: ceo.title,
-                        approval_token: ceoToken,
-                        token_expires_at: tokenExpiry.toISOString()
-                    }]);
-                
-                if (ceoApprovalError) throw ceoApprovalError;
-                
-                // 6. Generate approval URLs
                 var hodApprovalUrl = baseUrl + '/approve-permit.html?token=' + hodToken + '&level=hod';
-                var ceoApprovalUrl = baseUrl + '/approve-permit.html?token=' + ceoToken + '&level=ceo';
                 
-                // 7. Send email to HOD using your Edge Function
-                var emailSent = false;
-                var emailError = null;
-                
+                // Send email to HOD
                 try {
-                    var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                    await fetch(SUPABASE_URL + '/functions/v1/send-email', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -365,59 +594,27 @@
                             level: 'hod'
                         })
                     });
-                    
-                    var emailResult = await emailResponse.json();
-                    emailSent = emailResult.success;
-                    if (!emailSent) emailError = emailResult.error;
-                } catch(e) {
-                    emailError = e.message;
-                }
+                } catch(e) {}
                 
-                // 8. Display result
-                var emailStatusHtml = emailSent ? 
-                    '<div class="email-status email-sent">✓ Email sent to HOD (' + hod.email + ')</div>' : 
-                    '<div class="email-status email-failed">✗ Email failed: ' + (emailError || 'Unknown error') + '<br>Use the link below instead.</div>';
+                // Hide form, show tracking
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('trackingSection').classList.remove('hidden');
+                document.getElementById('displayPermitNumber').textContent = permitNumber;
                 
-                resultDiv.innerHTML = `
-                    <div class="success">
-                        <strong>Permit Created Successfully!</strong><br><br>
-                        <strong>Permit Number:</strong> ${permitNumber}<br>
-                        <strong>Status:</strong> Waiting for HOD Approval<br><br>
-                        
-                        ${emailStatusHtml}
-                        
-                        <div class="approval-box">
-                            <strong>HOD Approval Link:</strong><br>
-                            <input type="text" id="hodLink" value="${hodApprovalUrl}" readonly>
-                            <button class="copy-btn" onclick="copyToClipboard(document.getElementById('hodLink').value)">Copy Link</button>
-                            <br><br>
-                            <strong>CEO Approval Link (activate after HOD approves):</strong><br>
-                            <input type="text" id="ceoLink" value="${ceoApprovalUrl}" readonly>
-                            <button class="copy-btn" onclick="copyToClipboard(document.getElementById('ceoLink').value)">Copy Link</button>
-                        </div>
-                        
-                        <p><strong>Next Steps:</strong><br>
-                        1. HOD clicks the approval link and signs<br>
-                        2. After HOD approves, CEO will receive email and can approve<br>
-                        3. Once both approve, the final PDF will be generated automatically</p>
-                    </div>
-                `;
+                // Start progress bar
+                updateProgressBar('pending_hod', false, false);
                 
-                // Clear form fields
-                document.getElementById('applicantName').value = '';
-                document.getElementById('companyName').value = '';
-                document.getElementById('applicationRef').value = '';
-                document.getElementById('applicantRep').value = '';
-                document.getElementById('applicantId').value = '';
-                document.getElementById('applicantWitness').value = '';
-                setDefaultDates();
+                // Start polling for status every 10 seconds
+                if (checkInterval) clearInterval(checkInterval);
+                checkInterval = setInterval(checkPermitStatus, 10000);
+                
+                resultDiv.innerHTML = '';
                 
             } catch (error) {
                 console.error('Error:', error);
                 resultDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
-            } finally {
                 sendBtn.disabled = false;
-                sendBtn.textContent = 'Send for Approval (Email to HOD)';
+                sendBtn.textContent = 'Create Permit & Send to HOD';
             }
         }
         
