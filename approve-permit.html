@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Manyame RDC - Approve Permit</title>
+    <title>Manyame RDC - Document Approval Portal</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; min-height: 100vh; padding: 20px; }
@@ -53,10 +53,10 @@
     <div class="container">
         <div class="header">
             <h1>Manyame Rural District Council</h1>
-            <h2>Permit Approval Portal</h2>
+            <h2>Document Approval Portal</h2>
         </div>
         <div class="content" id="mainContent">
-            <div class="loading">Loading permit details...</div>
+            <div class="loading">Loading document details...</div>
         </div>
     </div>
 
@@ -95,6 +95,16 @@
             });
         }
         
+        function getDocumentTypeName(documentType) {
+            var typeMap = {
+                'development_permit': 'Development Permit (Change of Use)',
+                'building_permit': 'Building Permit',
+                'inspection_cert': 'Inspection Certificate',
+                'site_plan': 'Site Development Plan'
+            };
+            return typeMap[documentType] || documentType || 'Council Document';
+        }
+        
         async function loadApproval() {
             var params = getUrlParams();
             var contentDiv = document.getElementById('mainContent');
@@ -110,6 +120,7 @@
             }
             
             try {
+                // Get the approval record
                 var { data: approval, error } = await supabaseClient
                     .from('approvals')
                     .select('*')
@@ -133,29 +144,30 @@
                     return;
                 }
                 
-                var { data: permit, error: permitError } = await supabaseClient
+                // Get the document from issued_documents
+                var { data: document, error: docError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('id', approval.permit_id)
                     .single();
                 
-                if (permitError || !permit) {
-                    contentDiv.innerHTML = '<div class="error">Permit not found.</div>';
+                if (docError || !document) {
+                    contentDiv.innerHTML = '<div class="error">Document not found.</div>';
                     return;
                 }
                 
-                var permitData = approval.permit_data;
+                var documentData = approval.permit_data;
+                var docTypeName = getDocumentTypeName(document.document_type);
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
                 
-                // ============================================
                 // CEO PAGE - WAITING FOR HOD APPROVAL (WITH AUTO-REFRESH)
-                // ============================================
-                if (params.level === 'ceo' && !permit.hod_approved) {
+                if (params.level === 'ceo' && !document.hod_approved) {
                     contentDiv.innerHTML = `
                         <div class="warning">
                             <strong>Waiting for HOD Approval</strong><br><br>
-                            This permit is waiting for HOD approval first.<br><br>
-                            <strong>Permit Number:</strong> ${escapeHtml(permit.document_number)}<br><br>
+                            This document is waiting for HOD approval first.<br><br>
+                            <strong>Document Number:</strong> ${escapeHtml(document.document_number)}<br>
+                            <strong>Document Type:</strong> ${docTypeName}<br><br>
                             <span id="countdown">This page will refresh in 10 seconds...</span><br>
                             You can also <a href="#" onclick="location.reload(); return false;">click here</a> to refresh manually.
                         </div>
@@ -178,69 +190,75 @@
                     return;
                 }
                 
-                // Display the approval page
+                // Determine which fields to show based on document type
+                var applicantName = documentData.applicant_name || documentData.applicant_name || document.issued_to || 'N/A';
+                var propertyLocation = documentData.property_location || documentData.property_location || document.property_location || 'N/A';
+                var documentPurpose = documentData.commercial_uses || documentData.purpose || 'Standard Approval';
+                
+                // Build the approval page
                 contentDiv.innerHTML = `
                     <div class="info-card">
-                        <strong>PERMIT APPROVAL REQUIRED</strong><br>
+                        <strong>DOCUMENT APPROVAL REQUIRED</strong><br>
                         <strong>Approver:</strong> ${levelName}<br>
-                        <strong>Permit Number:</strong> ${escapeHtml(permitData.permit_number)}<br>
+                        <strong>Document Number:</strong> ${escapeHtml(document.document_number)}<br>
+                        <strong>Document Type:</strong> ${docTypeName}<br>
                         <strong>Status:</strong> ${params.level === 'hod' ? 'Awaiting HOD Signature' : 'Awaiting CEO Signature'}
                     </div>
                     
                     <div class="details-card">
-                        <h3>Client / Applicant Details</h3>
+                        <h3>Document Details</h3>
                         <div class="details-grid">
                             <div class="detail-item">
-                                <span class="detail-label">Applicant Name</span>
-                                <span class="detail-value">${escapeHtml(permitData.applicant_name)}</span>
+                                <span class="detail-label">Document Number</span>
+                                <span class="detail-value">${escapeHtml(document.document_number)}</span>
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Company Name</span>
-                                <span class="detail-value">${permitData.company_name ? escapeHtml(permitData.company_name) : 'N/A'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Property Location</span>
-                                <span class="detail-value">${escapeHtml(permitData.property_location)}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Commercial Uses</span>
-                                <span class="detail-value">${escapeHtml(permitData.commercial_uses)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="details-card">
-                        <h3>Permit Details</h3>
-                        <div class="details-grid">
-                            <div class="detail-item">
-                                <span class="detail-label">Permit Number</span>
-                                <span class="detail-value">${escapeHtml(permitData.permit_number)}</span>
+                                <span class="detail-label">Document Type</span>
+                                <span class="detail-value">${docTypeName}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Issue Date</span>
-                                <span class="detail-value">${permitData.issue_date}</span>
+                                <span class="detail-value">${document.issue_date}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Expiry Date</span>
-                                <span class="detail-value">${permitData.expiry_date}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Council Resolution</span>
-                                <span class="detail-value">${escapeHtml(permitData.council_resolution)}</span>
+                                <span class="detail-value">${document.expiry_date || 'N/A'}</span>
                             </div>
                         </div>
                     </div>
                     
                     <div class="details-card">
-                        <h3>Request Created By</h3>
+                        <h3>Applicant / Client Details</h3>
                         <div class="details-grid">
                             <div class="detail-item">
-                                <span class="detail-label">Officer Name</span>
-                                <span class="detail-value">${escapeHtml(permit.issued_by_name)}</span>
+                                <span class="detail-label">Name</span>
+                                <span class="detail-value">${escapeHtml(applicantName)}</span>
                             </div>
                             <div class="detail-item">
-                                <span class="detail-label">Officer Email</span>
-                                <span class="detail-value">${escapeHtml(permit.issued_by_email)}</span>
+                                <span class="detail-label">Property Location</span>
+                                <span class="detail-value">${escapeHtml(propertyLocation)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Purpose / Use</span>
+                                <span class="detail-value">${escapeHtml(documentPurpose)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="details-card">
+                        <h3>Request Details</h3>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Created By</span>
+                                <span class="detail-value">${escapeHtml(document.issued_by_name)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Created On</span>
+                                <span class="detail-value">${new Date(document.created_at).toLocaleString()}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Application Reference</span>
+                                <span class="detail-value">${escapeHtml(documentData.application_ref || 'N/A')}</span>
                             </div>
                         </div>
                     </div>
@@ -249,14 +267,14 @@
                         <h3>Approval Status</h3>
                         <div class="status-row">
                             <span class="status-label">HOD Approval:</span>
-                            <span class="status-badge ${permit.hod_approved ? 'status-approved' : 'status-pending'}">
-                                ${permit.hod_approved ? 'Approved' : 'Pending'}
+                            <span class="status-badge ${document.hod_approved ? 'status-approved' : 'status-pending'}">
+                                ${document.hod_approved ? 'Approved' : 'Pending'}
                             </span>
                         </div>
                         <div class="status-row">
                             <span class="status-label">CEO Approval:</span>
-                            <span class="status-badge ${permit.ceo_approved ? 'status-approved' : (permit.hod_approved ? 'status-pending' : 'status-waiting')}">
-                                ${permit.ceo_approved ? 'Approved' : (permit.hod_approved ? 'Pending' : 'Waiting for HOD')}
+                            <span class="status-badge ${document.ceo_approved ? 'status-approved' : (document.hod_approved ? 'status-pending' : 'status-waiting')}">
+                                ${document.ceo_approved ? 'Approved' : (document.hod_approved ? 'Pending' : 'Waiting for HOD')}
                             </span>
                         </div>
                     </div>
@@ -277,11 +295,11 @@
                 
                 document.getElementById('clearBtn').addEventListener('click', clearSignature);
                 document.getElementById('approveBtn').addEventListener('click', function() { 
-                    submitApproval('approved', params.token, params.level, approval.permit_id, permit.document_number); 
+                    submitApproval('approved', params.token, params.level, approval.permit_id, document.document_number, document.document_type); 
                 });
                 document.getElementById('rejectBtn').addEventListener('click', function() { 
-                    if (confirm('Are you sure you want to REJECT this permit?')) {
-                        submitApproval('rejected', params.token, params.level, approval.permit_id, permit.document_number);
+                    if (confirm('Are you sure you want to REJECT this document?')) {
+                        submitApproval('rejected', params.token, params.level, approval.permit_id, document.document_number, document.document_type);
                     }
                 });
                 
@@ -366,7 +384,7 @@
             ctx.lineWidth = 2;
         }
         
-        async function submitApproval(status, token, level, permitId, permitNumber) {
+        async function submitApproval(status, token, level, documentId, documentNumber, documentType) {
             var contentDiv = document.getElementById('mainContent');
             contentDiv.innerHTML = '<div class="loading">Processing your decision...</div>';
             
@@ -378,6 +396,7 @@
                 
                 var userAgent = navigator.userAgent;
                 
+                // Update the approval record for this level
                 var { error: updateError } = await supabaseClient
                     .from('approvals')
                     .update({
@@ -392,106 +411,116 @@
                 
                 if (updateError) throw updateError;
                 
-                // HOD approved - send email to CEO
+                // HOD approved - update document and send email to CEO
                 if (level === 'hod' && status === 'approved') {
-                    await supabaseClient
+                    console.log('===== HOD APPROVAL - UPDATING DOCUMENT =====');
+                    console.log('Document ID:', documentId);
+                    console.log('Document Number:', documentNumber);
+                    
+                    // Update the document
+                    var { data: updateData, error: docUpdateError } = await supabaseClient
                         .from('issued_documents')
                         .update({
                             hod_approved: true,
                             approval_status: 'pending_ceo'
                         })
-                        .eq('id', permitId);
+                        .eq('id', documentId)
+                        .select();
                     
+                    if (docUpdateError) {
+                        console.error('Document update error:', docUpdateError);
+                        throw new Error('Failed to update document: ' + docUpdateError.message);
+                    }
+                    
+                    console.log('Document update successful:', updateData);
+                    
+                    // Verify the update
+                    var { data: verifyData, error: verifyError } = await supabaseClient
+                        .from('issued_documents')
+                        .select('hod_approved, approval_status')
+                        .eq('id', documentId)
+                        .single();
+                    
+                    console.log('Verification - hod_approved:', verifyData?.hod_approved);
+                    console.log('Verification - approval_status:', verifyData?.approval_status);
+                    
+                    if (!verifyData?.hod_approved) {
+                        console.error('VERIFICATION FAILED: hod_approved is still false');
+                        contentDiv.innerHTML = '<div class="error">Update verification failed. Please refresh and try again.</div>';
+                        return;
+                    }
+                    
+                    // Get CEO from database
                     var { data: ceoData, error: ceoError } = await supabaseClient
                         .from('ceos')
                         .select('*')
                         .eq('is_active', true)
                         .limit(1);
                     
-                    console.log('CEO Data from database:', JSON.stringify(ceoData));
-                    
-                    if (ceoError) {
-                        console.error('Error fetching CEO:', ceoError);
-                    }
-                    
-                    if (!ceoData || ceoData.length === 0) {
-                        console.error('No CEO found in ceos table');
-                        contentDiv.innerHTML = '<div class="error">CEO not found in system. Please add CEO to database.</div>';
-                        return;
-                    }
-                    
-                    var ceo = ceoData[0];
-                    
-                    var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
-                        .from('approvals')
-                        .select('approval_token')
-                        .eq('permit_id', permitId)
-                        .eq('approval_level', 'ceo')
-                        .single();
-                    
-                    if (ceoApprovalError) {
-                        console.error('Error fetching CEO approval:', ceoApprovalError);
-                        contentDiv.innerHTML = '<div class="error">CEO approval record not found.</div>';
-                        return;
-                    }
-                    
-                    if (!ceoApproval || !ceoApproval.approval_token) {
-                        console.error('CEO approval token is missing');
-                        contentDiv.innerHTML = '<div class="error">CEO approval token not found.</div>';
-                        return;
-                    }
-                    
-                    var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
-                    
-                    console.log('========== SENDING CEO EMAIL ==========');
-                    console.log('CEO Email:', ceo.email);
-                    console.log('CEO Name:', ceo.name);
-                    console.log('Permit Number:', permitNumber);
-                    console.log('CEO Approval URL:', ceoApprovalUrl);
-                    console.log('========================================');
-                    
-                    try {
-                        var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                to: ceo.email,
-                                subject: 'Permit Final Approval Required - ' + permitNumber,
-                                permitNumber: permitNumber,
-                                approvalUrl: ceoApprovalUrl,
-                                approverName: ceo.name,
-                                level: 'ceo'
-                            })
-                        });
+                    if (ceoData && ceoData.length > 0) {
+                        var ceo = ceoData[0];
                         
-                        var emailResult = await emailResponse.json();
-                        console.log('Email send result:', emailResult);
+                        // Get CEO approval token
+                        var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
+                            .from('approvals')
+                            .select('approval_token')
+                            .eq('permit_id', documentId)
+                            .eq('approval_level', 'ceo')
+                            .single();
                         
-                        if (emailResult.success) {
-                            console.log('SUCCESS: CEO email sent to', ceo.email, 'with name', ceo.name);
-                        } else {
-                            console.error('FAILED: CEO email error:', emailResult.error);
+                        if (ceoApproval && ceoApproval.approval_token) {
+                            var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
+                            
+                            console.log('Sending CEO email to:', ceo.email);
+                            console.log('CEO Approval URL:', ceoApprovalUrl);
+                            
+                            // Send email to CEO
+                            try {
+                                await fetch(SUPABASE_URL + '/functions/v1/send-email', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        to: ceo.email,
+                                        subject: 'Document Final Approval Required - ' + documentNumber,
+                                        permitNumber: documentNumber,
+                                        approvalUrl: ceoApprovalUrl,
+                                        approverName: ceo.name,
+                                        level: 'ceo'
+                                    })
+                                });
+                                console.log('CEO email sent');
+                            } catch(e) {
+                                console.error('CEO email error:', e);
+                            }
                         }
-                    } catch(e) {
-                        console.error('CEO email exception:', e);
                     }
+                    
+                    console.log('===== HOD APPROVAL COMPLETE =====');
                 }
                 
+                // CEO approved - finalize document
                 if (level === 'ceo' && status === 'approved') {
-                    await supabaseClient
+                    var { error: docUpdateError } = await supabaseClient
                         .from('issued_documents')
                         .update({
                             ceo_approved: true,
                             approval_status: 'approved',
                             status: 'active'
                         })
-                        .eq('id', permitId);
+                        .eq('id', documentId);
+                    
+                    if (docUpdateError) {
+                        console.error('CEO document update error:', docUpdateError);
+                        throw new Error('Failed to finalize document: ' + docUpdateError.message);
+                    }
+                    
+                    console.log('Document fully approved - ceo_approved = true');
                 }
                 
                 if (status === 'approved') {
                     var message = level === 'hod' 
                         ? 'HOD approval successful. An email has been sent to the CEO for final approval.'
-                        : 'CEO approval successful. The permit has been fully approved. The officer can now download the PDF.';
+                        : 'CEO approval successful. The document has been fully approved. The officer can now download the PDF.';
                     
                     contentDiv.innerHTML = `
                         <div class="success">
@@ -503,8 +532,8 @@
                 } else {
                     contentDiv.innerHTML = `
                         <div class="error">
-                            <strong>Permit Rejected</strong><br><br>
-                            The permit has been rejected.<br><br>
+                            <strong>Document Rejected</strong><br><br>
+                            The document has been rejected.<br><br>
                             <a href="index.html" style="color: #721c24;">Return to Dashboard</a>
                         </div>
                     `;
