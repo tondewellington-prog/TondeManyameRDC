@@ -69,6 +69,7 @@
         var canvas = null;
         var ctx = null;
         var drawing = false;
+        var refreshInterval = null;
         
         try {
             if (window.supabase) {
@@ -145,21 +146,39 @@
                 
                 var permitData = approval.permit_data;
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
-                var currentApproverName = params.level === 'hod' ? approval.approver_name : 'CEO';
                 
+                // ============================================
+                // CEO PAGE - WAITING FOR HOD APPROVAL (WITH AUTO-REFRESH)
+                // ============================================
                 if (params.level === 'ceo' && !permit.hod_approved) {
                     contentDiv.innerHTML = `
                         <div class="warning">
-                            <strong>Cannot Approve Yet</strong><br><br>
+                            <strong>Waiting for HOD Approval</strong><br><br>
                             This permit is waiting for HOD approval first.<br><br>
-                            <strong>Current Status:</strong> HOD Approval Pending<br>
                             <strong>Permit Number:</strong> ${escapeHtml(permit.document_number)}<br><br>
-                            You will receive an email notification once the HOD has approved.
+                            <span id="countdown">This page will refresh in 10 seconds...</span><br>
+                            You can also <a href="#" onclick="location.reload(); return false;">click here</a> to refresh manually.
                         </div>
                     `;
+                    
+                    // Auto-refresh counter
+                    var seconds = 10;
+                    var countdownEl = document.getElementById('countdown');
+                    var countdownInterval = setInterval(function() {
+                        seconds--;
+                        if (countdownEl) {
+                            countdownEl.textContent = 'This page will refresh in ' + seconds + ' seconds...';
+                        }
+                        if (seconds <= 0) {
+                            clearInterval(countdownInterval);
+                            location.reload();
+                        }
+                    }, 1000);
+                    
                     return;
                 }
                 
+                // Display the approval page
                 contentDiv.innerHTML = `
                     <div class="info-card">
                         <strong>PERMIT APPROVAL REQUIRED</strong><br>
@@ -383,7 +402,6 @@
                         })
                         .eq('id', permitId);
                     
-                    // Get CEO from database - FRESH QUERY to ensure correct data
                     var { data: ceoData, error: ceoError } = await supabaseClient
                         .from('ceos')
                         .select('*')
@@ -404,7 +422,6 @@
                     
                     var ceo = ceoData[0];
                     
-                    // Get CEO approval token - THIS IS THE KEY FIX
                     var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
                         .from('approvals')
                         .select('approval_token')
@@ -426,16 +443,13 @@
                     
                     var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
                     
-                    // Debug logging
                     console.log('========== SENDING CEO EMAIL ==========');
                     console.log('CEO Email:', ceo.email);
                     console.log('CEO Name:', ceo.name);
-                    console.log('CEO Title:', ceo.title);
                     console.log('Permit Number:', permitNumber);
                     console.log('CEO Approval URL:', ceoApprovalUrl);
                     console.log('========================================');
                     
-                    // Send email to CEO with CORRECT CEO name
                     try {
                         var emailResponse = await fetch(SUPABASE_URL + '/functions/v1/send-email', {
                             method: 'POST',
@@ -445,7 +459,7 @@
                                 subject: 'Permit Final Approval Required - ' + permitNumber,
                                 permitNumber: permitNumber,
                                 approvalUrl: ceoApprovalUrl,
-                                approverName: ceo.name,  // Now using CEO's name, not HOD's
+                                approverName: ceo.name,
                                 level: 'ceo'
                             })
                         });
