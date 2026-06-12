@@ -62,6 +62,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded, starting approval portal...');
+            loadApproval();
+        });
+        
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -69,14 +75,15 @@
         var canvas = null;
         var ctx = null;
         var drawing = false;
-        var refreshInterval = null;
-        var countdownInterval = null;
         
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('Supabase initialized');
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error('Supabase init error:', e);
+        }
         
         function getUrlParams() {
             var params = new URLSearchParams(window.location.search);
@@ -107,13 +114,15 @@
         }
         
         async function loadApproval() {
-            var params = getUrlParams();
             var contentDiv = document.getElementById('mainContent');
             
             if (!contentDiv) {
-                console.error('mainContent element not found');
+                console.error('mainContent element not found!');
                 return;
             }
+            
+            var params = getUrlParams();
+            console.log('Loading approval with params:', params);
             
             if (!params.token) {
                 contentDiv.innerHTML = '<div class="error">Invalid approval link. No token provided.</div>';
@@ -122,6 +131,11 @@
             
             if (!params.level || (params.level !== 'hod' && params.level !== 'ceo')) {
                 contentDiv.innerHTML = '<div class="error">Invalid approval link. Invalid approval level.</div>';
+                return;
+            }
+            
+            if (!supabaseClient) {
+                contentDiv.innerHTML = '<div class="error">Database connection error. Please refresh.</div>';
                 return;
             }
             
@@ -135,6 +149,7 @@
                     .single();
                 
                 if (error || !approval) {
+                    console.error('Approval fetch error:', error);
                     contentDiv.innerHTML = '<div class="error">Invalid or expired approval link. Please contact the planning department.</div>';
                     return;
                 }
@@ -158,9 +173,12 @@
                     .single();
                 
                 if (docError || !document) {
+                    console.error('Document fetch error:', docError);
                     contentDiv.innerHTML = '<div class="error">Document not found.</div>';
                     return;
                 }
+                
+                console.log('Document loaded:', document.document_number);
                 
                 var documentData = approval.permit_data || {};
                 var docTypeName = getDocumentTypeName(document.document_type);
@@ -179,7 +197,7 @@
                         </div>
                     `;
                     
-                    // Auto-refresh counter - use setTimeout instead of manipulating DOM
+                    // Auto-refresh counter
                     var seconds = 10;
                     var countdownTimer = setInterval(function() {
                         seconds--;
@@ -314,14 +332,17 @@
                 });
                 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error in loadApproval:', error);
                 if (contentDiv) contentDiv.innerHTML = '<div class="error">Error loading approval request. Please try again.</div>';
             }
         }
         
         function initializeSignatureCanvas() {
             canvas = document.getElementById('signatureCanvas');
-            if (!canvas) return;
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+            }
             
             ctx = canvas.getContext('2d');
             
@@ -428,7 +449,7 @@
                 
                 // HOD approved - update document and send email to CEO
                 if (level === 'hod' && status === 'approved') {
-                    console.log('===== HOD APPROVAL - UPDATING DOCUMENT =====');
+                    console.log('HOD approval - updating document:', documentId);
                     
                     // Update the document
                     var { error: docUpdateError } = await supabaseClient
@@ -444,7 +465,7 @@
                         throw new Error('Failed to update document: ' + docUpdateError.message);
                     }
                     
-                    console.log('Document update successful');
+                    console.log('Document updated successfully');
                     
                     // Get CEO from database
                     var { data: ceoData, error: ceoError } = await supabaseClient
@@ -481,7 +502,7 @@
                                         level: 'ceo'
                                     })
                                 });
-                                console.log('CEO email sent');
+                                console.log('CEO email sent to:', ceo.email);
                             } catch(e) {
                                 console.error('CEO email error:', e);
                             }
@@ -530,22 +551,13 @@
                     `;
                 }
                 
-                // Clear any intervals
-                if (refreshInterval) clearInterval(refreshInterval);
-                if (countdownInterval) clearInterval(countdownInterval);
-                
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error in submitApproval:', error);
                 contentDiv.innerHTML = '<div class="error">Error processing approval: ' + error.message + '</div>';
             }
-        }
-        
-        // Start the approval loading when page is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadApproval);
-        } else {
-            loadApproval();
         }
     </script>
 </body>
 </html>
+
+
