@@ -62,12 +62,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Wait for DOM to be fully loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM fully loaded, starting approval portal...');
-            loadApproval();
-        });
-        
+        // Initialize variables
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -76,10 +71,13 @@
         var ctx = null;
         var drawing = false;
         
+        // Initialize Supabase
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 console.log('Supabase initialized');
+            } else {
+                console.error('Supabase library not loaded');
             }
         } catch(e) {
             console.error('Supabase init error:', e);
@@ -95,7 +93,7 @@
         
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
+            return String(str).replace(/[&<>]/g, function(m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
@@ -117,7 +115,7 @@
             var contentDiv = document.getElementById('mainContent');
             
             if (!contentDiv) {
-                console.error('mainContent element not found!');
+                console.error('mainContent element not found');
                 return;
             }
             
@@ -135,24 +133,26 @@
             }
             
             if (!supabaseClient) {
-                contentDiv.innerHTML = '<div class="error">Database connection error. Please refresh.</div>';
+                contentDiv.innerHTML = '<div class="error">Database connection error. Please refresh the page.</div>';
                 return;
             }
             
             try {
                 // Get the approval record
-                var { data: approval, error } = await supabaseClient
+                var approvalResult = await supabaseClient
                     .from('approvals')
                     .select('*')
                     .eq('approval_token', params.token)
                     .eq('approval_level', params.level)
                     .single();
                 
-                if (error || !approval) {
-                    console.error('Approval fetch error:', error);
+                if (approvalResult.error || !approvalResult.data) {
+                    console.error('Approval fetch error:', approvalResult.error);
                     contentDiv.innerHTML = '<div class="error">Invalid or expired approval link. Please contact the planning department.</div>';
                     return;
                 }
+                
+                var approval = approvalResult.data;
                 
                 if (approval.status !== 'pending') {
                     var statusText = approval.status === 'approved' ? 'already approved' : 'rejected';
@@ -166,25 +166,26 @@
                 }
                 
                 // Get the document from issued_documents
-                var { data: document, error: docError } = await supabaseClient
+                var docResult = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('id', approval.permit_id)
                     .single();
                 
-                if (docError || !document) {
-                    console.error('Document fetch error:', docError);
+                if (docResult.error || !docResult.data) {
+                    console.error('Document fetch error:', docResult.error);
                     contentDiv.innerHTML = '<div class="error">Document not found.</div>';
                     return;
                 }
                 
+                var document = docResult.data;
                 console.log('Document loaded:', document.document_number);
                 
                 var documentData = approval.permit_data || {};
                 var docTypeName = getDocumentTypeName(document.document_type);
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
                 
-                // CEO PAGE - WAITING FOR HOD APPROVAL (WITH AUTO-REFRESH)
+                // CEO PAGE - WAITING FOR HOD APPROVAL
                 if (params.level === 'ceo' && !document.hod_approved) {
                     contentDiv.innerHTML = `
                         <div class="warning">
@@ -214,13 +215,13 @@
                     return;
                 }
                 
-                // Determine which fields to show based on document type
+                // Determine fields to show
                 var applicantName = documentData.applicant_name || document.issued_to || 'N/A';
                 var propertyLocation = documentData.property_location || document.property_location || 'N/A';
                 var documentPurpose = documentData.commercial_uses || documentData.purpose || 'Standard Approval';
                 
-                // Build the approval page
-                contentDiv.innerHTML = `
+                // Build the approval page HTML
+                var html = `
                     <div class="info-card">
                         <strong>DOCUMENT APPROVAL REQUIRED</strong><br>
                         <strong>Approver:</strong> ${levelName}<br>
@@ -315,25 +316,41 @@
                     </div>
                 `;
                 
-                initializeSignatureCanvas();
+                contentDiv.innerHTML = html;
                 
-                var clearBtn = document.getElementById('clearBtn');
-                var approveBtn = document.getElementById('approveBtn');
-                var rejectBtn = document.getElementById('rejectBtn');
-                
-                if (clearBtn) clearBtn.addEventListener('click', clearSignature);
-                if (approveBtn) approveBtn.addEventListener('click', function() { 
-                    submitApproval('approved', params.token, params.level, approval.permit_id, document.document_number, document.document_type); 
-                });
-                if (rejectBtn) rejectBtn.addEventListener('click', function() { 
-                    if (confirm('Are you sure you want to REJECT this document?')) {
-                        submitApproval('rejected', params.token, params.level, approval.permit_id, document.document_number, document.document_type);
-                    }
-                });
+                // Initialize canvas and buttons after HTML is inserted
+                setTimeout(function() {
+                    initializeSignatureCanvas();
+                    attachButtonEvents(params.token, params.level, approval.permit_id, document.document_number, document.document_type);
+                }, 100);
                 
             } catch (error) {
                 console.error('Error in loadApproval:', error);
-                if (contentDiv) contentDiv.innerHTML = '<div class="error">Error loading approval request. Please try again.</div>';
+                if (contentDiv) {
+                    contentDiv.innerHTML = '<div class="error">Error loading approval request. Please try again.</div>';
+                }
+            }
+        }
+        
+        function attachButtonEvents(token, level, documentId, documentNumber, documentType) {
+            var clearBtn = document.getElementById('clearBtn');
+            var approveBtn = document.getElementById('approveBtn');
+            var rejectBtn = document.getElementById('rejectBtn');
+            
+            if (clearBtn) {
+                clearBtn.addEventListener('click', clearSignature);
+            }
+            if (approveBtn) {
+                approveBtn.addEventListener('click', function() { 
+                    submitApproval('approved', token, level, documentId, documentNumber, documentType); 
+                });
+            }
+            if (rejectBtn) {
+                rejectBtn.addEventListener('click', function() { 
+                    if (confirm('Are you sure you want to REJECT this document?')) {
+                        submitApproval('rejected', token, level, documentId, documentNumber, documentType);
+                    }
+                });
             }
         }
         
@@ -432,8 +449,8 @@
                 
                 var userAgent = navigator.userAgent;
                 
-                // Update the approval record for this level
-                var { error: updateError } = await supabaseClient
+                // Update the approval record
+                var updateResult = await supabaseClient
                     .from('approvals')
                     .update({
                         status: status,
@@ -445,14 +462,13 @@
                     .eq('approval_token', token)
                     .eq('approval_level', level);
                 
-                if (updateError) throw updateError;
+                if (updateResult.error) throw updateResult.error;
                 
                 // HOD approved - update document and send email to CEO
                 if (level === 'hod' && status === 'approved') {
                     console.log('HOD approval - updating document:', documentId);
                     
-                    // Update the document
-                    var { error: docUpdateError } = await supabaseClient
+                    var docUpdateResult = await supabaseClient
                         .from('issued_documents')
                         .update({
                             hod_approved: true,
@@ -460,33 +476,33 @@
                         })
                         .eq('id', documentId);
                     
-                    if (docUpdateError) {
-                        console.error('Document update error:', docUpdateError);
-                        throw new Error('Failed to update document: ' + docUpdateError.message);
+                    if (docUpdateResult.error) {
+                        console.error('Document update error:', docUpdateResult.error);
+                        throw new Error('Failed to update document: ' + docUpdateResult.error.message);
                     }
                     
                     console.log('Document updated successfully');
                     
                     // Get CEO from database
-                    var { data: ceoData, error: ceoError } = await supabaseClient
+                    var ceoResult = await supabaseClient
                         .from('ceos')
                         .select('*')
                         .eq('is_active', true)
                         .limit(1);
                     
-                    if (ceoData && ceoData.length > 0) {
-                        var ceo = ceoData[0];
+                    if (ceoResult.data && ceoResult.data.length > 0) {
+                        var ceo = ceoResult.data[0];
                         
                         // Get CEO approval token
-                        var { data: ceoApproval, error: ceoApprovalError } = await supabaseClient
+                        var ceoApprovalResult = await supabaseClient
                             .from('approvals')
                             .select('approval_token')
                             .eq('permit_id', documentId)
                             .eq('approval_level', 'ceo')
                             .single();
                         
-                        if (ceoApproval && ceoApproval.approval_token) {
-                            var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
+                        if (ceoApprovalResult.data && ceoApprovalResult.data.approval_token) {
+                            var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApprovalResult.data.approval_token + '&level=ceo';
                             
                             // Send email to CEO
                             try {
@@ -512,7 +528,7 @@
                 
                 // CEO approved - finalize document
                 if (level === 'ceo' && status === 'approved') {
-                    var { error: docUpdateError } = await supabaseClient
+                    var docUpdateResult = await supabaseClient
                         .from('issued_documents')
                         .update({
                             ceo_approved: true,
@@ -521,9 +537,9 @@
                         })
                         .eq('id', documentId);
                     
-                    if (docUpdateError) {
-                        console.error('CEO document update error:', docUpdateError);
-                        throw new Error('Failed to finalize document: ' + docUpdateError.message);
+                    if (docUpdateResult.error) {
+                        console.error('CEO document update error:', docUpdateResult.error);
+                        throw new Error('Failed to finalize document: ' + docUpdateResult.error.message);
                     }
                     
                     console.log('Document fully approved');
@@ -556,8 +572,17 @@
                 contentDiv.innerHTML = '<div class="error">Error processing approval: ' + error.message + '</div>';
             }
         }
+        
+        // Start the app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM ready, loading approval...');
+                loadApproval();
+            });
+        } else {
+            console.log('DOM already ready, loading approval...');
+            loadApproval();
+        }
     </script>
 </body>
 </html>
-
-
