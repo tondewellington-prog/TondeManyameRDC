@@ -359,7 +359,6 @@
                 <button class="logout-btn" onclick="staffLogout()">Logout</button>
             </div>
             
-            <!-- Form Section -->
             <div id="formSection">
                 <div class="info no-print">
                     <strong>Approval Workflow:</strong> Create permit → Email sent to HOD → HOD approves → Email sent to CEO → CEO approves → PDF ready
@@ -437,7 +436,6 @@
                 <div id="issueResult"></div>
             </div>
             
-            <!-- Tracking Section -->
             <div id="trackingSection" class="hidden">
                 <div class="progress-container">
                     <div class="progress-steps">
@@ -630,13 +628,36 @@
             }
             
             try {
+                // Fetch the signature values directly from the approvals table dynamically before compiling the HTML payload
+                var { data: fetchedApprovals, error: approvalFetchError } = await supabaseClient
+                    .from('approvals')
+                    .select('approval_level, status, signature_image_url')
+                    .eq('permit_id', currentPermitData.id);
+                
+                if (approvalFetchError) throw approvalFetchError;
+                
+                var docDataCopy = JSON.parse(JSON.stringify(currentPermitData.document_data));
+                docDataCopy.hod_signature_image = null;
+                docDataCopy.ceo_signature_image = null;
+                
+                if (fetchedApprovals) {
+                    fetchedApprovals.forEach(function(app) {
+                        if (app.approval_level === 'hod' && app.status === 'approved') {
+                            docDataCopy.hod_signature_image = app.signature_image_url;
+                        }
+                        if (app.approval_level === 'ceo' && app.status === 'approved') {
+                            docDataCopy.ceo_signature_image = app.signature_image_url;
+                        }
+                    });
+                }
+                
                 var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         document_type: 'development_permit',
-                        data: currentPermitData.document_data
+                        data: docDataCopy
                     })
                 });
                 
