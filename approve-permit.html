@@ -146,14 +146,14 @@
                     return;
                 }
                 
-                // Get the document from issued_documents
-                var { data: document, error: docError } = await supabaseClient
+                // Get the document from issued_documents (Renamed 'document' to 'permitDoc' to prevent shadowing global document)
+                var { data: permitDoc, error: docError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('id', approval.permit_id)
                     .single();
                 
-                if (docError || !document) {
+                if (docError || !permitDoc) {
                     contentDiv.innerHTML = '<div class="error">Document not found.</div>';
                     return;
                 }
@@ -164,12 +164,12 @@
                 // ============================================
                 // CEO PAGE - WAITING FOR HOD APPROVAL (WITH AUTO-REFRESH)
                 // ============================================
-                if (params.level === 'ceo' && !document.hod_approved) {
+                if (params.level === 'ceo' && !permitDoc.hod_approved) {
                     contentDiv.innerHTML = `
                         <div class="warning">
                             <strong>Waiting for HOD Approval</strong><br><br>
                             This document is waiting for HOD approval first.<br><br>
-                            <strong>Document Number:</strong> ${escapeHtml(document.document_number)}<br>
+                            <strong>Document Number:</strong> ${escapeHtml(permitDoc.document_number)}<br>
                             <strong>Document Type:</strong> Development Permit<br><br>
                             <span id="countdownText">This page will refresh in 10 seconds...</span><br>
                             You can also <a href="#" onclick="location.reload(); return false;">click here</a> to refresh manually.
@@ -194,15 +194,15 @@
                 }
                 
                 // Build the approval page
-                var applicantName = documentData.applicant_name || document.issued_to || 'N/A';
-                var propertyLocation = documentData.property_location || document.property_location || 'N/A';
+                var applicantName = documentData.applicant_name || permitDoc.issued_to || 'N/A';
+                var propertyLocation = documentData.property_location || permitDoc.property_location || 'N/A';
                 var documentPurpose = documentData.commercial_uses || documentData.purpose || 'Standard Approval';
                 
                 contentDiv.innerHTML = `
                     <div class="info-card">
                         <strong>DOCUMENT APPROVAL REQUIRED</strong><br>
                         <strong>Approver:</strong> ${levelName}<br>
-                        <strong>Document Number:</strong> ${escapeHtml(document.document_number)}<br>
+                        <strong>Document Number:</strong> ${escapeHtml(permitDoc.document_number)}<br>
                         <strong>Document Type:</strong> Development Permit<br>
                         <strong>Status:</strong> ${params.level === 'hod' ? 'Awaiting HOD Signature' : 'Awaiting CEO Signature'}
                     </div>
@@ -212,7 +212,7 @@
                         <div class="details-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Document Number</span>
-                                <span class="detail-value">${escapeHtml(document.document_number)}</span>
+                                <span class="detail-value">${escapeHtml(permitDoc.document_number)}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Document Type</span>
@@ -220,11 +220,11 @@
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Issue Date</span>
-                                <span class="detail-value">${document.issue_date}</span>
+                                <span class="detail-value">${permitDoc.issue_date}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Expiry Date</span>
-                                <span class="detail-value">${document.expiry_date || 'N/A'}</span>
+                                <span class="detail-value">${permitDoc.expiry_date || 'N/A'}</span>
                             </div>
                         </div>
                     </div>
@@ -252,11 +252,11 @@
                         <div class="details-grid">
                             <div class="detail-item">
                                 <span class="detail-label">Created By</span>
-                                <span class="detail-value">${escapeHtml(document.issued_by_name)}</span>
+                                <span class="detail-value">${escapeHtml(permitDoc.issued_by_name)}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Created On</span>
-                                <span class="detail-value">${new Date(document.created_at).toLocaleString()}</span>
+                                <span class="detail-value">${new Date(permitDoc.created_at).toLocaleString()}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Application Reference</span>
@@ -269,14 +269,14 @@
                         <h3>Approval Status</h3>
                         <div class="status-row">
                             <span class="status-label">HOD Approval:</span>
-                            <span class="status-badge ${document.hod_approved ? 'status-approved' : 'status-pending'}">
-                                ${document.hod_approved ? 'Approved' : 'Pending'}
+                            <span class="status-badge ${permitDoc.hod_approved ? 'status-approved' : 'status-pending'}">
+                                ${permitDoc.hod_approved ? 'Approved' : 'Pending'}
                             </span>
                         </div>
                         <div class="status-row">
                             <span class="status-label">CEO Approval:</span>
-                            <span class="status-badge ${document.ceo_approved ? 'status-approved' : (document.hod_approved ? 'status-pending' : 'status-waiting')}">
-                                ${document.ceo_approved ? 'Approved' : (document.hod_approved ? 'Pending' : 'Waiting for HOD')}
+                            <span class="status-badge ${permitDoc.ceo_approved ? 'status-approved' : (permitDoc.hod_approved ? 'status-pending' : 'status-waiting')}">
+                                ${permitDoc.ceo_approved ? 'Approved' : (permitDoc.hod_approved ? 'Pending' : 'Waiting for HOD')}
                             </span>
                         </div>
                     </div>
@@ -301,11 +301,11 @@
                 
                 if (clearBtn) clearBtn.addEventListener('click', clearSignature);
                 if (approveBtn) approveBtn.addEventListener('click', function() { 
-                    submitApproval('approved', params.token, params.level, approval.permit_id, document.document_number); 
+                    submitApproval('approved', params.token, params.level, approval.permit_id, permitDoc.document_number); 
                 });
                 if (rejectBtn) rejectBtn.addEventListener('click', function() { 
                     if (confirm('Are you sure you want to REJECT this document?')) {
-                        submitApproval('rejected', params.token, params.level, approval.permit_id, document.document_number);
+                        submitApproval('rejected', params.token, params.level, approval.permit_id, permitDoc.document_number);
                     }
                 });
                 
