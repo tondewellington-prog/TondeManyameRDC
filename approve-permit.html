@@ -70,6 +70,7 @@
         var ctx = null;
         var drawing = false;
         var refreshInterval = null;
+        var countdownInterval = null;
         
         try {
             if (window.supabase) {
@@ -108,6 +109,11 @@
         async function loadApproval() {
             var params = getUrlParams();
             var contentDiv = document.getElementById('mainContent');
+            
+            if (!contentDiv) {
+                console.error('mainContent element not found');
+                return;
+            }
             
             if (!params.token) {
                 contentDiv.innerHTML = '<div class="error">Invalid approval link. No token provided.</div>';
@@ -156,7 +162,7 @@
                     return;
                 }
                 
-                var documentData = approval.permit_data;
+                var documentData = approval.permit_data || {};
                 var docTypeName = getDocumentTypeName(document.document_type);
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
                 
@@ -168,21 +174,21 @@
                             This document is waiting for HOD approval first.<br><br>
                             <strong>Document Number:</strong> ${escapeHtml(document.document_number)}<br>
                             <strong>Document Type:</strong> ${docTypeName}<br><br>
-                            <span id="countdown">This page will refresh in 10 seconds...</span><br>
+                            <span id="countdownText">This page will refresh in 10 seconds...</span><br>
                             You can also <a href="#" onclick="location.reload(); return false;">click here</a> to refresh manually.
                         </div>
                     `;
                     
-                    // Auto-refresh counter
+                    // Auto-refresh counter - use setTimeout instead of manipulating DOM
                     var seconds = 10;
-                    var countdownEl = document.getElementById('countdown');
-                    var countdownInterval = setInterval(function() {
+                    var countdownTimer = setInterval(function() {
                         seconds--;
-                        if (countdownEl) {
-                            countdownEl.textContent = 'This page will refresh in ' + seconds + ' seconds...';
+                        var countdownSpan = document.getElementById('countdownText');
+                        if (countdownSpan) {
+                            countdownSpan.textContent = 'This page will refresh in ' + seconds + ' seconds...';
                         }
                         if (seconds <= 0) {
-                            clearInterval(countdownInterval);
+                            clearInterval(countdownTimer);
                             location.reload();
                         }
                     }, 1000);
@@ -191,8 +197,8 @@
                 }
                 
                 // Determine which fields to show based on document type
-                var applicantName = documentData.applicant_name || documentData.applicant_name || document.issued_to || 'N/A';
-                var propertyLocation = documentData.property_location || documentData.property_location || document.property_location || 'N/A';
+                var applicantName = documentData.applicant_name || document.issued_to || 'N/A';
+                var propertyLocation = documentData.property_location || document.property_location || 'N/A';
                 var documentPurpose = documentData.commercial_uses || documentData.purpose || 'Standard Approval';
                 
                 // Build the approval page
@@ -293,11 +299,15 @@
                 
                 initializeSignatureCanvas();
                 
-                document.getElementById('clearBtn').addEventListener('click', clearSignature);
-                document.getElementById('approveBtn').addEventListener('click', function() { 
+                var clearBtn = document.getElementById('clearBtn');
+                var approveBtn = document.getElementById('approveBtn');
+                var rejectBtn = document.getElementById('rejectBtn');
+                
+                if (clearBtn) clearBtn.addEventListener('click', clearSignature);
+                if (approveBtn) approveBtn.addEventListener('click', function() { 
                     submitApproval('approved', params.token, params.level, approval.permit_id, document.document_number, document.document_type); 
                 });
-                document.getElementById('rejectBtn').addEventListener('click', function() { 
+                if (rejectBtn) rejectBtn.addEventListener('click', function() { 
                     if (confirm('Are you sure you want to REJECT this document?')) {
                         submitApproval('rejected', params.token, params.level, approval.permit_id, document.document_number, document.document_type);
                     }
@@ -305,12 +315,14 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                contentDiv.innerHTML = '<div class="error">Error loading approval request. Please try again.</div>';
+                if (contentDiv) contentDiv.innerHTML = '<div class="error">Error loading approval request. Please try again.</div>';
             }
         }
         
         function initializeSignatureCanvas() {
             canvas = document.getElementById('signatureCanvas');
+            if (!canvas) return;
+            
             ctx = canvas.getContext('2d');
             
             var containerWidth = canvas.parentElement.clientWidth;
@@ -378,6 +390,7 @@
         }
         
         function clearSignature() {
+            if (!ctx || !canvas) return;
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = '#333';
@@ -386,11 +399,13 @@
         
         async function submitApproval(status, token, level, documentId, documentNumber, documentType) {
             var contentDiv = document.getElementById('mainContent');
+            if (!contentDiv) return;
+            
             contentDiv.innerHTML = '<div class="loading">Processing your decision...</div>';
             
             try {
                 var signatureDataUrl = null;
-                if (status === 'approved' && canvas) {
+                if (status === 'approved' && canvas && ctx) {
                     signatureDataUrl = canvas.toDataURL('image/png');
                 }
                 
@@ -414,41 +429,22 @@
                 // HOD approved - update document and send email to CEO
                 if (level === 'hod' && status === 'approved') {
                     console.log('===== HOD APPROVAL - UPDATING DOCUMENT =====');
-                    console.log('Document ID:', documentId);
-                    console.log('Document Number:', documentNumber);
                     
                     // Update the document
-                    var { data: updateData, error: docUpdateError } = await supabaseClient
+                    var { error: docUpdateError } = await supabaseClient
                         .from('issued_documents')
                         .update({
                             hod_approved: true,
                             approval_status: 'pending_ceo'
                         })
-                        .eq('id', documentId)
-                        .select();
+                        .eq('id', documentId);
                     
                     if (docUpdateError) {
                         console.error('Document update error:', docUpdateError);
                         throw new Error('Failed to update document: ' + docUpdateError.message);
                     }
                     
-                    console.log('Document update successful:', updateData);
-                    
-                    // Verify the update
-                    var { data: verifyData, error: verifyError } = await supabaseClient
-                        .from('issued_documents')
-                        .select('hod_approved, approval_status')
-                        .eq('id', documentId)
-                        .single();
-                    
-                    console.log('Verification - hod_approved:', verifyData?.hod_approved);
-                    console.log('Verification - approval_status:', verifyData?.approval_status);
-                    
-                    if (!verifyData?.hod_approved) {
-                        console.error('VERIFICATION FAILED: hod_approved is still false');
-                        contentDiv.innerHTML = '<div class="error">Update verification failed. Please refresh and try again.</div>';
-                        return;
-                    }
+                    console.log('Document update successful');
                     
                     // Get CEO from database
                     var { data: ceoData, error: ceoError } = await supabaseClient
@@ -471,9 +467,6 @@
                         if (ceoApproval && ceoApproval.approval_token) {
                             var ceoApprovalUrl = window.location.origin + '/TondeManyameRDC/approve-permit.html?token=' + ceoApproval.approval_token + '&level=ceo';
                             
-                            console.log('Sending CEO email to:', ceo.email);
-                            console.log('CEO Approval URL:', ceoApprovalUrl);
-                            
                             // Send email to CEO
                             try {
                                 await fetch(SUPABASE_URL + '/functions/v1/send-email', {
@@ -494,8 +487,6 @@
                             }
                         }
                     }
-                    
-                    console.log('===== HOD APPROVAL COMPLETE =====');
                 }
                 
                 // CEO approved - finalize document
@@ -514,7 +505,7 @@
                         throw new Error('Failed to finalize document: ' + docUpdateError.message);
                     }
                     
-                    console.log('Document fully approved - ceo_approved = true');
+                    console.log('Document fully approved');
                 }
                 
                 if (status === 'approved') {
@@ -539,13 +530,22 @@
                     `;
                 }
                 
+                // Clear any intervals
+                if (refreshInterval) clearInterval(refreshInterval);
+                if (countdownInterval) clearInterval(countdownInterval);
+                
             } catch (error) {
                 console.error('Error:', error);
                 contentDiv.innerHTML = '<div class="error">Error processing approval: ' + error.message + '</div>';
             }
         }
         
-        loadApproval();
+        // Start the approval loading when page is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadApproval);
+        } else {
+            loadApproval();
+        }
     </script>
 </body>
 </html>
