@@ -478,7 +478,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
         // Supabase Configuration
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
@@ -496,9 +496,14 @@
         
         // Initialize Supabase
         function initSupabase() {
-            if (!supabaseClient && typeof window.supabase !== 'undefined') {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                console.log("Supabase initialized");
+            if (!supabaseClient) {
+                var provider = window.supabase || (window.supabaseJS ? window.supabaseJS : null);
+                if (provider && provider.createClient) {
+                    supabaseClient = provider.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log("Supabase initialized matching window contexts");
+                } else {
+                    console.error("Supabase script global reference is missing or blocked by browser policies.");
+                }
             }
             return supabaseClient;
         }
@@ -602,6 +607,9 @@
             if (!currentPermitId) return;
             
             try {
+                initSupabase();
+                if (!supabaseClient) return;
+
                 var { data: permit, error } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -629,7 +637,9 @@
             }
             
             try {
-                // Fetch the signature values directly from the approvals table dynamically before compiling the HTML payload
+                initSupabase();
+                if (!supabaseClient) throw new Error("Database interface client unreachable.");
+
                 var { data: fetchedApprovals, error: approvalFetchError } = await supabaseClient
                     .from('approvals')
                     .select('approval_level, status, signature_image_url')
@@ -697,6 +707,9 @@
         
         // Load permit for tracking
         async function loadPermitForTracking(permitId) {
+            initSupabase();
+            if (!supabaseClient) return;
+
             var { data: permit, error } = await supabaseClient
                 .from('issued_documents')
                 .select('*')
@@ -748,7 +761,6 @@
                 return;
             }
             
-            // Reset duplicate validation visual indicators
             noticeDiv.classList.add('hidden');
             noticeDiv.innerHTML = '';
             
@@ -760,7 +772,15 @@
                 initSupabase();
                 
                 // =============================================================
-                // INTERCEPT LOGIC: Check database for existing Resolution Entry
+                // CRASH PROTECTION GUARD
+                // =============================================================
+                if (!supabaseClient) {
+                    throw new Error("The database connection script was blocked by your browser's safety layout. Please disable tracking block exceptions or use a secure network window.");
+                }
+                // =============================================================
+
+                // =============================================================
+                // INTERCEPT LOGIC: Check database for duplicate resolution entry
                 // =============================================================
                 var { data: doubleDoc, error: lookUpErr } = await supabaseClient
                     .from('issued_documents')
@@ -773,18 +793,16 @@
                 }
 
                 if (doubleDoc) {
-                    // Match found! Halt execution completely and surface layout feedback box
                     noticeDiv.innerHTML = `<strong>Submission Rejected:</strong> A Development Permit already exists in the system registry for Council Resolution Reference <strong>"${escapeHtml(councilResolution)}"</strong>.<br><br>` +
                                           `• Existing Document ID: <b>${doubleDoc.document_number}</b><br>` +
                                           `• Registered Location: <b>${escapeHtml(doubleDoc.property_location)}</b><br>` +
                                           `• Initial Creation Date: <b>${doubleDoc.issue_date}</b>`;
                     noticeDiv.classList.remove('hidden');
                     
-                    // Recover form button interactive context
                     resultDiv.innerHTML = '';
                     sendBtn.disabled = false;
                     sendBtn.textContent = 'Create Permit and Send to HOD';
-                    return; // Absolute logic isolation exit
+                    return; 
                 }
                 // =============================================================
 
@@ -907,7 +925,6 @@
                 
                 var hodApprovalUrl = baseUrl + '/approve-permit.html?token=' + hodToken + '&level=hod';
                 
-                // ONLY send email to HOD - NOT to CEO
                 console.log('Sending email to HOD:', hod.email);
                 
                 try {
@@ -936,7 +953,6 @@
                     console.error('HOD email error:', e);
                 }
                 
-                // Show tracking section
                 document.getElementById('formSection').classList.add('hidden');
                 document.getElementById('trackingSection').classList.remove('hidden');
                 document.getElementById('displayPermitNumber').textContent = permitNumber;
