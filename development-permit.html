@@ -275,7 +275,6 @@
             color: #155724;
         }
         
-        /* Permit Card Styles */
         .permit-card {
             background: #f8f9fa;
             border-radius: 12px;
@@ -496,7 +495,6 @@
         
         // ============================================
         // PERMIT HTML TEMPLATE GENERATOR
-        // This is the FULL document template - now in the frontend
         // ============================================
         function generatePermitHTML(data, qrUrl) {
             var issueDate = new Date(data.issue_date);
@@ -543,6 +541,55 @@
                 month: 'long',
                 year: 'numeric'
             }).toUpperCase();
+            
+            // ============================================
+            // SIGNATURE HTML - ONLY for HOD and CEO positions
+            // ============================================
+            var hodSignatureHtml = '';
+            var ceoSignatureHtml = '';
+            
+            if (data.hod_signature_image) {
+                hodSignatureHtml = `<img src="${data.hod_signature_image}" style="max-height: 55px; max-width: 200px; width: auto; height: auto; display: inline-block; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); z-index: 5;" />`;
+            }
+            if (data.ceo_signature_image) {
+                ceoSignatureHtml = `<img src="${data.ceo_signature_image}" style="max-height: 55px; max-width: 200px; width: auto; height: auto; display: inline-block; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); z-index: 5;" />`;
+            }
+            
+            // ============================================
+            // STAMP HTML - Only if CEO approved
+            // ============================================
+            var stampHtml = '';
+            if (data.ceo_approved) {
+                stampHtml = `
+                <div class="stamp-wrapper" style="margin-top: 20px; text-align: right;">
+                    <div class="stamp-box" style="
+                        border: 2px solid #1e3c72;
+                        border-radius: 4px;
+                        padding: 12px 18px;
+                        display: inline-block;
+                        text-align: center;
+                        background: white;
+                        min-width: 200px;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+                    ">
+                        <div class="stamp-title" style="font-size: 11pt; font-weight: bold; color: #1e3c72; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;">
+                            MANYAME RURAL DISTRICT COUNCIL
+                        </div>
+                        <div class="stamp-subtitle" style="font-size: 10pt; font-weight: bold; color: #2a5298; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #1e3c72; padding-bottom: 4px;">
+                            DISTRICT PLANNER
+                        </div>
+                        <div class="stamp-date" style="font-size: 11pt; font-weight: bold; color: #c0392b; margin: 4px 0; letter-spacing: 1px;">
+                            ${stampDate}
+                        </div>
+                        <div class="stamp-address" style="font-size: 8pt; color: #333; margin-top: 4px; padding-top: 4px; border-top: 1px solid #ddd;">
+                            P.O. BOX 99, BEATRICE
+                            <br>
+                            TEL: 0242150-239/218
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
             
             return `<!DOCTYPE html>
 <html>
@@ -769,9 +816,7 @@
     color: #111;
   }
   
-  /* ============================================ */
-  /* STAMP STYLES */
-  /* ============================================ */
+  /* Stamp styles */
   .stamp-wrapper {
     margin-top: 20px;
     text-align: right;
@@ -785,6 +830,7 @@
     text-align: center;
     background: white;
     min-width: 200px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
   }
   
   .stamp-title {
@@ -905,13 +951,16 @@
     <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
   </ol>
 
+  <!-- ============================================ -->
+  <!-- SIGNATURE SECTION - HOD and CEO only          -->
+  <!-- Applicant and Witness positions are empty     -->
+  <!-- ============================================ -->
   <div class="signatures-container">
     <table class="sig-table">
       <tr>
         <td>
           <div class="sig-wrapper">
-            <!-- HOD_SIGNATURE_PLACEHOLDER will be replaced by Edge Function -->
-            <span id="hodSigPlaceholder"></span>
+            <!-- EMPTY - Applicant signature position (left empty) -->
           </div>
           <div class="line-text">
             <strong>${escapeHtml(data.applicant_rep || '').toUpperCase()}</strong><br>
@@ -921,8 +970,7 @@
         </td>
         <td>
           <div class="sig-wrapper">
-            <!-- CEO_SIGNATURE_PLACEHOLDER will be replaced by Edge Function -->
-            <span id="ceoSigPlaceholder"></span>
+            <!-- EMPTY - Witness signature position (left empty) -->
           </div>
           <div class="line-text">
             <strong>${escapeHtml(data.applicant_witness || '')}</strong><br>
@@ -934,8 +982,7 @@
       <tr>
         <td>
           <div class="sig-wrapper">
-            <!-- This will be filled dynamically when approved -->
-            <span id="hodSigPlaceholder2"></span>
+            ${hodSignatureHtml}
           </div>
           <div class="line-text">
             <strong>${escapeHtml(data.council_rep || 'F. Guta')}</strong><br>
@@ -944,8 +991,7 @@
         </td>
         <td>
           <div class="sig-wrapper">
-            <!-- This will be filled dynamically when approved -->
-            <span id="ceoSigPlaceholder2"></span>
+            ${ceoSignatureHtml}
           </div>
           <div class="line-text">
             <strong>CHIEF EXECUTIVE OFFICER</strong><br>
@@ -995,8 +1041,10 @@
     </div>
   </div>
 
-  <!-- STAMP PLACEHOLDER - will be replaced by Edge Function -->
-  <div id="stampPlaceholder"></div>
+  <!-- ============================================ -->
+  <!-- STAMP - Appears at the bottom when CEO approved -->
+  <!-- ============================================ -->
+  ${stampHtml}
 
 </div>
 </body>
@@ -1011,7 +1059,7 @@
                 var provider = window.supabase || (window.supabaseJS ? window.supabaseJS : null);
                 if (provider && provider.createClient) {
                     supabaseClient = provider.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    console.log("Supabase initialized matching window contexts");
+                    console.log("Supabase initialized");
                 } else {
                     console.error("Supabase script global reference is missing or blocked by browser policies.");
                 }
@@ -1019,7 +1067,6 @@
             return supabaseClient;
         }
         
-        // Check staff login
         function checkStaffLogin() {
             if (!currentStaffUser || !currentStaffName) {
                 document.getElementById('formSection').innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
@@ -1029,7 +1076,6 @@
             return true;
         }
         
-        // Staff logout
         function staffLogout() {
             if(supabaseClient) supabaseClient.auth.signOut();
             sessionStorage.removeItem('staffEmail');
@@ -1037,7 +1083,6 @@
             window.location.href = 'index.html';
         }
         
-        // Set default dates
         function setDefaultDates() {
             var appDate = document.getElementById('applicationDate');
             var issueDate = document.getElementById('issueDate');
@@ -1055,19 +1100,16 @@
             }
         }
         
-        // Generate permit number
         function generatePermitNumber() {
             var year = new Date().getFullYear();
             var random = Math.floor(Math.random() * 900) + 100;
             return 'MANY/' + random + '/' + year;
         }
         
-        // Generate approval token
         function generateApprovalToken() {
             return 'tok_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
         }
         
-        // Escape HTML
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -1078,7 +1120,6 @@
             });
         }
         
-        // Update progress bar
         function updateProgressBar(status, hodApproved, ceoApproved) {
             var stepDraft = document.getElementById('stepDraft');
             var stepHOD = document.getElementById('stepHOD');
@@ -1113,7 +1154,6 @@
             document.getElementById('displayCEOStatus').textContent = ceoApproved ? 'Approved' : (hodApproved ? 'Pending' : 'Waiting for HOD');
         }
         
-        // Check permit status
         async function checkPermitStatus() {
             if (!currentPermitId) return;
             
@@ -1140,7 +1180,6 @@
             }
         }
         
-        // Download final PDF - Now sends HTML template to Edge Function
         async function downloadFinalPDF() {
             if (!currentPermitData) {
                 alert('No permit data available. Please refresh and try again.');
@@ -1161,6 +1200,7 @@
                 var docDataCopy = JSON.parse(JSON.stringify(currentPermitData.document_data));
                 docDataCopy.hod_signature_image = null;
                 docDataCopy.ceo_signature_image = null;
+                docDataCopy.ceo_approved = currentPermitData.ceo_approved;
                 
                 if (fetchedApprovals) {
                     fetchedApprovals.forEach(function(app) {
@@ -1173,10 +1213,8 @@
                     });
                 }
                 
-                // Generate the FULL HTML template here in the frontend
                 var permitHtml = generatePermitHTML(docDataCopy, docDataCopy.qr_code_url);
                 
-                // Send HTML template + data to Edge Function
                 var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
@@ -1184,7 +1222,7 @@
                     body: JSON.stringify({
                         document_type: 'development_permit',
                         data: docDataCopy,
-                        html_template: permitHtml  // Send the HTML template
+                        html_template: permitHtml
                     })
                 });
                 
@@ -1209,7 +1247,6 @@
             }
         }
         
-        // Check for tracking parameter
         function checkForTracking() {
             var urlParams = new URLSearchParams(window.location.search);
             var trackId = urlParams.get('track');
@@ -1221,7 +1258,6 @@
             return false;
         }
         
-        // Load permit for tracking
         async function loadPermitForTracking(permitId) {
             initSupabase();
             if (!supabaseClient) return;
@@ -1248,13 +1284,11 @@
             }
         }
         
-        // Send for approval (ONLY to HOD)
         async function sendForApproval(event) {
             var resultDiv = document.getElementById('issueResult');
             var noticeDiv = document.getElementById('duplicateNoticeBox');
             var sendBtn = event.target;
             
-            // Get form values
             var propertyLocation = document.getElementById('propertyLocation').value.trim();
             var applicantName = document.getElementById('applicantName').value.trim();
             var companyName = document.getElementById('companyName').value.trim();
@@ -1271,7 +1305,6 @@
             var councilWitness = document.getElementById('councilWitness').value.trim();
             var expiryDate = document.getElementById('expiryDate').value;
             
-            // Validate
             if (!propertyLocation || !applicantName || !applicationDate || !applicationRef || !councilResolution || !commercialUses || !issuedAtTown || !issueDate || !applicantRep || !applicantId || !applicantWitness || !councilRep || !councilWitness || !expiryDate) {
                 resultDiv.innerHTML = '<div class="error">Please fill in all required fields.</div>';
                 return;
@@ -1291,7 +1324,6 @@
                     throw new Error("The database connection script was blocked by your browser's safety layout. Please disable tracking block exceptions or use a secure network window.");
                 }
 
-                // Check for duplicate resolution
                 var { data: doubleDoc, error: lookUpErr } = await supabaseClient
                     .from('issued_documents')
                     .select('document_number, property_location, issue_date')
@@ -1344,7 +1376,6 @@
                     verification_url: verificationUrl
                 };
                 
-                // Insert into issued_documents
                 var { data: permitData, error: permitError } = await supabaseClient
                     .from('issued_documents')
                     .insert([{
@@ -1371,7 +1402,6 @@
                 currentPermitNumber = permitNumber;
                 currentPermitData = permitData[0];
                 
-                // Get HOD from database
                 var { data: hodData, error: hodError } = await supabaseClient
                     .from('hods')
                     .select('*')
@@ -1384,7 +1414,6 @@
                 
                 var hod = hodData[0];
                 
-                // Get CEO from database
                 var { data: ceoData, error: ceoError } = await supabaseClient
                     .from('ceos')
                     .select('*')
@@ -1397,7 +1426,6 @@
                 
                 var ceo = ceoData[0];
                 
-                // Create approval tokens
                 var hodToken = generateApprovalToken();
                 var ceoToken = generateApprovalToken();
                 var tokenExpiry = new Date();
