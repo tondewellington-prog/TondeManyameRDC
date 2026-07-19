@@ -494,7 +494,518 @@
         var currentPermitData = null;
         var checkInterval = null;
         
-        // Initialize Supabase
+        // ============================================
+        // PERMIT HTML TEMPLATE GENERATOR
+        // This is the FULL document template - now in the frontend
+        // ============================================
+        function generatePermitHTML(data, qrUrl) {
+            var issueDate = new Date(data.issue_date);
+            var appDate = new Date(data.application_date);
+            
+            var day = issueDate.getDate();
+            var month = issueDate.toLocaleString('en-GB', { month: 'long' });
+            var year = issueDate.getFullYear();
+            
+            var appDay = appDate.getDate();
+            var appMonth = appDate.toLocaleString('en-GB', { month: 'long' });
+            var appYear = appDate.getFullYear();
+            
+            var expiryFormatted = new Date(data.expiry_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+            function getOrdinal(n) {
+                if (n > 3 && n < 21) return 'th';
+                switch (n % 10) {
+                    case 1: return 'st';
+                    case 2: return 'nd';
+                    case 3: return 'rd';
+                    default: return 'th';
+                }
+            }
+            
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                });
+            }
+            
+            var councilHeaderUrl = "https://ocojsigqagaehlebubdw.supabase.co/storage/v1/object/public/council-assets/council-header.png";
+            var commercialUsesUpper = escapeHtml(data.commercial_uses || '').toUpperCase();
+            var propertyLocationUpper = escapeHtml(data.property_location || '').toUpperCase();
+            var companyText = data.company_name ? ' (' + escapeHtml(data.company_name) + ')' : '';
+            
+            // Stamp date (auto-generated)
+            var stampDate = new Date().toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }).toUpperCase();
+            
+            return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Development Permit - ${escapeHtml(data.permit_number || '')}</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: "Times New Roman", Times, serif;
+    background: white;
+    font-size: 12pt;
+    line-height: 1.5;
+    margin: 0;
+    padding: 20mm;
+  }
+  
+  .permit-document {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .header-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5mm;
+  }
+  
+  .header-table td {
+    vertical-align: top;
+  }
+  
+  .logo-cell {
+    width: 75%;
+  }
+  
+  .logo-cell img {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+  }
+  
+  .qr-cell {
+    width: 25%;
+    text-align: right;
+  }
+  
+  .qr-cell img {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .act-header {
+    text-align: center;
+    font-weight: bold;
+    margin: 4mm 0 6mm 0;
+    line-height: 1.3;
+  }
+  
+  .act-title {
+    font-size: 13pt;
+    letter-spacing: 0.5px;
+  }
+  
+  .act-chapter {
+    font-size: 11pt;
+  }
+  
+  .ref-box {
+    margin: 6mm 0;
+    font-size: 12pt;
+    line-height: 1.6;
+  }
+  
+  .ref-line {
+    margin: 1.5mm 0;
+  }
+  
+  .dotted-value {
+    font-family: "Times New Roman", Times, serif;
+    font-weight: normal;
+    padding-left: 5px;
+  }
+  
+  .permit-title {
+    text-align: center;
+    margin: 8mm 0 8mm 0;
+  }
+  
+  .permit-title h2 {
+    font-size: 18pt;
+    text-decoration: underline;
+    font-weight: bold;
+    margin-bottom: 3mm;
+    letter-spacing: 1px;
+  }
+  
+  .permit-title h3 {
+    font-size: 13pt;
+    font-weight: bold;
+  }
+  
+  .main-text {
+    margin: 4mm 0;
+    text-align: justify;
+    font-size: 12pt;
+    text-justify: inter-word;
+  }
+  
+  .conditions-list {
+    margin: 4mm 0;
+    padding-left: 8mm;
+  }
+  
+  .conditions-list li {
+    margin-bottom: 2.5mm;
+    text-align: justify;
+    text-justify: inter-word;
+    font-size: 12pt;
+    padding-left: 2mm;
+  }
+  
+  .subclause {
+    margin-left: 6mm;
+    margin-top: 1.5mm;
+    margin-bottom: 1.5mm;
+    display: block;
+  }
+  
+  .signatures-container {
+    margin: 15mm 0 8mm 0;
+    page-break-inside: avoid;
+    width: 100%;
+  }
+  
+  .sig-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .sig-table td {
+    width: 50%;
+    vertical-align: bottom;
+    padding: 0 8mm 12mm 8mm;
+  }
+  
+  .sig-wrapper {
+    height: 55px;
+    position: relative;
+    text-align: center;
+    width: 100%;
+  }
+  
+  .sig-img {
+    max-height: 55px;
+    max-width: 200px;
+    width: auto;
+    height: auto;
+    display: inline-block;
+    z-index: 5;
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .line-text {
+    border-top: 1px dashed #000;
+    padding-top: 1.5mm;
+    font-size: 11pt;
+    text-align: center;
+    line-height: 1.4;
+  }
+  
+  .date-section {
+    margin: 6mm 0;
+    font-size: 12pt;
+  }
+  
+  .copies {
+    margin: 6mm 0;
+    font-size: 11pt;
+    line-height: 1.4;
+  }
+  
+  .copies p {
+    margin-bottom: 1mm;
+  }
+  
+  .warning-container {
+    margin: 12mm 0 0 0;
+    page-break-inside: avoid;
+    border-top: 1px solid #000;
+    padding-top: 5mm;
+  }
+  
+  .warning-main-title {
+    font-weight: bold;
+    font-size: 11pt;
+    text-decoration: underline;
+    margin-bottom: 4mm;
+    text-align: left;
+  }
+  
+  .warning-section {
+    margin: 4mm 0;
+  }
+  
+  .warning-section-title {
+    font-weight: bold;
+    font-size: 11pt;
+    margin-bottom: 1px;
+    display: block;
+  }
+  
+  .warning-section-text {
+    text-align: justify;
+    font-size: 11pt;
+    color: #111;
+  }
+  
+  /* ============================================ */
+  /* STAMP STYLES */
+  /* ============================================ */
+  .stamp-wrapper {
+    margin-top: 20px;
+    text-align: right;
+  }
+  
+  .stamp-box {
+    border: 2px solid #1e3c72;
+    border-radius: 4px;
+    padding: 12px 18px;
+    display: inline-block;
+    text-align: center;
+    background: white;
+    min-width: 200px;
+  }
+  
+  .stamp-title {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #1e3c72;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+  
+  .stamp-subtitle {
+    font-size: 10pt;
+    font-weight: bold;
+    color: #2a5298;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #1e3c72;
+    padding-bottom: 4px;
+  }
+  
+  .stamp-date {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #c0392b;
+    margin: 4px 0;
+    letter-spacing: 1px;
+  }
+  
+  .stamp-address {
+    font-size: 8pt;
+    color: #333;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #ddd;
+  }
+  
+  @media print {
+    body { padding: 0; margin: 0; }
+    .qr-cell img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="permit-document">
+
+  <table class="header-table">
+    <tr>
+      <td class="logo-cell">
+        <img src="${councilHeaderUrl}" alt="Council Logo Header" onerror="this.style.display='none'">
+      </td>
+      <td class="qr-cell">
+        ${qrUrl ? `<img src="${qrUrl}" alt="Verification Portal QR Code">` : ''}
+      </td>
+    </tr>
+  </table>
+
+  <div class="act-header">
+    <div class="act-title">RURAL DISTRICT COUNCILS ACT</div>
+    <div class="act-chapter">CHAPTER 29:13</div>
+    <div class="act-chapter">SECTION (3)</div>
+  </div>
+
+  <div class="ref-box">
+    <div class="ref-line"><strong>REFERENCE:</strong><span class="dotted-value">${escapeHtml(data.property_location || '')}</span></div>
+    <div class="ref-line"><strong>PERMIT NO:</strong><span class="dotted-value">${escapeHtml(data.permit_number || '')}</span></div>
+    <div class="ref-line"><strong>APPLICANT:</strong><span class="dotted-value">${escapeHtml(data.applicant_name || '').toUpperCase()}</span></div>
+  </div>
+
+  <div class="permit-title">
+    <h2>DEVELOPMENT PERMIT</h2>
+    <h3>CHANGE OF USE ON ${propertyLocationUpper}: SEKE DISTRICT</h3>
+  </div>
+
+  <div class="main-text">
+    <p>The MANYAME Rural District Council, (hereinafter called "the Local Authority") in terms of Section 3 of the RURAL DISTRICT COUNCILS ACT, Chapter 29:13 (hereinafter called "the Act") hereby grants a <strong>PERMIT</strong> in respect of an application dated ${appDay} ${appMonth} ${appYear} and numbered ${escapeHtml(data.application_ref || '')} in the Register of the Chief Executive Officer, MANYAME Rural District Council, to <strong>${escapeHtml(data.company_name || data.applicant_name || '').toUpperCase()}</strong> (hereinafter called "the applicant") for:-</p>
+  </div>
+
+  <div class="main-text">
+    <p>This Permit is granted subject to the conditions set hereunder Part I to III.</p>
+  </div>
+
+  <div class="main-text">
+    <p>In these conditions:<br>
+    The Owner means the person in whose favour any of the stands is subsequently transferred to by the Registrar of Deeds.<br>
+    The Local Authority means MANYAME Rural District Council or its successors.</p>
+  </div>
+
+  <div class="main-text">
+    <p>This permit is issued subject to the following conditions:-</p>
+  </div>
+
+  <ol class="conditions-list">
+    <li>That council consent to the establishment of a business centre on portion of ${escapeHtml(data.property_location || '')} through <strong>${escapeHtml(data.council_resolution || 'Full Council FC13 645.12')}.</strong></li>
+    <li>The applicant to engage a private planning consultant to produce a layout plan and report for submission to the Department of Spatial Planning and Development for approval.</li>
+    <li>No development shall take place unless in accordance with approved layout plan and report to be submitted by the applicant to the Department of Spatial Planning.</li>
+    <li>The applicant undertakes to commence the erection of buildings and other structures according to council by laws and any other regulations.</li>
+    <li>During the period of the permit, all rates and taxes and other charges as would be payable by the registered owner of the stand, will be paid to the Local authority, and they have the right to ask, demand, sue for and recover all such rates and taxes.</li>
+    <li>The applicant shall meet the full cost of servicing the land in terms of water, sewerage, storm water drains and roads.</li>
+    <li>The applicant must obtain relevant authorization from different government departments and other relevant agencies.</li>
+    <li>The owner must apply for relevant licences from the local authority and other relevant agencies before operating.</li>
+    <li>The applicant shall not occupy, or cause, or suffer or permit any person or persons to occupy any stand hereby approved until the buildings have been completed to the satisfaction of the Local authority.</li>
+    <li>Representatives of the Local authority shall be entitled to enter on the stand at all reasonable times during the daytime, to inspect the state and condition thereof and of the building that have been or are being erected thereon.</li>
+    <li>The portion of the stand <strong>shall be used for COMMERCIAL PURPOSES THAT IS THE ESTABLISHMENT OF ${commercialUsesUpper}</strong> and the only buildings which may be erected or used thereon shall consists of not more than building designed for uses as detailed in the application and a guard room.</li>
+    <li>The site coverage, inclusive of outbuildings shall not be less than 30% of the area of the stand.</li>
+    <li>The stand shall not be occupied until:-
+      <span class="subclause">a) Approved buildings have been erected and completed thereon.</span>
+      <span class="subclause">b) A reticulated water supply has been connected thereto: and</span>
+      <span class="subclause">c) A sanitary system to the approval of the Manyame Rural District Council has been installed thereon.</span>
+    </li>
+    <li>No building other than boundary walls or fences shall be erected within 50 meters of the state road servitude or within 9 meters of any other boundary of the stand.</li>
+    <li>No culvert or other means of access to the stand shall be constructed except with the consent of and to a specification approved by the Manyame Rural District Council and the Provincial Roads Engineer.</li>
+    <li>The developer must consult the Provincial engineer before constructing access road to the stand.</li>
+    <li>Servitude over the stand for all water supply, sewerage and public utility purposes shall be granted by the owner as and when required.</li>
+    <li>The applicant must attend to any issues that may be raised by council from time to time during site inspections.</li>
+    <li>The bricks shall meet with the standard Association of Zimbabwe requirements.</li>
+    <li>That all Manyame Rural District Council By Laws relating to building be adhered to.</li>
+    <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
+  </ol>
+
+  <div class="signatures-container">
+    <table class="sig-table">
+      <tr>
+        <td>
+          <div class="sig-wrapper">
+            <!-- HOD_SIGNATURE_PLACEHOLDER will be replaced by Edge Function -->
+            <span id="hodSigPlaceholder"></span>
+          </div>
+          <div class="line-text">
+            <strong>${escapeHtml(data.applicant_rep || '').toUpperCase()}</strong><br>
+            ID NUMBER (${escapeHtml(data.applicant_id || '')})<br>
+            For Applicant
+          </div>
+        </td>
+        <td>
+          <div class="sig-wrapper">
+            <!-- CEO_SIGNATURE_PLACEHOLDER will be replaced by Edge Function -->
+            <span id="ceoSigPlaceholder"></span>
+          </div>
+          <div class="line-text">
+            <strong>${escapeHtml(data.applicant_witness || '')}</strong><br>
+            Witness
+          </div>
+        </td>
+      </tr>
+      
+      <tr>
+        <td>
+          <div class="sig-wrapper">
+            <!-- This will be filled dynamically when approved -->
+            <span id="hodSigPlaceholder2"></span>
+          </div>
+          <div class="line-text">
+            <strong>${escapeHtml(data.council_rep || 'F. Guta')}</strong><br>
+            For MANYAME RURAL DISTRICT COUNCIL
+          </div>
+        </td>
+        <td>
+          <div class="sig-wrapper">
+            <!-- This will be filled dynamically when approved -->
+            <span id="ceoSigPlaceholder2"></span>
+          </div>
+          <div class="line-text">
+            <strong>CHIEF EXECUTIVE OFFICER</strong><br>
+            MANYAME RURAL DISTRICT COUNCIL
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="date-section">
+    <p>Dated at <strong>${escapeHtml(data.issued_at_town || 'BEATRICE').toUpperCase()}</strong> this <strong>${day}<sup>${getOrdinal(day)}</sup></strong> day of <strong>${month}</strong> Year <strong>${year}</strong>.</p>
+  </div>
+
+  <div class="copies">
+    <p><strong><u>Copies To:</u></strong></p>
+    <p>Change of Use Permits File (1) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; File Copy (1)</p>
+    <p>Department of Spatial Planning and Development &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; File Copy (1)</p>
+  </div>
+
+  <div class="warning-container">
+    <div class="warning-main-title">THE ATTENTION OF THE APPLICANT IS DRAWN TO THE FOLLOWING MATTERS</div>
+    
+    <div class="warning-section">
+      <span class="warning-section-title">WARNING</span>
+      <div class="warning-section-text">Attention is drawn to the fact that any action taken in pursuance of the granting of this <strong>PERMIT</strong> within the period allowed for appeals shall be at the risk of the person taking the action concerned.</div>
+    </div>
+    
+    <div class="warning-section">
+      <span class="warning-section-title">EXPIRY OF PERMIT</span>
+      <div class="warning-section-text">This permit expires, if unimplemented, on <strong>${expiryFormatted}</strong> unless the period of validity is extended by the Local Planning Authority in writing.</div>
+    </div>
+    
+    <div class="warning-section">
+      <span class="warning-section-title">EXTENSION OF TIME</span>
+      <div class="warning-section-text">PERMIT holders are warned that no extension of the period referred above of the PERMIT will be granted unless the Local Planning Authority is satisfied that good sufficient reasons exist for any request made.</div>
+    </div>
+    
+    <div class="warning-section">
+      <span class="warning-section-title">COPIES OF THE PERMIT</span>
+      <div class="warning-section-text">Copies of this Permit may be obtained on payment of the prescribed fee from the issuing Local Planning Authority. In this regard the <strong>PERMIT</strong> number and file reference should be quoted on all correspondence.</div>
+    </div>
+    
+    <div class="warning-section">
+      <span class="warning-section-title">AMENDMENT TO THE PERMIT</span>
+      <div class="warning-section-text">Amendment to this Permit can only be made as provided by the law. Correspondence in this connection must quote the details referred to in paragraph 3 above. Any change required which is not of a minor nature cannot be effected by way of an amendment; application for a new permit would have to be made.</div>
+    </div>
+  </div>
+
+  <!-- STAMP PLACEHOLDER - will be replaced by Edge Function -->
+  <div id="stampPlaceholder"></div>
+
+</div>
+</body>
+</html>`;
+        }
+
+        // ============================================
+        // SUPABASE INITIALIZATION
+        // ============================================
         function initSupabase() {
             if (!supabaseClient) {
                 var provider = window.supabase || (window.supabaseJS ? window.supabaseJS : null);
@@ -629,7 +1140,7 @@
             }
         }
         
-        // Download final PDF
+        // Download final PDF - Now sends HTML template to Edge Function
         async function downloadFinalPDF() {
             if (!currentPermitData) {
                 alert('No permit data available. Please refresh and try again.');
@@ -662,13 +1173,18 @@
                     });
                 }
                 
+                // Generate the FULL HTML template here in the frontend
+                var permitHtml = generatePermitHTML(docDataCopy, docDataCopy.qr_code_url);
+                
+                // Send HTML template + data to Edge Function
                 var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         document_type: 'development_permit',
-                        data: docDataCopy
+                        data: docDataCopy,
+                        html_template: permitHtml  // Send the HTML template
                     })
                 });
                 
@@ -771,17 +1287,11 @@
             try {
                 initSupabase();
                 
-                // =============================================================
-                // CRASH PROTECTION GUARD
-                // =============================================================
                 if (!supabaseClient) {
                     throw new Error("The database connection script was blocked by your browser's safety layout. Please disable tracking block exceptions or use a secure network window.");
                 }
-                // =============================================================
 
-                // =============================================================
-                // INTERCEPT LOGIC: Check database for duplicate resolution entry
-                // =============================================================
+                // Check for duplicate resolution
                 var { data: doubleDoc, error: lookUpErr } = await supabaseClient
                     .from('issued_documents')
                     .select('document_number, property_location, issue_date')
@@ -804,7 +1314,6 @@
                     sendBtn.textContent = 'Create Permit and Send to HOD';
                     return; 
                 }
-                // =============================================================
 
                 sendBtn.textContent = 'Creating permit...';
                 resultDiv.innerHTML = '<div class="loading">Creating permit and sending to HOD...</div>';
