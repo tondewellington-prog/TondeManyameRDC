@@ -172,7 +172,6 @@
             display: none;
         }
         
-        /* Progress Bar Styles */
         .progress-container {
             background: #e9ecef;
             border-radius: 12px;
@@ -479,7 +478,6 @@
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
-        // Supabase Configuration
         var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
         var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
         
@@ -533,14 +531,6 @@
             var councilHeaderUrl = "https://ocojsigqagaehlebubdw.supabase.co/storage/v1/object/public/council-assets/council-header.png";
             var commercialUsesUpper = escapeHtml(data.commercial_uses || '').toUpperCase();
             var propertyLocationUpper = escapeHtml(data.property_location || '').toUpperCase();
-            var companyText = data.company_name ? ' (' + escapeHtml(data.company_name) + ')' : '';
-            
-            // Stamp date (auto-generated)
-            var stampDate = new Date().toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            }).toUpperCase();
             
             // ============================================
             // SIGNATURE HTML - ONLY for HOD and CEO positions
@@ -560,28 +550,33 @@
             // ============================================
             var stampHtml = '';
             if (data.ceo_approved) {
+                var stampDate = new Date().toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                }).toUpperCase();
+                
                 stampHtml = `
-                <div class="stamp-wrapper" style="margin-top: 20px; text-align: right;">
-                    <div class="stamp-box" style="
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; text-align: right;">
+                    <div style="
                         border: 2px solid #1e3c72;
                         border-radius: 4px;
-                        padding: 12px 18px;
+                        padding: 10px 16px;
                         display: inline-block;
                         text-align: center;
                         background: white;
-                        min-width: 200px;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+                        min-width: 190px;
                     ">
-                        <div class="stamp-title" style="font-size: 11pt; font-weight: bold; color: #1e3c72; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;">
+                        <div style="font-size: 10pt; font-weight: bold; color: #1e3c72; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
                             MANYAME RURAL DISTRICT COUNCIL
                         </div>
-                        <div class="stamp-subtitle" style="font-size: 10pt; font-weight: bold; color: #2a5298; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #1e3c72; padding-bottom: 4px;">
+                        <div style="font-size: 9.5pt; font-weight: bold; color: #2a5298; text-transform: uppercase; margin-bottom: 3px; border-bottom: 1px solid #1e3c72; padding-bottom: 3px;">
                             DISTRICT PLANNER
                         </div>
-                        <div class="stamp-date" style="font-size: 11pt; font-weight: bold; color: #c0392b; margin: 4px 0; letter-spacing: 1px;">
+                        <div style="font-size: 10pt; font-weight: bold; color: #2a5298; margin: 3px 0; letter-spacing: 1px;">
                             ${stampDate}
                         </div>
-                        <div class="stamp-address" style="font-size: 8pt; color: #333; margin-top: 4px; padding-top: 4px; border-top: 1px solid #ddd;">
+                        <div style="font-size: 7.5pt; color: #1e3c72; margin-top: 3px; padding-top: 3px; border-top: 1px solid #ddd;">
                             P.O. BOX 99, BEATRICE
                             <br>
                             TEL: 0242150-239/218
@@ -785,22 +780,22 @@
   }
   
   .warning-container {
-    margin: 12mm 0 0 0;
+    margin: 8mm 0 0 0;
     page-break-inside: avoid;
     border-top: 1px solid #000;
-    padding-top: 5mm;
+    padding-top: 4mm;
   }
   
   .warning-main-title {
     font-weight: bold;
     font-size: 11pt;
     text-decoration: underline;
-    margin-bottom: 4mm;
+    margin-bottom: 3mm;
     text-align: left;
   }
   
   .warning-section {
-    margin: 4mm 0;
+    margin: 3mm 0;
   }
   
   .warning-section-title {
@@ -814,58 +809,6 @@
     text-align: justify;
     font-size: 11pt;
     color: #111;
-  }
-  
-  /* Stamp styles */
-  .stamp-wrapper {
-    margin-top: 20px;
-    text-align: right;
-  }
-  
-  .stamp-box {
-    border: 2px solid #1e3c72;
-    border-radius: 4px;
-    padding: 12px 18px;
-    display: inline-block;
-    text-align: center;
-    background: white;
-    min-width: 200px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05);
-  }
-  
-  .stamp-title {
-    font-size: 11pt;
-    font-weight: bold;
-    color: #1e3c72;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 3px;
-  }
-  
-  .stamp-subtitle {
-    font-size: 10pt;
-    font-weight: bold;
-    color: #2a5298;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-    border-bottom: 1px solid #1e3c72;
-    padding-bottom: 4px;
-  }
-  
-  .stamp-date {
-    font-size: 11pt;
-    font-weight: bold;
-    color: #c0392b;
-    margin: 4px 0;
-    letter-spacing: 1px;
-  }
-  
-  .stamp-address {
-    font-size: 8pt;
-    color: #333;
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid #ddd;
   }
   
   @media print {
@@ -951,16 +894,12 @@
     <li>That all clauses agreed to between you and the Manyame Rural District Council be binding.</li>
   </ol>
 
-  <!-- ============================================ -->
-  <!-- SIGNATURE SECTION - HOD and CEO only          -->
-  <!-- Applicant and Witness positions are empty     -->
-  <!-- ============================================ -->
   <div class="signatures-container">
     <table class="sig-table">
       <tr>
         <td>
           <div class="sig-wrapper">
-            <!-- EMPTY - Applicant signature position (left empty) -->
+            <!-- EMPTY - Applicant signature position -->
           </div>
           <div class="line-text">
             <strong>${escapeHtml(data.applicant_rep || '').toUpperCase()}</strong><br>
@@ -970,7 +909,7 @@
         </td>
         <td>
           <div class="sig-wrapper">
-            <!-- EMPTY - Witness signature position (left empty) -->
+            <!-- EMPTY - Witness signature position -->
           </div>
           <div class="line-text">
             <strong>${escapeHtml(data.applicant_witness || '')}</strong><br>
@@ -1042,7 +981,7 @@
   </div>
 
   <!-- ============================================ -->
-  <!-- STAMP - Appears at the bottom when CEO approved -->
+  <!-- STAMP - Fits below the warning section       -->
   <!-- ============================================ -->
   ${stampHtml}
 
