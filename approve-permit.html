@@ -97,6 +97,33 @@
             });
         }
         
+        // ============================================
+        // DOCUMENT TYPE NAME MAP
+        // Add new document types here
+        // ============================================
+        function getDocumentTypeName(docType) {
+            var typeMap = {
+                'development_permit': 'Development Permit (Change of Use)',
+                'building_permit': 'Building Permit',
+                'inspection_cert': 'Inspection Certificate',
+                'site_plan': 'Site Development Plan'
+            };
+            return typeMap[docType] || docType || 'Council Document';
+        }
+        
+        // ============================================
+        // DOCUMENT TITLE FOR APPROVAL PAGE
+        // ============================================
+        function getDocumentTitle(docType) {
+            var titleMap = {
+                'development_permit': 'Development Permit',
+                'building_permit': 'Building Permit',
+                'inspection_cert': 'Inspection Certificate',
+                'site_plan': 'Site Development Plan'
+            };
+            return titleMap[docType] || 'Document';
+        }
+        
         async function loadApproval() {
             var params = getUrlParams();
             var contentDiv = document.getElementById('mainContent');
@@ -146,7 +173,7 @@
                     return;
                 }
                 
-                // Get the document from issued_documents (Renamed 'document' to 'permitDoc' to prevent shadowing global document)
+                // Get the document from issued_documents
                 var { data: permitDoc, error: docError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -162,6 +189,13 @@
                 var levelName = params.level === 'hod' ? 'Head of Department' : 'Chief Executive Officer';
                 
                 // ============================================
+                // GET DOCUMENT TYPE (DYNAMIC - works for any document)
+                // ============================================
+                var docType = permitDoc.document_type || 'unknown';
+                var docTypeDisplay = getDocumentTypeName(docType);
+                var docTitle = getDocumentTitle(docType);
+                
+                // ============================================
                 // CEO PAGE - WAITING FOR HOD APPROVAL (WITH AUTO-REFRESH)
                 // ============================================
                 if (params.level === 'ceo' && !permitDoc.hod_approved) {
@@ -170,7 +204,7 @@
                             <strong>Waiting for HOD Approval</strong><br><br>
                             This document is waiting for HOD approval first.<br><br>
                             <strong>Document Number:</strong> ${escapeHtml(permitDoc.document_number)}<br>
-                            <strong>Document Type:</strong> Development Permit<br><br>
+                            <strong>Document Type:</strong> ${docTypeDisplay}<br><br>
                             <span id="countdownText">This page will refresh in 10 seconds...</span><br>
                             You can also <a href="#" onclick="location.reload(); return false;">click here</a> to refresh manually.
                         </div>
@@ -193,17 +227,42 @@
                     return;
                 }
                 
-                // Build the approval page
-                var applicantName = documentData.applicant_name || permitDoc.issued_to || 'N/A';
-                var propertyLocation = documentData.property_location || permitDoc.property_location || 'N/A';
-                var documentPurpose = documentData.commercial_uses || documentData.purpose || 'Standard Approval';
+                // ============================================
+                // DYNAMIC FIELD EXTRACTION
+                // Works for any document type
+                // ============================================
+                // Try to get applicant name from various possible fields
+                var applicantName = documentData.applicant_name || 
+                                   documentData.name || 
+                                   permitDoc.issued_to || 
+                                   'N/A';
                 
+                // Try to get property/address from various possible fields
+                var propertyLocation = documentData.property_location || 
+                                      documentData.location || 
+                                      documentData.address ||
+                                      permitDoc.property_location || 
+                                      'N/A';
+                
+                // Try to get purpose/description from various possible fields
+                var documentPurpose = documentData.commercial_uses || 
+                                     documentData.purpose || 
+                                     documentData.description ||
+                                     'Standard Approval';
+                
+                // Try to get application reference
+                var applicationRef = documentData.application_ref || 
+                                    documentData.reference || 
+                                    documentData.ref ||
+                                    'N/A';
+                
+                // Build the approval page
                 contentDiv.innerHTML = `
                     <div class="info-card">
                         <strong>DOCUMENT APPROVAL REQUIRED</strong><br>
                         <strong>Approver:</strong> ${levelName}<br>
                         <strong>Document Number:</strong> ${escapeHtml(permitDoc.document_number)}<br>
-                        <strong>Document Type:</strong> Development Permit<br>
+                        <strong>Document Type:</strong> ${docTypeDisplay}<br>
                         <strong>Status:</strong> ${params.level === 'hod' ? 'Awaiting HOD Signature' : 'Awaiting CEO Signature'}
                     </div>
                     
@@ -216,11 +275,11 @@
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Document Type</span>
-                                <span class="detail-value">Development Permit</span>
+                                <span class="detail-value">${docTypeDisplay}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Issue Date</span>
-                                <span class="detail-value">${permitDoc.issue_date}</span>
+                                <span class="detail-value">${permitDoc.issue_date || 'N/A'}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Expiry Date</span>
@@ -260,7 +319,7 @@
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">Application Reference</span>
-                                <span class="detail-value">${escapeHtml(documentData.application_ref || 'N/A')}</span>
+                                <span class="detail-value">${escapeHtml(applicationRef)}</span>
                             </div>
                         </div>
                     </div>
