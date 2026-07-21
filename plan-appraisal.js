@@ -19,7 +19,7 @@ var planFileUrl = null;
 var planFilePath = null;
 
 // ============================================
-// QUESTIONS DATA - Exactly from Word document
+// QUESTIONS DATA
 // ============================================
 var questions = [{
     section: '1',
@@ -144,6 +144,11 @@ function initSupabase() {
 // STAFF FUNCTIONS - Fetch using UUID (id column)
 // ============================================
 async function fetchUserRoleAndName(userId) {
+    if (!userId) {
+        console.warn('No userId provided to fetchUserRoleAndName');
+        return { role: 'building_inspector', name: '' };
+    }
+    
     try {
         var { data, error } = await supabaseClient
             .from('profiles')
@@ -162,6 +167,7 @@ async function fetchUserRoleAndName(userId) {
                 name: data.full_name || ''
             };
         }
+        console.log('No profile found for userId:', userId);
         return { role: 'building_inspector', name: '' };
     } catch (e) {
         console.error('Error:', e);
@@ -188,6 +194,10 @@ function getRoleBadgeClass(role) {
 }
 
 async function checkStaffLogin() {
+    console.log('checkStaffLogin called');
+    console.log('currentStaffUser:', currentStaffUser);
+    console.log('currentStaffUserId:', currentStaffUserId);
+    
     if (!currentStaffUser || !currentStaffName || !currentStaffUserId) {
         var infoSection = document.getElementById('staffInfoSection');
         if (infoSection) {
@@ -207,7 +217,8 @@ async function checkStaffLogin() {
 
     try {
         var profile = await fetchUserRoleAndName(currentStaffUserId);
-        currentStaffRole = profile.role;
+        console.log('Profile fetched:', profile);
+        currentStaffRole = profile.role || 'building_inspector';
         if (profile.name) {
             currentStaffName = profile.name;
             sessionStorage.setItem('staffDisplayName', currentStaffName);
@@ -1006,19 +1017,47 @@ async function loadAppraisalForTracking(id) {
 // ============================================
 // INITIALIZE
 // ============================================
-initSupabase();
-
-// Also update index.html login to store userId
-// Add this to the login function in index.html:
-// sessionStorage.setItem('staffUserId', data.user.id);
-
-if (!checkStaffLogin()) {
-    // Staff not logged in
-} else {
-    if (!checkForTracking()) {
-        // Normal mode
+(async function init() {
+    console.log('Initializing Plan Appraisal Form...');
+    initSupabase();
+    
+    if (!currentStaffUser || !currentStaffName || !currentStaffUserId) {
+        console.warn('No user session found. Redirecting to login.');
+        var infoSection = document.getElementById('staffInfoSection');
+        if (infoSection) {
+            infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+        }
+        return;
     }
-}
+
+    // Force fetch from database using userId
+    var profile = await fetchUserRoleAndName(currentStaffUserId);
+    console.log('Profile fetched on init:', profile);
+    currentStaffRole = profile.role || 'building_inspector';
+    if (profile.name) {
+        currentStaffName = profile.name;
+        sessionStorage.setItem('staffDisplayName', currentStaffName);
+    }
+    sessionStorage.setItem('staffRole', currentStaffRole);
+
+    // Update UI
+    var nameEl = document.getElementById('staffName');
+    var badge = document.getElementById('staffRoleBadge');
+    
+    if (nameEl) nameEl.textContent = currentStaffName;
+    if (badge) {
+        badge.textContent = getStaffRoleDisplay(currentStaffRole);
+        badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
+    }
+
+    console.log('Role loaded from database:', currentStaffRole);
+    console.log('User ID:', currentStaffUserId);
+    console.log('User:', currentStaffName);
+
+    if (!checkForTracking()) {
+        // Normal mode - show details step
+    }
+})();
 
 document.getElementById('emergencyModal').addEventListener('click', function(e) {
     if (e.target === this) {
