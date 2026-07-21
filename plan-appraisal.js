@@ -11,7 +11,7 @@ var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
 var supabaseClient = null;
 var currentStaffUser = sessionStorage.getItem('staffEmail');
 var currentStaffName = sessionStorage.getItem('staffDisplayName');
-var currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
+var currentStaffRole = 'building_inspector';
 
 var appraisalId = null;
 var planFileUrl = null;
@@ -140,9 +140,9 @@ function initSupabase() {
 }
 
 // ============================================
-// STAFF FUNCTIONS - Using profiles table
+// STAFF FUNCTIONS - ALWAYS FETCH FROM DATABASE
 // ============================================
-async function fetchUserRole(email) {
+async function fetchUserRoleAndName(email) {
     try {
         var { data, error } = await supabaseClient
             .from('profiles')
@@ -151,17 +151,20 @@ async function fetchUserRole(email) {
             .maybeSingle();
 
         if (error) {
-            console.error('Error fetching role:', error);
-            return 'building_inspector';
+            console.error('Error fetching profile:', error);
+            return { role: 'building_inspector', name: email.split('@')[0] };
         }
 
-        if (data && data.role) {
-            return data.role;
+        if (data) {
+            return {
+                role: data.role || 'building_inspector',
+                name: data.full_name || email.split('@')[0]
+            };
         }
-        return 'building_inspector';
+        return { role: 'building_inspector', name: email.split('@')[0] };
     } catch (e) {
         console.error('Error:', e);
-        return 'building_inspector';
+        return { role: 'building_inspector', name: email.split('@')[0] };
     }
 }
 
@@ -185,24 +188,58 @@ function getRoleBadgeClass(role) {
 
 async function checkStaffLogin() {
     if (!currentStaffUser || !currentStaffName) {
-        document.getElementById('staffInfoSection').innerHTML =
-            '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+        var infoSection = document.getElementById('staffInfoSection');
+        if (infoSection) {
+            infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+        }
         return false;
     }
 
-    // Get role from sessionStorage or fetch from profiles
-    if (!sessionStorage.getItem('staffRole')) {
-        var role = await fetchUserRole(currentStaffUser);
-        sessionStorage.setItem('staffRole', role);
-        currentStaffRole = role;
-    } else {
-        currentStaffRole = sessionStorage.getItem('staffRole');
+    initSupabase();
+    if (!supabaseClient) {
+        var infoSection = document.getElementById('staffInfoSection');
+        if (infoSection) {
+            infoSection.innerHTML = '<div class="error">Database connection error. Please refresh.</div>';
+        }
+        return false;
     }
 
-    document.getElementById('staffName').textContent = currentStaffName;
+    try {
+        var { data, error } = await supabaseClient
+            .from('profiles')
+            .select('full_name, role')
+            .eq('email', currentStaffUser)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error fetching profile:', error);
+            currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
+        } else if (data) {
+            currentStaffRole = data.role || 'building_inspector';
+            if (data.full_name) {
+                currentStaffName = data.full_name;
+                sessionStorage.setItem('staffDisplayName', currentStaffName);
+            }
+            sessionStorage.setItem('staffRole', currentStaffRole);
+        } else {
+            currentStaffRole = 'building_inspector';
+        }
+    } catch (e) {
+        console.error('Error fetching role:', e);
+        currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
+    }
+
+    var nameEl = document.getElementById('staffName');
     var badge = document.getElementById('staffRoleBadge');
-    badge.textContent = getStaffRoleDisplay(currentStaffRole);
-    badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
+    
+    if (nameEl) nameEl.textContent = currentStaffName;
+    if (badge) {
+        badge.textContent = getStaffRoleDisplay(currentStaffRole);
+        badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
+    }
+
+    console.log('Role loaded from database:', currentStaffRole);
+    console.log('User:', currentStaffName);
 
     return true;
 }
@@ -329,7 +366,7 @@ async function startAppraisal() {
 }
 
 // ============================================
-// RENDER APPRAISAL TABLE - FIXED YES/NO BUTTONS
+// RENDER APPRAISAL TABLE
 // ============================================
 function renderAppraisalTable() {
     var tbody = document.getElementById('appraisalTableBody');
@@ -338,7 +375,6 @@ function renderAppraisalTable() {
     var role = currentStaffRole;
 
     questions.forEach(function(section) {
-        // Section header row
         var headerRow = document.createElement('tr');
         headerRow.className = 'section-header';
         headerRow.innerHTML = `
@@ -346,16 +382,13 @@ function renderAppraisalTable() {
         `;
         tbody.appendChild(headerRow);
 
-        // Items
         section.items.forEach(function(item) {
             var row = document.createElement('tr');
 
-            // Item ID
             var idCell = document.createElement('td');
             idCell.textContent = item.id;
             row.appendChild(idCell);
 
-            // Question text
             var qCell = document.createElement('td');
             qCell.textContent = item.text;
             if (item.id.includes('.')) {
@@ -363,17 +396,14 @@ function renderAppraisalTable() {
             }
             row.appendChild(qCell);
 
-            // Building Inspector column
             var inspectorCell = document.createElement('td');
             inspectorCell.innerHTML = generateColumnHTML(item.id, 'building_inspector', role);
             row.appendChild(inspectorCell);
 
-            // Planning Tech column
             var techCell = document.createElement('td');
             techCell.innerHTML = generateColumnHTML(item.id, 'planning_tech', role);
             row.appendChild(techCell);
 
-            // District Planner column
             var plannerCell = document.createElement('td');
             plannerCell.innerHTML = generateColumnHTML(item.id, 'district_planner', role);
             row.appendChild(plannerCell);
@@ -383,15 +413,12 @@ function renderAppraisalTable() {
     });
 
     addSignatureRows(tbody);
-
-    // Re-bind click events for Yes/No buttons
     bindYesNoEvents();
 }
 
 function generateColumnHTML(itemId, columnRole, currentRole) {
     var canEdit = false;
 
-    // Determine if current user can edit this column
     if (currentRole === 'building_inspector' && columnRole === 'building_inspector') {
         canEdit = true;
     } else if (currentRole === 'planning_tech' && (columnRole === 'building_inspector' || columnRole === 'planning_tech')) {
@@ -405,12 +432,9 @@ function generateColumnHTML(itemId, columnRole, currentRole) {
     var comment = appraisalState.comments[key] || '';
 
     var html = '<div style="display:flex;flex-direction:column;gap:3px;">';
-    
-    // Yes/No buttons
     html += '<div style="display:flex;gap:5px;justify-content:center;">';
 
     if (canEdit) {
-        // Create buttons with data attributes
         html += `<button class="yn-btn yes-btn ${value === 'yes' ? 'active-yes' : ''}" 
                         data-item="${itemId}" 
                         data-column="${columnRole}" 
@@ -426,17 +450,15 @@ function generateColumnHTML(itemId, columnRole, currentRole) {
                     No
                  </button>`;
     } else {
-        // Read-only display
         html += `<span style="font-size:11px;color:#666;padding:3px 12px;border:1px solid #ddd;border-radius:4px;background:#f8f9fa;">
-                    ${value === 'yes' ? '✅ Yes' : value === 'no' ? '❌ No' : '—'}
+                    ${value === 'yes' ? 'Yes' : value === 'no' ? 'No' : '---'}
                 </span>`;
     }
 
     html += '</div>';
 
-    // Comment box - only show if "No" is selected OR there's an existing comment
     if (value === 'no' || comment) {
-        var displayValue = value === 'no' ? 'No' : (value === 'yes' ? 'Yes' : '—');
+        var displayValue = value === 'no' ? 'No' : (value === 'yes' ? 'Yes' : '---');
         html += `<div class="comment-small" style="margin-top:4px;border-top:1px solid #eee;padding-top:4px;">`;
         html += `<span style="font-size:6pt;color:#999;">Comment ${displayValue}:</span>`;
         if (canEdit) {
@@ -446,7 +468,7 @@ function generateColumnHTML(itemId, columnRole, currentRole) {
                                 placeholder="Reason for No..." 
                                 style="font-size:7pt; padding:2px 4px; min-height:20px; border:none; background:transparent; width:100%; resize:none;">${comment}</textarea>`;
         } else {
-            html += `<div style="font-size:6pt;color:#555;word-wrap:break-word;">${comment || '—'}</div>`;
+            html += `<div style="font-size:6pt;color:#555;word-wrap:break-word;">${comment || '---'}</div>`;
         }
         html += `</div>`;
     }
@@ -460,9 +482,9 @@ function addSignatureRows(tbody) {
     row6.innerHTML = `
         <td>6</td>
         <td><strong>SIGNED</strong></td>
-        <td id="inspectorSignedCell">${appraisalState.inspector_signed ? '✅ Signed' : '⏳ Pending'}</td>
-        <td id="techSignedCell">${appraisalState.tech_signed ? '✅ Signed' : '⏳ Pending'}</td>
-        <td id="plannerSignedCell">${appraisalState.planner_signed ? '✅ Signed' : '⏳ Pending'}</td>
+        <td id="inspectorSignedCell">${appraisalState.inspector_signed ? 'Signed' : 'Pending'}</td>
+        <td id="techSignedCell">${appraisalState.tech_signed ? 'Signed' : 'Pending'}</td>
+        <td id="plannerSignedCell">${appraisalState.planner_signed ? 'Signed' : 'Pending'}</td>
     `;
     tbody.appendChild(row6);
 
@@ -470,9 +492,9 @@ function addSignatureRows(tbody) {
     row7.innerHTML = `
         <td>7</td>
         <td><strong>APPROVED</strong></td>
-        <td>${appraisalState.hod_approved ? '✅' : '—'}</td>
-        <td>${appraisalState.ceo_approved ? '✅' : '—'}</td>
-        <td id="finalApprovedCell">${appraisalState.planner_signed && appraisalState.ceo_approved ? '✅ APPROVED' : '⏳ Pending'}</td>
+        <td>${appraisalState.hod_approved ? 'Yes' : '---'}</td>
+        <td>${appraisalState.ceo_approved ? 'Yes' : '---'}</td>
+        <td id="finalApprovedCell">${appraisalState.planner_signed && appraisalState.ceo_approved ? 'APPROVED' : 'Pending'}</td>
     `;
     tbody.appendChild(row7);
 }
@@ -481,7 +503,6 @@ function addSignatureRows(tbody) {
 // BIND YES/NO EVENTS
 // ============================================
 function bindYesNoEvents() {
-    // Yes/No button clicks
     var buttons = document.querySelectorAll('.yn-btn');
     buttons.forEach(function(btn) {
         btn.onclick = function(e) {
@@ -493,7 +514,6 @@ function bindYesNoEvents() {
         };
     });
 
-    // Comment textarea changes
     var textareas = document.querySelectorAll('.comment-textarea');
     textareas.forEach(function(ta) {
         ta.oninput = function() {
@@ -510,14 +530,12 @@ function bindYesNoEvents() {
 function setAnswer(itemId, columnRole, value) {
     var key = itemId + '_' + columnRole;
     
-    // Toggle: if clicking the same value, deselect it
     if (appraisalState.answers[key] === value) {
         appraisalState.answers[key] = '';
     } else {
         appraisalState.answers[key] = value;
     }
     
-    // Save and re-render
     renderAppraisalTable();
     saveAppraisalState();
 }
@@ -689,10 +707,10 @@ function updateSignatureStatus(id) {
 
     var hasSig = appraisalState[id + '_signature'];
     if (hasSig) {
-        statusEl.innerHTML = '✅ Signature captured';
+        statusEl.innerHTML = 'Signature captured';
         statusEl.style.color = '#28a745';
     } else {
-        statusEl.innerHTML = '⏳ Awaiting signature';
+        statusEl.innerHTML = 'Awaiting signature';
         statusEl.style.color = '#666';
     }
 }
@@ -724,8 +742,8 @@ function submitInspectorApproval() {
 
     saveAppraisalState();
     updateSignatureStatus('inspector');
-    document.getElementById('inspectorSignedCell').innerHTML = '✅ Signed';
-    document.getElementById('inspectorStatus').innerHTML = '✅ Submitted';
+    document.getElementById('inspectorSignedCell').innerHTML = 'Signed';
+    document.getElementById('inspectorStatus').innerHTML = 'Submitted';
 
     showSuccess('Building Inspector approval submitted!');
 
@@ -756,8 +774,8 @@ function submitTechApproval() {
 
     saveAppraisalState();
     updateSignatureStatus('tech');
-    document.getElementById('techSignedCell').innerHTML = '✅ Signed';
-    document.getElementById('techStatus').innerHTML = '✅ Submitted';
+    document.getElementById('techSignedCell').innerHTML = 'Signed';
+    document.getElementById('techStatus').innerHTML = 'Submitted';
 
     showSuccess('Planning Technician approval submitted!');
 
@@ -790,9 +808,9 @@ function submitPlannerApproval() {
 
     saveAppraisalState();
     updateSignatureStatus('planner');
-    document.getElementById('plannerSignedCell').innerHTML = '✅ Signed';
-    document.getElementById('finalApprovedCell').innerHTML = '✅ APPROVED';
-    document.getElementById('plannerStatus').innerHTML = '✅ Approved';
+    document.getElementById('plannerSignedCell').innerHTML = 'Signed';
+    document.getElementById('finalApprovedCell').innerHTML = 'APPROVED';
+    document.getElementById('plannerStatus').innerHTML = 'Approved';
 
     showSuccess('District Planner final approval submitted!');
 
@@ -833,7 +851,7 @@ function checkColumnAnswered(column) {
 function checkAllApproved() {
     if (appraisalState.inspector_signed && appraisalState.tech_signed && appraisalState.planner_signed) {
         document.getElementById('downloadPdfBtn').style.display = 'inline-block';
-        document.getElementById('appraisalStatusText').textContent = 'Status: ✅ Fully Approved';
+        document.getElementById('appraisalStatusText').textContent = 'Status: Fully Approved';
     } else if (appraisalState.inspector_signed && appraisalState.tech_signed) {
         document.getElementById('appraisalStatusText').textContent = 'Status: Waiting for District Planner';
     } else if (appraisalState.inspector_signed) {
@@ -882,7 +900,7 @@ function verifyEmergencyPassword() {
         console.log('Emergency access used by:', currentStaffUser, 'at:', new Date().toISOString());
     } else {
         errorEl.classList.remove('hidden');
-        errorEl.innerHTML = '❌ Incorrect emergency password.';
+        errorEl.innerHTML = 'Incorrect emergency password.';
     }
 }
 
@@ -905,7 +923,7 @@ function downloadFinalPDF() {
     showSuccess('PDF generation in progress...');
 
     setTimeout(function() {
-        showSuccess('PDF generated successfully! (Demo)');
+        showSuccess('PDF generated successfully. (Demo)');
     }, 2000);
 }
 
