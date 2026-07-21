@@ -329,7 +329,7 @@ async function startAppraisal() {
 }
 
 // ============================================
-// RENDER APPRAISAL TABLE
+// RENDER APPRAISAL TABLE - FIXED YES/NO BUTTONS
 // ============================================
 function renderAppraisalTable() {
     var tbody = document.getElementById('appraisalTableBody');
@@ -338,6 +338,7 @@ function renderAppraisalTable() {
     var role = currentStaffRole;
 
     questions.forEach(function(section) {
+        // Section header row
         var headerRow = document.createElement('tr');
         headerRow.className = 'section-header';
         headerRow.innerHTML = `
@@ -345,13 +346,16 @@ function renderAppraisalTable() {
         `;
         tbody.appendChild(headerRow);
 
+        // Items
         section.items.forEach(function(item) {
             var row = document.createElement('tr');
 
+            // Item ID
             var idCell = document.createElement('td');
             idCell.textContent = item.id;
             row.appendChild(idCell);
 
+            // Question text
             var qCell = document.createElement('td');
             qCell.textContent = item.text;
             if (item.id.includes('.')) {
@@ -359,14 +363,17 @@ function renderAppraisalTable() {
             }
             row.appendChild(qCell);
 
+            // Building Inspector column
             var inspectorCell = document.createElement('td');
             inspectorCell.innerHTML = generateColumnHTML(item.id, 'building_inspector', role);
             row.appendChild(inspectorCell);
 
+            // Planning Tech column
             var techCell = document.createElement('td');
             techCell.innerHTML = generateColumnHTML(item.id, 'planning_tech', role);
             row.appendChild(techCell);
 
+            // District Planner column
             var plannerCell = document.createElement('td');
             plannerCell.innerHTML = generateColumnHTML(item.id, 'district_planner', role);
             row.appendChild(plannerCell);
@@ -376,11 +383,15 @@ function renderAppraisalTable() {
     });
 
     addSignatureRows(tbody);
+
+    // Re-bind click events for Yes/No buttons
+    bindYesNoEvents();
 }
 
 function generateColumnHTML(itemId, columnRole, currentRole) {
     var canEdit = false;
 
+    // Determine if current user can edit this column
     if (currentRole === 'building_inspector' && columnRole === 'building_inspector') {
         canEdit = true;
     } else if (currentRole === 'planning_tech' && (columnRole === 'building_inspector' || columnRole === 'planning_tech')) {
@@ -389,27 +400,51 @@ function generateColumnHTML(itemId, columnRole, currentRole) {
         canEdit = true;
     }
 
-    var value = appraisalState.answers[itemId + '_' + columnRole] || '';
-    var comment = appraisalState.comments[itemId + '_' + columnRole] || '';
+    var key = itemId + '_' + columnRole;
+    var value = appraisalState.answers[key] || '';
+    var comment = appraisalState.comments[key] || '';
 
     var html = '<div style="display:flex;flex-direction:column;gap:3px;">';
+    
+    // Yes/No buttons
     html += '<div style="display:flex;gap:5px;justify-content:center;">';
 
     if (canEdit) {
-        html += `<span class="yn-option ${value === 'yes' ? 'active-yes' : ''}" onclick="setAnswer('${itemId}','${columnRole}','yes')">Yes</span>`;
-        html += `<span class="yn-option ${value === 'no' ? 'active-no' : ''}" onclick="setAnswer('${itemId}','${columnRole}','no')">No</span>`;
+        // Create buttons with data attributes
+        html += `<button class="yn-btn yes-btn ${value === 'yes' ? 'active-yes' : ''}" 
+                        data-item="${itemId}" 
+                        data-column="${columnRole}" 
+                        data-value="yes"
+                        style="padding:3px 12px; border:1px solid #ddd; border-radius:4px; cursor:pointer; font-size:11px; background:${value === 'yes' ? '#28a745' : 'white'}; color:${value === 'yes' ? 'white' : '#333'};">
+                    Yes
+                 </button>`;
+        html += `<button class="yn-btn no-btn ${value === 'no' ? 'active-no' : ''}" 
+                        data-item="${itemId}" 
+                        data-column="${columnRole}" 
+                        data-value="no"
+                        style="padding:3px 12px; border:1px solid #ddd; border-radius:4px; cursor:pointer; font-size:11px; background:${value === 'no' ? '#dc3545' : 'white'}; color:${value === 'no' ? 'white' : '#333'};">
+                    No
+                 </button>`;
     } else {
-        html += `<span style="font-size:11px;color:#666;">${value === 'yes' ? '✅ Yes' : value === 'no' ? '❌ No' : '—'}</span>`;
+        // Read-only display
+        html += `<span style="font-size:11px;color:#666;padding:3px 12px;border:1px solid #ddd;border-radius:4px;background:#f8f9fa;">
+                    ${value === 'yes' ? '✅ Yes' : value === 'no' ? '❌ No' : '—'}
+                </span>`;
     }
 
     html += '</div>';
 
+    // Comment box - only show if "No" is selected OR there's an existing comment
     if (value === 'no' || comment) {
         var displayValue = value === 'no' ? 'No' : (value === 'yes' ? 'Yes' : '—');
         html += `<div class="comment-small" style="margin-top:4px;border-top:1px solid #eee;padding-top:4px;">`;
         html += `<span style="font-size:6pt;color:#999;">Comment ${displayValue}:</span>`;
         if (canEdit) {
-            html += `<textarea placeholder="Reason for No..." onchange="setComment('${itemId}','${columnRole}',this.value)">${comment}</textarea>`;
+            html += `<textarea class="comment-textarea" 
+                                data-item="${itemId}" 
+                                data-column="${columnRole}"
+                                placeholder="Reason for No..." 
+                                style="font-size:7pt; padding:2px 4px; min-height:20px; border:none; background:transparent; width:100%; resize:none;">${comment}</textarea>`;
         } else {
             html += `<div style="font-size:6pt;color:#555;word-wrap:break-word;">${comment || '—'}</div>`;
         }
@@ -443,15 +478,46 @@ function addSignatureRows(tbody) {
 }
 
 // ============================================
+// BIND YES/NO EVENTS
+// ============================================
+function bindYesNoEvents() {
+    // Yes/No button clicks
+    var buttons = document.querySelectorAll('.yn-btn');
+    buttons.forEach(function(btn) {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            var itemId = this.getAttribute('data-item');
+            var columnRole = this.getAttribute('data-column');
+            var value = this.getAttribute('data-value');
+            setAnswer(itemId, columnRole, value);
+        };
+    });
+
+    // Comment textarea changes
+    var textareas = document.querySelectorAll('.comment-textarea');
+    textareas.forEach(function(ta) {
+        ta.oninput = function() {
+            var itemId = this.getAttribute('data-item');
+            var columnRole = this.getAttribute('data-column');
+            setComment(itemId, columnRole, this.value);
+        };
+    });
+}
+
+// ============================================
 // ANSWER AND COMMENT FUNCTIONS
 // ============================================
 function setAnswer(itemId, columnRole, value) {
     var key = itemId + '_' + columnRole;
+    
+    // Toggle: if clicking the same value, deselect it
     if (appraisalState.answers[key] === value) {
         appraisalState.answers[key] = '';
     } else {
         appraisalState.answers[key] = value;
     }
+    
+    // Save and re-render
     renderAppraisalTable();
     saveAppraisalState();
 }
