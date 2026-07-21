@@ -355,35 +355,36 @@
                 </div>
                 
                 <div class="dashboard-header">
-                    <h3>My Permits</h3>
+                    <h3>My Documents</h3>
                 </div>
                 
-                <!-- Document Type Selection for New Permit -->
+                <!-- Document Type Selection for New Document -->
                 <div class="doc-type-select">
                     <label>Create New Document</label>
                     <select id="documentType">
                         <option value="">-- Select Document Type --</option>
                         <option value="development_permit">Development Permit (Change of Use)</option>
+                        <option value="plan_appraisal">Plan Appraisal Form</option>
                     </select>
                     <button id="continueBtn" class="continue-btn">Continue to Document Form</button>
                 </div>
                 
-                <!-- Permits Table -->
+                <!-- Documents Table -->
                 <div id="permitsList">
-                    <h3 style="margin: 25px 0 15px 0;">Recent Permits</h3>
+                    <h3 style="margin: 25px 0 15px 0;">Recent Documents</h3>
                     <table class="permit-table">
                         <thead>
                             <tr>
-                                <th>Permit Number</th>
-                                <th>Property Location</th>
-                                <th>Applicant</th>
+                                <th>Document Number</th>
+                                <th>Property / Location</th>
+                                <th>Applicant / Owner</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="permitsTableBody">
                             <tr class="empty-row">
-                                <td colspan="5">Loading permits...</td>
+                                <td colspan="5">Loading documents...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -401,7 +402,7 @@
         let supabaseClient = null;
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
-        let allPermits = [];
+        let allDocuments = [];
         
         // Initialize Supabase
         try {
@@ -450,7 +451,7 @@
                 loginSection.classList.add('hidden');
                 dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = currentStaffName;
-                loadMyPermits();
+                loadMyDocuments();
             } else {
                 loginSection.classList.remove('hidden');
                 dashboardSection.classList.add('hidden');
@@ -502,7 +503,7 @@
                 loginSection.classList.add('hidden');
                 dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = displayName;
-                loadMyPermits();
+                loadMyDocuments();
                 
             } catch (error) {
                 loginError.innerHTML = `<div class="error">${error.message || 'Invalid credentials'}</div>`;
@@ -526,81 +527,181 @@
             loginError.innerHTML = '';
         }
         
-        // Load My Permits
-        async function loadMyPermits() {
+        // Load My Documents (from both issued_documents and plan_appraisals)
+        async function loadMyDocuments() {
             if (!supabaseClient || !currentStaffUser) return;
             
-            permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading permits...</td></tr>';
+            permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading documents...</td></tr>';
             
             try {
-                const { data, error } = await supabaseClient
+                let allDocs = [];
+                
+                // 1. Load from issued_documents (Development Permits)
+                const { data: permits, error: permitsError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('issued_by_email', currentStaffUser)
                     .neq('status', 'downloaded')
                     .order('created_at', { ascending: false });
                 
-                if (error) throw error;
+                if (!permitsError && permits) {
+                    permits.forEach(function(doc) {
+                        allDocs.push({
+                            id: doc.id,
+                            document_number: doc.document_number,
+                            document_type: doc.document_type || 'development_permit',
+                            property_location: doc.document_data ? doc.document_data.property_location : doc.property_location,
+                            applicant_name: doc.document_data ? doc.document_data.applicant_name : doc.issued_to,
+                            hod_approved: doc.hod_approved || false,
+                            ceo_approved: doc.ceo_approved || false,
+                            status: doc.status,
+                            created_at: doc.created_at,
+                            source_table: 'issued_documents',
+                            raw_data: doc
+                        });
+                    });
+                }
                 
-                allPermits = data || [];
-                renderPermitsTable();
+                // 2. Load from plan_appraisals (Plan Appraisal Forms)
+                const { data: appraisals, error: appraisalsError } = await supabaseClient
+                    .from('plan_appraisals')
+                    .select('*')
+                    .eq('created_by_email', currentStaffUser)
+                    .order('created_at', { ascending: false });
+                
+                if (!appraisalsError && appraisals) {
+                    appraisals.forEach(function(doc) {
+                        var statusText = doc.status || 'building_inspector';
+                        var hodApproved = (statusText === 'planning_tech' || statusText === 'district_planner' || statusText === 'approved');
+                        var ceoApproved = (statusText === 'approved');
+                        
+                        allDocs.push({
+                            id: doc.id,
+                            document_number: doc.appraisal_number,
+                            document_type: 'plan_appraisal',
+                            property_location: doc.location || doc.stand_number || 'N/A',
+                            applicant_name: doc.owner_name || 'N/A',
+                            hod_approved: hodApproved,
+                            ceo_approved: ceoApproved,
+                            status: doc.status,
+                            created_at: doc.created_at,
+                            source_table: 'plan_appraisals',
+                            raw_data: doc
+                        });
+                    });
+                }
+                
+                // Sort by created_at descending
+                allDocs.sort(function(a, b) {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+                
+                allDocuments = allDocs;
+                renderDocumentsTable();
                 
             } catch (error) {
-                console.error('Error loading permits:', error);
-                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">Error loading permits. Please refresh.</td></tr>';
+                console.error('Error loading documents:', error);
+                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">Error loading documents. Please refresh.</td></tr>';
             }
         }
         
-        // Render permits table
-        function renderPermitsTable() {
-            if (!allPermits || allPermits.length === 0) {
-                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No permits found. Create a new permit using the form above.</td></tr>';
+        // Render documents table
+        function renderDocumentsTable() {
+            if (!allDocuments || allDocuments.length === 0) {
+                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No documents found. Create a new document using the form above.</td></tr>';
                 return;
             }
             
             permitsTableBody.innerHTML = '';
             
-            for (var i = 0; i < allPermits.length; i++) {
-                var permit = allPermits[i];
-                var permitData = permit.document_data || {};
+            for (var i = 0; i < allDocuments.length; i++) {
+                var doc = allDocuments[i];
                 var statusText = '';
                 var statusClass = '';
                 var showDownload = false;
+                var docTypeDisplay = '';
                 
-                if (permit.ceo_approved && permit.hod_approved) {
-                    statusText = 'Approved';
-                    statusClass = 'status-approved';
-                    showDownload = true;
-                } else if (permit.hod_approved) {
-                    statusText = 'CEO Pending';
-                    statusClass = 'status-ceo';
-                    showDownload = false;
+                // Determine document type display name
+                if (doc.document_type === 'plan_appraisal') {
+                    docTypeDisplay = 'Plan Appraisal';
+                } else if (doc.document_type === 'development_permit') {
+                    docTypeDisplay = 'Dev Permit';
                 } else {
-                    statusText = 'HOD Pending';
-                    statusClass = 'status-hod';
-                    showDownload = false;
+                    docTypeDisplay = doc.document_type || 'Document';
+                }
+                
+                // Determine status
+                if (doc.document_type === 'plan_appraisal') {
+                    if (doc.ceo_approved) {
+                        statusText = 'Approved';
+                        statusClass = 'status-approved';
+                        showDownload = true;
+                    } else if (doc.hod_approved) {
+                        statusText = 'District Planner Pending';
+                        statusClass = 'status-ceo';
+                        showDownload = false;
+                    } else if (doc.status === 'planning_tech') {
+                        statusText = 'Planning Tech Pending';
+                        statusClass = 'status-ceo';
+                        showDownload = false;
+                    } else {
+                        statusText = 'Building Inspector Pending';
+                        statusClass = 'status-hod';
+                        showDownload = false;
+                    }
+                } else {
+                    // Development permit status
+                    if (doc.ceo_approved && doc.hod_approved) {
+                        statusText = 'Approved';
+                        statusClass = 'status-approved';
+                        showDownload = true;
+                    } else if (doc.hod_approved) {
+                        statusText = 'CEO Pending';
+                        statusClass = 'status-ceo';
+                        showDownload = false;
+                    } else {
+                        statusText = 'HOD Pending';
+                        statusClass = 'status-hod';
+                        showDownload = false;
+                    }
                 }
                 
                 var row = document.createElement('tr');
                 
-                var actionsHtml = `
-                    <button class="action-btn" onclick="viewPermitProgress('${permit.id}', '${permit.document_number}')">View Progress</button>
-                `;
+                var actionsHtml = '';
                 
-                if (showDownload) {
-                    actionsHtml += `<button class="action-btn download" onclick="downloadPermit('${permit.id}', '${permit.document_number}')">Download PDF</button>`;
+                if (doc.document_type === 'plan_appraisal') {
+                    actionsHtml = `<button class="action-btn" onclick="viewAppraisalProgress('${doc.id}')">View Progress</button>`;
+                    if (showDownload) {
+                        actionsHtml += `<button class="action-btn download" onclick="downloadAppraisal('${doc.id}')">Download PDF</button>`;
+                    }
+                } else {
+                    actionsHtml = `<button class="action-btn" onclick="viewPermitProgress('${doc.id}', '${doc.document_number}')">View Progress</button>`;
+                    if (showDownload) {
+                        actionsHtml += `<button class="action-btn download" onclick="downloadPermit('${doc.id}', '${doc.document_number}')">Download PDF</button>`;
+                    }
                 }
                 
                 row.innerHTML = `
-                    <td><strong>${escapeHtml(permit.document_number)}</strong></td>
-                    <td>${escapeHtml(permitData.property_location || permit.property_location || '-')}</td>
-                    <td>${escapeHtml(permitData.applicant_name || permit.issued_to || '-')}</td>
+                    <td><strong>${escapeHtml(doc.document_number)}</strong><br><small style="font-size:10px;color:#666;">${docTypeDisplay}</small></td>
+                    <td>${escapeHtml(doc.property_location || '-')}</td>
+                    <td>${escapeHtml(doc.applicant_name || '-')}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${actionsHtml}</td>
                 `;
                 
                 permitsTableBody.appendChild(row);
             }
+        }
+        
+        // View appraisal progress
+        function viewAppraisalProgress(appraisalId) {
+            window.location.href = 'plan-appraisal-form.html?track=' + appraisalId;
+        }
+        
+        // Download appraisal (will be implemented later)
+        async function downloadAppraisal(appraisalId) {
+            alert('PDF download for Plan Appraisal will be available soon. The document is being finalized.');
         }
         
         // View permit progress
@@ -652,7 +753,7 @@
                     .eq('id', permitId);
                 
                 // Refresh the list
-                loadMyPermits();
+                loadMyDocuments();
                 
             } catch (error) {
                 console.error('Download error:', error);
@@ -672,12 +773,40 @@
             verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
             
             try {
-                const { data, error } = await supabaseClient
+                // Try issued_documents first
+                let { data, error } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
                     .eq('document_number', docId);
                 
                 if (error) throw error;
+                
+                // If not found, try plan_appraisals
+                if (!data || data.length === 0) {
+                    const { data: appraisalData, error: appraisalError } = await supabaseClient
+                        .from('plan_appraisals')
+                        .select('*')
+                        .eq('appraisal_number', docId);
+                    
+                    if (!appraisalError && appraisalData && appraisalData.length > 0) {
+                        data = appraisalData;
+                        // Map appraisal data to expected format
+                        data = data.map(function(d) {
+                            return {
+                                document_number: d.appraisal_number,
+                                issued_to: d.owner_name,
+                                property_location: d.location || d.stand_number,
+                                issue_date: d.created_at ? d.created_at.split('T')[0] : 'N/A',
+                                expiry_date: null,
+                                status: d.status === 'approved' ? 'active' : 'pending',
+                                hod_approved: (d.status === 'planning_tech' || d.status === 'district_planner' || d.status === 'approved'),
+                                ceo_approved: (d.status === 'approved'),
+                                document_type: 'plan_appraisal',
+                                document_data: d
+                            };
+                        });
+                    }
+                }
                 
                 if (!data || data.length === 0) {
                     verifyResult.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
@@ -685,13 +814,13 @@
                 }
                 
                 const doc = data[0];
-                const isValid = doc.status === 'active' && (!doc.expiry_date || new Date(doc.expiry_date) >= new Date());
+                const isValid = doc.status === 'active' || doc.status === 'approved';
                 
-                let docTypeName = 'Development Permit';
-                let issuedToName = doc.document_data ? doc.document_data.applicant_name : doc.issued_to;
-                let propertyLoc = doc.document_data ? doc.document_data.property_location : doc.property_location;
+                let docTypeName = doc.document_type === 'plan_appraisal' ? 'Plan Appraisal Form' : 'Development Permit';
+                let issuedToName = doc.issued_to || doc.owner_name || 'N/A';
+                let propertyLoc = doc.property_location || doc.location || doc.stand_number || 'N/A';
                 
-                if (isValid && doc.ceo_approved && doc.hod_approved) {
+                if (isValid && (doc.ceo_approved || doc.status === 'approved')) {
                     verifyResult.innerHTML = `
                         <div class="valid">
                             <strong>VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
@@ -699,8 +828,7 @@
                             <strong>Type:</strong> ${docTypeName}<br>
                             <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
                             <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
-                            <strong>Issue Date:</strong> ${new Date(doc.issue_date).toLocaleDateString()}<br>
-                            <strong>Expiry Date:</strong> ${doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : 'N/A'}<br>
+                            <strong>Issue Date:</strong> ${doc.issue_date || 'N/A'}<br>
                             <strong>Status:</strong> Active Council Record
                         </div>
                     `;
@@ -728,6 +856,8 @@
             
             if (docType === 'development_permit') {
                 window.location.href = 'development-permit.html';
+            } else if (docType === 'plan_appraisal') {
+                window.location.href = 'plan-appraisal-form.html';
             }
         }
         
@@ -752,6 +882,8 @@
         // Make functions global for onclick handlers
         window.viewPermitProgress = viewPermitProgress;
         window.downloadPermit = downloadPermit;
+        window.viewAppraisalProgress = viewAppraisalProgress;
+        window.downloadAppraisal = downloadAppraisal;
         
         // Check initial login state
         checkLoginState();
