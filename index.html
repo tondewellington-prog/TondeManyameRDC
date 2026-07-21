@@ -196,7 +196,6 @@
             background: #218838;
         }
         
-        /* Dashboard Styles */
         .dashboard-header {
             display: flex;
             justify-content: space-between;
@@ -279,6 +278,30 @@
             color: #666;
         }
         
+        .role-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .role-inspector {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .role-tech {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .role-planner {
+            background: #28a745;
+            color: white;
+        }
+        
         @media (max-width: 768px) {
             .permit-table th, .permit-table td {
                 padding: 8px;
@@ -350,7 +373,7 @@
             <!-- Dashboard Section -->
             <div id="dashboardSection" class="hidden">
                 <div class="staff-info">
-                    <span>Welcome, <strong id="staffName"></strong></span>
+                    <span>Welcome, <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge"></span></span>
                     <button id="logoutBtn" class="logout-btn">Logout</button>
                 </div>
                 
@@ -358,7 +381,7 @@
                     <h3>My Documents</h3>
                 </div>
                 
-                <!-- Document Type Selection for New Document -->
+                <!-- Document Type Selection -->
                 <div class="doc-type-select">
                     <label>Create New Document</label>
                     <select id="documentType">
@@ -402,6 +425,8 @@
         let supabaseClient = null;
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
+        let currentStaffUserId = sessionStorage.getItem('staffUserId');
+        let currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
         let allDocuments = [];
         
         // Initialize Supabase
@@ -430,6 +455,31 @@
         const verifyResult = document.getElementById('verifyResult');
         const permitsTableBody = document.getElementById('permitsTableBody');
         
+        function getRoleBadgeClass(role) {
+            var roleMap = {
+                'building_inspector': 'role-inspector',
+                'planning_tech': 'role-tech',
+                'district_planner': 'role-planner'
+            };
+            return roleMap[role] || 'role-inspector';
+        }
+        
+        function getStaffRoleDisplay(role) {
+            var roleMap = {
+                'building_inspector': 'Building Inspector',
+                'planning_tech': 'Planning Technician',
+                'district_planner': 'District Planner'
+            };
+            return roleMap[role] || 'Building Inspector';
+        }
+        
+        function updateRoleBadge() {
+            const badge = document.getElementById('staffRoleBadge');
+            if (!badge) return;
+            badge.textContent = getStaffRoleDisplay(currentStaffRole);
+            badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
+        }
+        
         // Tab switching
         function showVerifyTab() {
             verifyPanel.classList.remove('hidden');
@@ -451,6 +501,7 @@
                 loginSection.classList.add('hidden');
                 dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = currentStaffName;
+                updateRoleBadge();
                 loadMyDocuments();
             } else {
                 loginSection.classList.remove('hidden');
@@ -458,7 +509,7 @@
             }
         }
         
-        // Staff Login
+        // Staff Login - FIXED to store userId
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
@@ -483,26 +534,39 @@
                 
                 if (error) throw error;
                 
-                let displayName = email.split('@')[0];
+                // STORE USER ID (UUID) - CRITICAL FIX
+                const userId = data.user.id;
+                sessionStorage.setItem('staffUserId', userId);
+                currentStaffUserId = userId;
                 
-                try {
-                    const { data: profile } = await supabaseClient
-                        .from('profiles')
-                        .select('full_name')
-                        .eq('email', email)
-                        .maybeSingle();
-                    if (profile && profile.full_name) displayName = profile.full_name;
-                } catch(e) {}
+                let displayName = email.split('@')[0];
+                let staffRole = 'building_inspector';
+                
+                // Fetch user's role from profiles table using ID (uuid)
+                const { data: profileData, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('full_name, role')
+                    .eq('id', userId)
+                    .maybeSingle();
+                
+                if (profileData) {
+                    if (profileData.full_name) displayName = profileData.full_name;
+                    if (profileData.role) staffRole = profileData.role;
+                }
                 
                 currentStaffUser = email;
                 currentStaffName = displayName;
+                currentStaffRole = staffRole;
+                
                 sessionStorage.setItem('staffEmail', email);
                 sessionStorage.setItem('staffDisplayName', displayName);
+                sessionStorage.setItem('staffRole', staffRole);
                 
                 loginError.innerHTML = '';
                 loginSection.classList.add('hidden');
                 dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = displayName;
+                updateRoleBadge();
                 loadMyDocuments();
                 
             } catch (error) {
@@ -518,8 +582,12 @@
             }
             sessionStorage.removeItem('staffEmail');
             sessionStorage.removeItem('staffDisplayName');
+            sessionStorage.removeItem('staffRole');
+            sessionStorage.removeItem('staffUserId');
             currentStaffUser = null;
             currentStaffName = null;
+            currentStaffUserId = null;
+            currentStaffRole = 'building_inspector';
             loginSection.classList.remove('hidden');
             dashboardSection.classList.add('hidden');
             document.getElementById('loginEmail').value = '';
@@ -527,7 +595,7 @@
             loginError.innerHTML = '';
         }
         
-        // Load My Documents (from both issued_documents and plan_appraisals)
+        // Load My Documents
         async function loadMyDocuments() {
             if (!supabaseClient || !currentStaffUser) return;
             
@@ -536,7 +604,7 @@
             try {
                 let allDocs = [];
                 
-                // 1. Load from issued_documents (Development Permits)
+                // Load from issued_documents
                 const { data: permits, error: permitsError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -562,7 +630,7 @@
                     });
                 }
                 
-                // 2. Load from plan_appraisals (Plan Appraisal Forms)
+                // Load from plan_appraisals
                 const { data: appraisals, error: appraisalsError } = await supabaseClient
                     .from('plan_appraisals')
                     .select('*')
@@ -591,7 +659,6 @@
                     });
                 }
                 
-                // Sort by created_at descending
                 allDocs.sort(function(a, b) {
                     return new Date(b.created_at) - new Date(a.created_at);
                 });
@@ -605,10 +672,9 @@
             }
         }
         
-        // Render documents table
         function renderDocumentsTable() {
             if (!allDocuments || allDocuments.length === 0) {
-                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No documents found. Create a new document using the form above.</td></tr>';
+                permitsTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">No documents found.</td></tr>';
                 return;
             }
             
@@ -621,17 +687,8 @@
                 var showDownload = false;
                 var docTypeDisplay = '';
                 
-                // Determine document type display name
                 if (doc.document_type === 'plan_appraisal') {
                     docTypeDisplay = 'Plan Appraisal';
-                } else if (doc.document_type === 'development_permit') {
-                    docTypeDisplay = 'Dev Permit';
-                } else {
-                    docTypeDisplay = doc.document_type || 'Document';
-                }
-                
-                // Determine status
-                if (doc.document_type === 'plan_appraisal') {
                     if (doc.ceo_approved) {
                         statusText = 'Approved';
                         statusClass = 'status-approved';
@@ -639,18 +696,15 @@
                     } else if (doc.hod_approved) {
                         statusText = 'District Planner Pending';
                         statusClass = 'status-ceo';
-                        showDownload = false;
                     } else if (doc.status === 'planning_tech') {
                         statusText = 'Planning Tech Pending';
                         statusClass = 'status-ceo';
-                        showDownload = false;
                     } else {
                         statusText = 'Building Inspector Pending';
                         statusClass = 'status-hod';
-                        showDownload = false;
                     }
                 } else {
-                    // Development permit status
+                    docTypeDisplay = 'Dev Permit';
                     if (doc.ceo_approved && doc.hod_approved) {
                         statusText = 'Approved';
                         statusClass = 'status-approved';
@@ -658,16 +712,13 @@
                     } else if (doc.hod_approved) {
                         statusText = 'CEO Pending';
                         statusClass = 'status-ceo';
-                        showDownload = false;
                     } else {
                         statusText = 'HOD Pending';
                         statusClass = 'status-hod';
-                        showDownload = false;
                     }
                 }
                 
                 var row = document.createElement('tr');
-                
                 var actionsHtml = '';
                 
                 if (doc.document_type === 'plan_appraisal') {
@@ -694,22 +745,18 @@
             }
         }
         
-        // View appraisal progress
         function viewAppraisalProgress(appraisalId) {
             window.location.href = 'plan-appraisal-form.html?track=' + appraisalId;
         }
         
-        // Download appraisal (will be implemented later)
-        async function downloadAppraisal(appraisalId) {
-            alert('PDF download for Plan Appraisal will be available soon. The document is being finalized.');
+        function downloadAppraisal(appraisalId) {
+            alert('PDF download for Plan Appraisal will be available soon.');
         }
         
-        // View permit progress
         function viewPermitProgress(permitId, permitNumber) {
             window.location.href = 'development-permit.html?track=' + permitId;
         }
         
-        // Download permit and remove from list
         async function downloadPermit(permitId, permitNumber) {
             try {
                 var { data: permit, error } = await supabaseClient
@@ -720,7 +767,6 @@
                 
                 if (error) throw error;
                 
-                // Generate PDF
                 var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
                 var response = await fetch(functionUrl, {
                     method: 'POST',
@@ -735,7 +781,6 @@
                     throw new Error('PDF generation failed');
                 }
                 
-                // Download PDF
                 var pdfBlob = await response.blob();
                 var url = window.URL.createObjectURL(pdfBlob);
                 var a = document.createElement('a');
@@ -746,13 +791,11 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
                 
-                // Mark as downloaded
                 await supabaseClient
                     .from('issued_documents')
                     .update({ status: 'downloaded' })
                     .eq('id', permitId);
                 
-                // Refresh the list
                 loadMyDocuments();
                 
             } catch (error) {
@@ -761,7 +804,6 @@
             }
         }
         
-        // Verify Document
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
             
@@ -773,7 +815,6 @@
             verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
             
             try {
-                // Try issued_documents first
                 let { data, error } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -781,7 +822,6 @@
                 
                 if (error) throw error;
                 
-                // If not found, try plan_appraisals
                 if (!data || data.length === 0) {
                     const { data: appraisalData, error: appraisalError } = await supabaseClient
                         .from('plan_appraisals')
@@ -789,9 +829,7 @@
                         .eq('appraisal_number', docId);
                     
                     if (!appraisalError && appraisalData && appraisalData.length > 0) {
-                        data = appraisalData;
-                        // Map appraisal data to expected format
-                        data = data.map(function(d) {
+                        data = appraisalData.map(function(d) {
                             return {
                                 document_number: d.appraisal_number,
                                 issued_to: d.owner_name,
@@ -809,7 +847,7 @@
                 }
                 
                 if (!data || data.length === 0) {
-                    verifyResult.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found in official council records.</div>`;
+                    verifyResult.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found.</div>`;
                     return;
                 }
                 
@@ -833,14 +871,13 @@
                         </div>
                     `;
                 } else {
-                    verifyResult.innerHTML = `<div class="invalid">INVALID - This document has not been fully approved or has expired.</div>`;
+                    verifyResult.innerHTML = `<div class="invalid">INVALID - This document has not been fully approved.</div>`;
                 }
             } catch (error) {
                 verifyResult.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
             }
         }
         
-        // Go to document form
         function goToDocumentForm() {
             const docType = documentTypeSelect.value;
             
@@ -879,16 +916,13 @@
         verifyBtn.addEventListener('click', verifyDocument);
         if (continueBtn) continueBtn.addEventListener('click', goToDocumentForm);
         
-        // Make functions global for onclick handlers
         window.viewPermitProgress = viewPermitProgress;
         window.downloadPermit = downloadPermit;
         window.viewAppraisalProgress = viewAppraisalProgress;
         window.downloadAppraisal = downloadAppraisal;
         
-        // Check initial login state
         checkLoginState();
         
-        // Check for URL verification parameter
         const urlParams = new URLSearchParams(window.location.search);
         const docIdParam = urlParams.get('id');
         if (docIdParam && document.getElementById('verifyDocId')) {
