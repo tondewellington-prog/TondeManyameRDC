@@ -11,6 +11,7 @@ var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
 var supabaseClient = null;
 var currentStaffUser = sessionStorage.getItem('staffEmail');
 var currentStaffName = sessionStorage.getItem('staffDisplayName');
+var currentStaffUserId = sessionStorage.getItem('staffUserId');
 var currentStaffRole = 'building_inspector';
 
 var appraisalId = null;
@@ -140,31 +141,31 @@ function initSupabase() {
 }
 
 // ============================================
-// STAFF FUNCTIONS - ALWAYS FETCH FROM DATABASE
+// STAFF FUNCTIONS - Fetch using UUID (id column)
 // ============================================
-async function fetchUserRoleAndName(email) {
+async function fetchUserRoleAndName(userId) {
     try {
         var { data, error } = await supabaseClient
             .from('profiles')
             .select('full_name, role')
-            .eq('email', email)
+            .eq('id', userId)
             .maybeSingle();
 
         if (error) {
             console.error('Error fetching profile:', error);
-            return { role: 'building_inspector', name: email.split('@')[0] };
+            return { role: 'building_inspector', name: '' };
         }
 
         if (data) {
             return {
                 role: data.role || 'building_inspector',
-                name: data.full_name || email.split('@')[0]
+                name: data.full_name || ''
             };
         }
-        return { role: 'building_inspector', name: email.split('@')[0] };
+        return { role: 'building_inspector', name: '' };
     } catch (e) {
         console.error('Error:', e);
-        return { role: 'building_inspector', name: email.split('@')[0] };
+        return { role: 'building_inspector', name: '' };
     }
 }
 
@@ -187,7 +188,7 @@ function getRoleBadgeClass(role) {
 }
 
 async function checkStaffLogin() {
-    if (!currentStaffUser || !currentStaffName) {
+    if (!currentStaffUser || !currentStaffName || !currentStaffUserId) {
         var infoSection = document.getElementById('staffInfoSection');
         if (infoSection) {
             infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
@@ -204,37 +205,19 @@ async function checkStaffLogin() {
         return false;
     }
 
-    // ============================================
-    // ALWAYS FETCH FROM DATABASE - IGNORE SESSIONSTORAGE
-    // ============================================
     try {
-        var { data, error } = await supabaseClient
-            .from('profiles')
-            .select('full_name, role')
-            .eq('email', currentStaffUser)
-            .maybeSingle();
-
-        if (error) {
-            console.error('Error fetching profile:', error);
-            currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
-        } else if (data) {
-            // Force update from database
-            currentStaffRole = data.role || 'building_inspector';
-            if (data.full_name) {
-                currentStaffName = data.full_name;
-                sessionStorage.setItem('staffDisplayName', currentStaffName);
-            }
-            // ALWAYS update sessionStorage with fresh role
-            sessionStorage.setItem('staffRole', currentStaffRole);
-        } else {
-            currentStaffRole = 'building_inspector';
+        var profile = await fetchUserRoleAndName(currentStaffUserId);
+        currentStaffRole = profile.role;
+        if (profile.name) {
+            currentStaffName = profile.name;
+            sessionStorage.setItem('staffDisplayName', currentStaffName);
         }
+        sessionStorage.setItem('staffRole', currentStaffRole);
     } catch (e) {
         console.error('Error fetching role:', e);
         currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
     }
 
-    // Update UI
     var nameEl = document.getElementById('staffName');
     var badge = document.getElementById('staffRoleBadge');
     
@@ -245,6 +228,7 @@ async function checkStaffLogin() {
     }
 
     console.log('Role loaded from database:', currentStaffRole);
+    console.log('User ID:', currentStaffUserId);
     console.log('User:', currentStaffName);
 
     return true;
@@ -255,6 +239,7 @@ function staffLogout() {
     sessionStorage.removeItem('staffEmail');
     sessionStorage.removeItem('staffDisplayName');
     sessionStorage.removeItem('staffRole');
+    sessionStorage.removeItem('staffUserId');
     window.location.href = 'index.html';
 }
 
@@ -1021,41 +1006,19 @@ async function loadAppraisalForTracking(id) {
 // ============================================
 // INITIALIZE
 // ============================================
-(async function init() {
-    initSupabase();
-    
-    if (!currentStaffUser || !currentStaffName) {
-        var infoSection = document.getElementById('staffInfoSection');
-        if (infoSection) {
-            infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
-        }
-        return;
-    }
+initSupabase();
 
-    // Force fetch from database
-    var profile = await fetchUserRoleAndName(currentStaffUser);
-    currentStaffRole = profile.role;
-    currentStaffName = profile.name;
-    sessionStorage.setItem('staffRole', currentStaffRole);
-    sessionStorage.setItem('staffDisplayName', currentStaffName);
+// Also update index.html login to store userId
+// Add this to the login function in index.html:
+// sessionStorage.setItem('staffUserId', data.user.id);
 
-    // Update UI
-    var nameEl = document.getElementById('staffName');
-    var badge = document.getElementById('staffRoleBadge');
-    
-    if (nameEl) nameEl.textContent = currentStaffName;
-    if (badge) {
-        badge.textContent = getStaffRoleDisplay(currentStaffRole);
-        badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
-    }
-
-    console.log('Role loaded from database:', currentStaffRole);
-    console.log('User:', currentStaffName);
-
+if (!checkStaffLogin()) {
+    // Staff not logged in
+} else {
     if (!checkForTracking()) {
-        // Normal mode - show details step
+        // Normal mode
     }
-})();
+}
 
 document.getElementById('emergencyModal').addEventListener('click', function(e) {
     if (e.target === this) {
