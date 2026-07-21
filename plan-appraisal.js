@@ -204,6 +204,9 @@ async function checkStaffLogin() {
         return false;
     }
 
+    // ============================================
+    // ALWAYS FETCH FROM DATABASE - IGNORE SESSIONSTORAGE
+    // ============================================
     try {
         var { data, error } = await supabaseClient
             .from('profiles')
@@ -215,11 +218,13 @@ async function checkStaffLogin() {
             console.error('Error fetching profile:', error);
             currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
         } else if (data) {
+            // Force update from database
             currentStaffRole = data.role || 'building_inspector';
             if (data.full_name) {
                 currentStaffName = data.full_name;
                 sessionStorage.setItem('staffDisplayName', currentStaffName);
             }
+            // ALWAYS update sessionStorage with fresh role
             sessionStorage.setItem('staffRole', currentStaffRole);
         } else {
             currentStaffRole = 'building_inspector';
@@ -229,6 +234,7 @@ async function checkStaffLogin() {
         currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
     }
 
+    // Update UI
     var nameEl = document.getElementById('staffName');
     var badge = document.getElementById('staffRoleBadge');
     
@@ -1015,15 +1021,41 @@ async function loadAppraisalForTracking(id) {
 // ============================================
 // INITIALIZE
 // ============================================
-initSupabase();
-
-if (!checkStaffLogin()) {
-    // Staff not logged in
-} else {
-    if (!checkForTracking()) {
-        // Normal mode
+(async function init() {
+    initSupabase();
+    
+    if (!currentStaffUser || !currentStaffName) {
+        var infoSection = document.getElementById('staffInfoSection');
+        if (infoSection) {
+            infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+        }
+        return;
     }
-}
+
+    // Force fetch from database
+    var profile = await fetchUserRoleAndName(currentStaffUser);
+    currentStaffRole = profile.role;
+    currentStaffName = profile.name;
+    sessionStorage.setItem('staffRole', currentStaffRole);
+    sessionStorage.setItem('staffDisplayName', currentStaffName);
+
+    // Update UI
+    var nameEl = document.getElementById('staffName');
+    var badge = document.getElementById('staffRoleBadge');
+    
+    if (nameEl) nameEl.textContent = currentStaffName;
+    if (badge) {
+        badge.textContent = getStaffRoleDisplay(currentStaffRole);
+        badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
+    }
+
+    console.log('Role loaded from database:', currentStaffRole);
+    console.log('User:', currentStaffName);
+
+    if (!checkForTracking()) {
+        // Normal mode - show details step
+    }
+})();
 
 document.getElementById('emergencyModal').addEventListener('click', function(e) {
     if (e.target === this) {
