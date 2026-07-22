@@ -718,6 +718,70 @@ function updateSignatureStatus(id) {
 }
 
 // ============================================
+// POPULATE CONSIDERATION SCHEDULE
+// ============================================
+async function populateConsiderationSchedule(appraisalId, appraisalData) {
+    try {
+        if (!supabaseClient) {
+            console.error('Supabase not initialized');
+            return null;
+        }
+
+        // Check if already exists
+        var { data: existing, error: checkError } = await supabaseClient
+            .from('consideration_schedule')
+            .select('id')
+            .eq('appraisal_id', appraisalId)
+            .maybeSingle();
+
+        if (existing) {
+            console.log('Consideration schedule already exists for this appraisal');
+            return existing;
+        }
+
+        // Generate reference number (format: CS-YYYY-MM-XXXXX)
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = String(now.getMonth() + 1).padStart(2, '0');
+        var randomNum = String(Math.floor(Math.random() * 10000)).padStart(5, '0');
+        var referenceNumber = 'CS-' + year + '-' + month + '-' + randomNum;
+
+        // Prepare data for consideration_schedule
+        var scheduleData = {
+            appraisal_id: appraisalId,
+            reference_number: referenceNumber,
+            applicant_name: appraisalData.owner_name || 'N/A',
+            property_address: appraisalData.location || appraisalData.stand_number || 'N/A',
+            nature_of_development: 'Building Plan - ' + (appraisalData.zone || 'N/A'),
+            date_of_approval: now.toISOString().split('T')[0],
+            remarks: 'Approved - Ready for stamp',
+            status: 'pending',
+            contact: appraisalData.created_by_email || '',
+            sex: 'N/A',
+            payments: 'N/A'
+        };
+
+        // Insert into consideration_schedule
+        var { data, error } = await supabaseClient
+            .from('consideration_schedule')
+            .insert([scheduleData])
+            .select();
+
+        if (error) {
+            console.error('Error populating consideration schedule:', error);
+            throw error;
+        }
+
+        console.log('Consideration schedule populated successfully:', data);
+        return data ? data[0] : null;
+
+    } catch (error) {
+        console.error('Error in populateConsiderationSchedule:', error);
+        throw error;
+    }
+}
+
+// ============================================
 // SUBMIT APPROVALS
 // ============================================
 function submitInspectorApproval() {
@@ -784,7 +848,7 @@ function submitTechApproval() {
     checkAllApproved();
 }
 
-function submitPlannerApproval() {
+async function submitPlannerApproval() {
     if (currentStaffRole !== 'district_planner') {
         showError('Only the District Planner can give final approval.');
         return;
@@ -802,22 +866,49 @@ function submitPlannerApproval() {
         return;
     }
 
-    appraisalState.planner_signed = true;
-    appraisalState.planner_signature = sig;
-    appraisalState.ceo_approved = true;
-    appraisalState.hod_approved = true;
-    appraisalState.status = 'approved';
+    try {
+        showLoading('Processing final approval...');
 
-    saveAppraisalState();
-    updateSignatureStatus('planner');
-    document.getElementById('plannerSignedCell').innerHTML = 'Signed';
-    document.getElementById('finalApprovedCell').innerHTML = 'APPROVED';
-    document.getElementById('plannerStatus').innerHTML = 'Approved';
+        appraisalState.planner_signed = true;
+        appraisalState.planner_signature = sig;
+        appraisalState.ceo_approved = true;
+        appraisalState.hod_approved = true;
+        appraisalState.status = 'approved';
 
-    showSuccess('District Planner final approval submitted!');
+        await saveAppraisalState();
+        
+        updateSignatureStatus('planner');
+        document.getElementById('plannerSignedCell').innerHTML = 'Signed';
+        document.getElementById('finalApprovedCell').innerHTML = 'APPROVED';
+        document.getElementById('plannerStatus').innerHTML = 'Approved';
 
-    document.getElementById('downloadPdfBtn').style.display = 'inline-block';
-    sendApprovalEmails('final');
+        // Get appraisal data
+        var { data: appraisalData, error: fetchError } = await supabaseClient
+            .from('plan_appraisals')
+            .select('*')
+            .eq('id', appraisalId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        // POPULATE CONSIDERATION SCHEDULE - NEW AUTO-POPULATE
+        var scheduleEntry = await populateConsiderationSchedule(appraisalId, appraisalData);
+
+        if (scheduleEntry) {
+            showSuccess('✅ Final approval complete! Added to Consideration Schedule 261.');
+        } else {
+            showSuccess('Final approval complete!');
+        }
+
+        document.getElementById('downloadPdfBtn').style.display = 'inline-block';
+        sendApprovalEmails('final');
+
+    } catch (error) {
+        console.error('Error in DP approval:', error);
+        showError('Error processing approval: ' + error.message);
+    }
+
+    hideLoading();
 }
 
 function checkColumnAnswered(column) {
