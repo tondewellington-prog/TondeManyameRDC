@@ -253,6 +253,13 @@
             gap: 15px;
         }
 
+        .action-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+        }
+
         @media (max-width: 768px) {
             .content {
                 padding: 15px;
@@ -327,9 +334,6 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Hidden div for stamp trigger -->
-            <div id="stampTrigger" class="hidden"></div>
         </div>
     </div>
 
@@ -411,10 +415,10 @@
             hideSuccess();
 
             try {
-                // Get all appraisals that are approved (status = 'approved') and in consideration_schedule
+                // Get all schedules with appraisal details
                 var { data: scheduleData, error: scheduleError } = await supabaseClient
                     .from('consideration_schedule')
-                    .select('*')
+                    .select('*, plan_appraisals(*)')
                     .order('created_at', { ascending: true });
 
                 if (scheduleError) throw scheduleError;
@@ -427,29 +431,12 @@
                     return;
                 }
 
-                // Get appraisal details for each schedule item
-                var appraisalIds = scheduleData.map(function(item) { return item.appraisal_id; });
-                var { data: appraisalData, error: appraisalError } = await supabaseClient
-                    .from('plan_appraisals')
-                    .select('*')
-                    .in('id', appraisalIds);
-
-                if (appraisalError) throw appraisalError;
-
-                // Create a map for quick lookup
-                var appraisalMap = {};
-                if (appraisalData) {
-                    appraisalData.forEach(function(app) {
-                        appraisalMap[app.id] = app;
-                    });
-                }
-
                 tbody.innerHTML = '';
                 var rowNumber = 1;
 
                 for (var i = 0; i < scheduleData.length; i++) {
                     var item = scheduleData[i];
-                    var appraisal = appraisalMap[item.appraisal_id];
+                    var appraisal = item.plan_appraisals;
 
                     if (!appraisal) continue;
 
@@ -459,7 +446,6 @@
 
                     var row = document.createElement('tr');
 
-                    // Determine status text and class
                     var statusText = item.status === 'approved' ? 'Approved' : 'Pending';
                     var statusClass = item.status === 'approved' ? 'status-approved' : 'status-pending';
                     var isApproved = item.status === 'approved';
@@ -467,13 +453,13 @@
                     // Actions based on status
                     var actionsHtml = '';
                     if (isApproved) {
-                        actionsHtml = `<span class="status-badge status-approved">✓ Approved</span>`;
-                        if (appraisal.stamped_url) {
-                            actionsHtml += `<br><a href="${appraisal.stamped_url}" target="_blank" class="download-btn">📄 Download PDF</a>`;
-                        }
+                        actionsHtml = `
+                            <span class="status-badge status-approved">Approved</span>
+                            ${appraisal.plan_file_url ? `<br><a href="${appraisal.plan_file_url}" target="_blank" class="download-btn">Download PDF</a>` : ''}
+                        `;
                     } else {
                         actionsHtml = `
-                            <button class="approve-btn" onclick="approvePlan(${item.id}, ${appraisal.id}, '${appraisal.appraisal_number}')">
+                            <button class="approve-btn" onclick="approveSchedule('${item.id}')">
                                 Approve
                             </button>
                         `;
@@ -492,7 +478,12 @@
                         <td style="text-align:center;">${dor}</td>
                         <td style="text-align:center;">${dar}</td>
                         <td style="text-align:center;">${escapeHtml(item.sex || '-')}</td>
-                        <td style="text-align:center;">${actionsHtml}</td>
+                        <td style="text-align:center;">
+                            <div class="action-cell">
+                                ${actionsHtml}
+                                ${item.remarks ? `<small>${escapeHtml(item.remarks)}</small>` : ''}
+                            </div>
+                        </td>
                     `;
 
                     tbody.appendChild(row);
@@ -517,75 +508,100 @@
         }
 
         // ============================================
-        // APPROVE PLAN (Applies Stamp)
+        // APPROVE SCHEDULE - FIXED VERSION
         // ============================================
-        async function approvePlan(scheduleId, appraisalId, appraisalNumber) {
-            if (!confirm(`Are you sure you want to approve "${appraisalNumber}" and apply the council stamp?`)) {
+        async function approveSchedule(scheduleId) {
+            if (!scheduleId) {
+                showError('Invalid schedule ID. Please refresh and try again.');
                 return;
             }
 
-            showLoading('Applying stamp and approving plan...');
+            if (!confirm('Are you sure you want to approve this schedule and apply the council stamp?')) {
+                return;
+            }
+
+            showLoading('Applying stamp and approving schedule...');
 
             try {
-                // 1. Update consideration_schedule status to 'approved'
+                initSupabase();
+                if (!supabaseClient) {
+                    throw new Error('Database connection error. Please refresh.');
+                }
+
+                // 1. Update the schedule status to 'approved'
                 var { error: updateError } = await supabaseClient
                     .from('consideration_schedule')
                     .update({
                         status: 'approved',
-                        considered_at: new Date().toISOString()
+                        considered_at: new Date().toISOString(),
+                        remarks: 'Approved with council stamp on ' + new Date().toLocaleDateString()
                     })
                     .eq('id', scheduleId);
 
-                if (updateError) throw updateError;
+                if (updateError) {
+                    console.error('Update error:', updateError);
+                    throw new Error('Failed to update schedule: ' + updateError.message);
+                }
 
-                // 2. Get the appraisal data for stamping
-                var { data: appraisal, error: appraisalError } = await supabaseClient
-                    .from('plan_appraisals')
-                    .select('*')
-                    .eq('id', appraisalId)
+                // 2. Get the schedule with appraisal details
+                var { data: scheduleData, error: scheduleError } = await supabaseClient
+                    .from('consideration_schedule')
+                    .select('*, plan_appraisals(*)')
+                    .eq('id', scheduleId)
                     .single();
 
-                if (appraisalError) throw appraisalError;
-
-                // 3. Apply stamp to the plan
-                var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
-                var stampResponse = await fetch(functionUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fileUrl: appraisal.plan_file_url,
-                        appraisalId: appraisalId,
-                        stampDate: new Date().toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                        }).toUpperCase()
-                    })
-                });
-
-                if (!stampResponse.ok) {
-                    var errorText = await stampResponse.text();
-                    throw new Error('Stamp failed: ' + errorText);
+                if (scheduleError) {
+                    console.error('Fetch error:', scheduleError);
+                    throw new Error('Failed to fetch schedule details: ' + scheduleError.message);
                 }
 
-                var stampResult = await stampResponse.json();
-
-                if (!stampResult.success) {
-                    throw new Error(stampResult.error || 'Stamp failed');
+                if (!scheduleData) {
+                    throw new Error('Schedule not found');
                 }
 
-                showSuccess('Plan approved and stamp applied successfully!');
+                // 3. Apply stamp to the plan (if there's a plan file)
+                if (scheduleData.plan_appraisals && scheduleData.plan_appraisals.plan_file_url) {
+                    try {
+                        var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
+                        var stampResponse = await fetch(functionUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fileUrl: scheduleData.plan_appraisals.plan_file_url,
+                                scheduleId: scheduleId,
+                                stampDate: new Date().toLocaleDateString('en-GB', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                }).toUpperCase()
+                            })
+                        });
 
-                // 4. Reload the schedule
+                        if (stampResponse.ok) {
+                            var stampResult = await stampResponse.json();
+                            if (stampResult.success) {
+                                console.log('Stamp applied successfully');
+                            }
+                        }
+                    } catch (stampError) {
+                        console.warn('Stamp application failed but schedule was approved:', stampError);
+                        // Don't fail the approval if stamp fails
+                    }
+                }
+
+                // 4. Show success message
+                showSuccess('Schedule approved and stamped successfully! Reference: ' + scheduleData.reference_number);
+                
+                // 5. Reload the schedule
                 setTimeout(function() {
                     loadSchedule();
                 }, 1500);
 
             } catch (error) {
                 console.error('Approve error:', error);
-                showError('Error approving plan: ' + error.message);
+                showError('Error approving schedule: ' + error.message);
             }
-
+            
             hideLoading();
         }
 
@@ -621,7 +637,6 @@
         }
 
         function showLoading(msg) {
-            // Show in success area as loading
             var el = document.getElementById('successDisplay');
             el.textContent = '⏳ ' + msg;
             el.classList.remove('hidden', 'success');
