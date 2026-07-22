@@ -326,29 +326,6 @@
             margin-left: 8px;
         }
         
-        .quick-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin: 15px 0;
-        }
-        
-        .quick-action-btn {
-            background: #f8f9fa;
-            color: #1e3c72;
-            padding: 10px 20px;
-            border: 2px solid #1e3c72;
-            border-radius: 8px;
-            font-weight: bold;
-            width: auto;
-            font-size: 14px;
-        }
-        
-        .quick-action-btn:hover {
-            background: #1e3c72;
-            color: white;
-        }
-        
         @media (max-width: 768px) {
             .permit-table th, .permit-table td {
                 padding: 8px;
@@ -357,11 +334,6 @@
             .action-btn {
                 padding: 4px 8px;
                 font-size: 10px;
-            }
-            .quick-action-btn {
-                padding: 8px 12px;
-                font-size: 12px;
-                width: 100%;
             }
         }
         
@@ -433,15 +405,6 @@
                     <h3>My Documents</h3>
                 </div>
                 
-                <!-- Quick Actions -->
-                <div class="quick-actions">
-                    <button class="quick-action-btn" onclick="goToNewPermit()">📋 New Development Permit</button>
-                    <button class="quick-action-btn" onclick="goToNewAppraisal()">📄 New Plan Appraisal</button>
-                    <button class="quick-action-btn schedule" id="scheduleQuickBtn" style="display:none;" onclick="goToConsiderationSchedule()">
-                        📊 Consideration Schedule 261 <span id="schedulePendingCount" class="schedule-count">0</span>
-                    </button>
-                </div>
-                
                 <!-- Document Type Selection -->
                 <div class="doc-type-select">
                     <label>Create New Document</label>
@@ -449,8 +412,9 @@
                         <option value="">-- Select Document Type --</option>
                         <option value="development_permit">Development Permit (Change of Use)</option>
                         <option value="plan_appraisal">Plan Appraisal Form</option>
+                        <option value="consideration_schedule" id="scheduleOption" style="display:none;">Consideration Schedule 261</option>
                     </select>
-                    <button id="continueBtn" class="continue-btn">Continue to Document Form</button>
+                    <button id="continueBtn" class="continue-btn">Continue</button>
                 </div>
                 
                 <!-- Documents Table -->
@@ -515,6 +479,7 @@
         const loginError = document.getElementById('loginError');
         const verifyResult = document.getElementById('verifyResult');
         const permitsTableBody = document.getElementById('permitsTableBody');
+        const scheduleOption = document.getElementById('scheduleOption');
         
         function getRoleBadgeClass(role) {
             var roleMap = {
@@ -540,13 +505,36 @@
             badge.textContent = getStaffRoleDisplay(currentStaffRole);
             badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
             
-            // Show/hide schedule button based on role
-            const scheduleBtn = document.getElementById('scheduleQuickBtn');
+            // Show/hide schedule option based on role
             if (currentStaffRole === 'district_planner') {
-                scheduleBtn.style.display = 'inline-block';
-                updateScheduleCount();
+                scheduleOption.style.display = 'block';
+                // Update the label with pending count
+                updateScheduleOptionLabel();
             } else {
-                scheduleBtn.style.display = 'none';
+                scheduleOption.style.display = 'none';
+                // If schedule is selected but user is not planner, reset
+                if (documentTypeSelect.value === 'consideration_schedule') {
+                    documentTypeSelect.value = '';
+                }
+            }
+        }
+        
+        async function updateScheduleOptionLabel() {
+            try {
+                const { count, error } = await supabaseClient
+                    .from('consideration_schedule')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'pending');
+                    
+                if (!error && count !== null) {
+                    var label = 'Consideration Schedule 261';
+                    if (count > 0) {
+                        label += ' (' + count + ' pending)';
+                    }
+                    scheduleOption.textContent = label;
+                }
+            } catch (error) {
+                console.error('Error updating schedule count:', error);
             }
         }
         
@@ -733,7 +721,7 @@
                 
                 allDocuments = allDocs;
                 renderDocumentsTable();
-                updateScheduleCount();
+                updateScheduleOptionLabel();
                 
             } catch (error) {
                 console.error('Error loading documents:', error);
@@ -822,32 +810,6 @@
         // ============================================
         // CONSIDERATION SCHEDULE FUNCTIONS
         // ============================================
-        async function updateScheduleCount() {
-            if (currentStaffRole !== 'district_planner') return;
-            
-            try {
-                const { count, error } = await supabaseClient
-                    .from('consideration_schedule')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending');
-                    
-                if (!error && count !== null) {
-                    const pendingEl = document.getElementById('schedulePendingCount');
-                    if (pendingEl) {
-                        pendingEl.textContent = count;
-                        if (count > 0) {
-                            pendingEl.style.display = 'inline-block';
-                            pendingEl.style.background = '#dc3545';
-                        } else {
-                            pendingEl.style.display = 'none';
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating schedule count:', error);
-            }
-        }
-        
         function goToConsiderationSchedule() {
             window.location.href = 'consideration-schedule.html';
         }
@@ -876,14 +838,6 @@
         // ============================================
         // NAVIGATION FUNCTIONS
         // ============================================
-        function goToNewPermit() {
-            window.location.href = 'development-permit.html';
-        }
-        
-        function goToNewAppraisal() {
-            window.location.href = 'plan-appraisal-form.html';
-        }
-        
         function viewAppraisalProgress(appraisalId) {
             window.location.href = 'plan-appraisal-form.html?track=' + appraisalId;
         }
@@ -1037,6 +991,8 @@
                 window.location.href = 'development-permit.html';
             } else if (docType === 'plan_appraisal') {
                 window.location.href = 'plan-appraisal-form.html';
+            } else if (docType === 'consideration_schedule') {
+                window.location.href = 'consideration-schedule.html';
             }
         }
         
@@ -1063,13 +1019,17 @@
         window.downloadPermit = downloadPermit;
         window.viewAppraisalProgress = viewAppraisalProgress;
         window.downloadAppraisal = downloadAppraisal;
-        window.goToNewPermit = goToNewPermit;
-        window.goToNewAppraisal = goToNewAppraisal;
         window.goToConsiderationSchedule = goToConsiderationSchedule;
         window.viewScheduleForAppraisal = viewScheduleForAppraisal;
-        window.updateScheduleCount = updateScheduleCount;
         
         checkLoginState();
+        
+        // Auto-refresh schedule count every 30 seconds
+        setInterval(function() {
+            if (currentStaffRole === 'district_planner' && document.visibilityState === 'visible') {
+                updateScheduleOptionLabel();
+            }
+        }, 30000);
         
         const urlParams = new URLSearchParams(window.location.search);
         const docIdParam = urlParams.get('id');
