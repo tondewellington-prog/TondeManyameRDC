@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manyame RDC - Consideration of Plans</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .back-link {
+            max-width: 1400px;
+            margin: 0 auto 15px auto;
+        }
+
+        .back-link a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 22px;
+        }
+
+        .header h2 {
+            font-size: 13px;
+            font-weight: normal;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .staff-info {
+            background: #e9ecef;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logout-btn {
+            background: #6c757d;
+            width: auto;
+            padding: 6px 15px;
+            font-size: 13px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .role-planner {
+            background: #28a745;
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 1200px;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            border: 1px solid #333;
+            padding: 10px 12px;
+            vertical-align: middle;
+            text-align: left;
+        }
+
+        .schedule-table th {
+            background: #1e3c72;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .schedule-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .schedule-table tr:hover {
+            background: #e9ecef;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #28a745;
+            color: white;
+        }
+
+        .approve-btn {
+            background: #28a745;
+            color: white;
+            padding: 6px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .approve-btn:hover {
+            background: #218838;
+        }
+
+        .approve-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .download-btn {
+            background: #007bff;
+            color: white;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            text-decoration: none;
+        }
+
+        .download-btn:hover {
+            background: #0069d9;
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .count-badge {
+            background: #ffc107;
+            color: #333;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .refresh-btn {
+            background: #6c757d;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6268;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 15px;
+            }
+            .schedule-table {
+                font-size: 11px;
+                min-width: 900px;
+            }
+            .schedule-table th,
+            .schedule-table td {
+                padding: 6px 8px;
+            }
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link no-print">
+        <a href="index.html">← Back to Dashboard</a>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Manyame Rural District Council</h1>
+                <h2>Consideration of Plans Schedule 261</h2>
+            </div>
+            <div class="header-actions">
+                <span id="pendingCount" class="count-badge">0 Pending</span>
+                <button class="refresh-btn no-print" onclick="loadSchedule()">⟳ Refresh</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="staffInfoSection" class="staff-info no-print">
+                <span>Logged in as: <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge role-planner">District Planner</span></span>
+                <button class="logout-btn" onclick="staffLogout()">Logout</button>
+            </div>
+
+            <div id="errorDisplay" class="error hidden"></div>
+            <div id="successDisplay" class="success hidden"></div>
+
+            <div class="warning no-print">
+                <strong>Schedule 261:</strong> Plans that have been approved by the District Planner are listed below. Click <strong>"Approve"</strong> to finalize and apply the council stamp. The stamped plan will then be available for download.
+            </div>
+
+            <div id="tableContainer" class="table-container">
+                <table class="schedule-table" id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th style="width:5%;">NO</th>
+                            <th style="width:12%;">NAME</th>
+                            <th style="width:8%;">STAND NO</th>
+                            <th style="width:15%;">PLAN DETAILS</th>
+                            <th style="width:10%;">CONTACT</th>
+                            <th style="width:8%;">PAYMENTS</th>
+                            <th style="width:8%;">DOR</th>
+                            <th style="width:8%;">DAR</th>
+                            <th style="width:5%;">SEX</th>
+                            <th style="width:16%;">REMARKS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <tr class="empty-row">
+                            <td colspan="10">Loading schedule...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Hidden div for stamp trigger -->
+            <div id="stampTrigger" class="hidden"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // ============================================
+        // SUPABASE CONFIGURATION
+        // ============================================
+        var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
+        var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+
+        var supabaseClient = null;
+        var currentStaffUser = sessionStorage.getItem('staffEmail');
+        var currentStaffName = sessionStorage.getItem('staffDisplayName');
+        var currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
+        var currentStaffUserId = sessionStorage.getItem('staffUserId');
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        function initSupabase() {
+            if (!supabaseClient) {
+                var provider = window.supabase || (window.supabaseJS ? window.supabaseJS : null);
+                if (provider && provider.createClient) {
+                    supabaseClient = provider.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log("Supabase initialized");
+                } else {
+                    console.error("Supabase script not loaded");
+                }
+            }
+            return supabaseClient;
+        }
+
+        function checkAccess() {
+            if (currentStaffRole !== 'district_planner') {
+                var container = document.getElementById('tableContainer');
+                container.innerHTML = `
+                    <div class="error">
+                        <strong>Access Denied</strong><br><br>
+                        This page is only accessible to the District Planner.
+                        <br><br>
+                        <a href="index.html">Return to Dashboard</a>
+                    </div>
+                `;
+                document.getElementById('staffInfoSection').innerHTML = '';
+                return false;
+            }
+
+            document.getElementById('staffName').textContent = currentStaffName;
+            var badge = document.getElementById('staffRoleBadge');
+            badge.textContent = 'District Planner';
+            badge.className = 'role-badge role-planner';
+
+            return true;
+        }
+
+        function staffLogout() {
+            if (supabaseClient) supabaseClient.auth.signOut();
+            sessionStorage.removeItem('staffEmail');
+            sessionStorage.removeItem('staffDisplayName');
+            sessionStorage.removeItem('staffRole');
+            sessionStorage.removeItem('staffUserId');
+            window.location.href = 'index.html';
+        }
+
+        // ============================================
+        // LOAD SCHEDULE
+        // ============================================
+        async function loadSchedule() {
+            initSupabase();
+            if (!supabaseClient) {
+                showError('Database connection error. Please refresh.');
+                return;
+            }
+
+            var tbody = document.getElementById('scheduleBody');
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="10">Loading schedule...</td></tr>';
+            hideError();
+            hideSuccess();
+
+            try {
+                // Get all appraisals that are approved (status = 'approved') and in consideration_schedule
+                var { data: scheduleData, error: scheduleError } = await supabaseClient
+                    .from('consideration_schedule')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+
+                if (scheduleError) throw scheduleError;
+
+                var pendingCount = 0;
+
+                if (!scheduleData || scheduleData.length === 0) {
+                    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No plans in the consideration schedule.</td></tr>';
+                    document.getElementById('pendingCount').textContent = '0 Pending';
+                    return;
+                }
+
+                // Get appraisal details for each schedule item
+                var appraisalIds = scheduleData.map(function(item) { return item.appraisal_id; });
+                var { data: appraisalData, error: appraisalError } = await supabaseClient
+                    .from('plan_appraisals')
+                    .select('*')
+                    .in('id', appraisalIds);
+
+                if (appraisalError) throw appraisalError;
+
+                // Create a map for quick lookup
+                var appraisalMap = {};
+                if (appraisalData) {
+                    appraisalData.forEach(function(app) {
+                        appraisalMap[app.id] = app;
+                    });
+                }
+
+                tbody.innerHTML = '';
+                var rowNumber = 1;
+
+                for (var i = 0; i < scheduleData.length; i++) {
+                    var item = scheduleData[i];
+                    var appraisal = appraisalMap[item.appraisal_id];
+
+                    if (!appraisal) continue;
+
+                    if (item.status === 'pending') {
+                        pendingCount++;
+                    }
+
+                    var row = document.createElement('tr');
+
+                    // Determine status text and class
+                    var statusText = item.status === 'approved' ? 'Approved' : 'Pending';
+                    var statusClass = item.status === 'approved' ? 'status-approved' : 'status-pending';
+                    var isApproved = item.status === 'approved';
+
+                    // Actions based on status
+                    var actionsHtml = '';
+                    if (isApproved) {
+                        actionsHtml = `<span class="status-badge status-approved">✓ Approved</span>`;
+                        if (appraisal.stamped_url) {
+                            actionsHtml += `<br><a href="${appraisal.stamped_url}" target="_blank" class="download-btn">📄 Download PDF</a>`;
+                        }
+                    } else {
+                        actionsHtml = `
+                            <button class="approve-btn" onclick="approvePlan(${item.id}, ${appraisal.id}, '${appraisal.appraisal_number}')">
+                                Approve
+                            </button>
+                        `;
+                    }
+
+                    var dor = appraisal.created_at ? new Date(appraisal.created_at).toLocaleDateString() : '-';
+                    var dar = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : '-';
+
+                    row.innerHTML = `
+                        <td style="text-align:center;">${rowNumber}</td>
+                        <td><strong>${escapeHtml(appraisal.owner_name || '-')}</strong></td>
+                        <td>${escapeHtml(appraisal.stand_number || '-')}</td>
+                        <td>${escapeHtml(appraisal.location || '-')}</td>
+                        <td>${escapeHtml(item.contact || '-')}</td>
+                        <td style="text-align:center;">${escapeHtml(item.payments || '-')}</td>
+                        <td style="text-align:center;">${dor}</td>
+                        <td style="text-align:center;">${dar}</td>
+                        <td style="text-align:center;">${escapeHtml(item.sex || '-')}</td>
+                        <td style="text-align:center;">${actionsHtml}</td>
+                    `;
+
+                    tbody.appendChild(row);
+                    rowNumber++;
+                }
+
+                document.getElementById('pendingCount').textContent = pendingCount + ' Pending';
+
+                if (pendingCount === 0) {
+                    document.getElementById('pendingCount').style.background = '#28a745';
+                    document.getElementById('pendingCount').style.color = 'white';
+                } else {
+                    document.getElementById('pendingCount').style.background = '#ffc107';
+                    document.getElementById('pendingCount').style.color = '#333';
+                }
+
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="10">Error loading schedule. Please refresh.</td></tr>';
+                showError('Error loading schedule: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // APPROVE PLAN (Applies Stamp)
+        // ============================================
+        async function approvePlan(scheduleId, appraisalId, appraisalNumber) {
+            if (!confirm(`Are you sure you want to approve "${appraisalNumber}" and apply the council stamp?`)) {
+                return;
+            }
+
+            showLoading('Applying stamp and approving plan...');
+
+            try {
+                // 1. Update consideration_schedule status to 'approved'
+                var { error: updateError } = await supabaseClient
+                    .from('consideration_schedule')
+                    .update({
+                        status: 'approved',
+                        considered_at: new Date().toISOString()
+                    })
+                    .eq('id', scheduleId);
+
+                if (updateError) throw updateError;
+
+                // 2. Get the appraisal data for stamping
+                var { data: appraisal, error: appraisalError } = await supabaseClient
+                    .from('plan_appraisals')
+                    .select('*')
+                    .eq('id', appraisalId)
+                    .single();
+
+                if (appraisalError) throw appraisalError;
+
+                // 3. Apply stamp to the plan
+                var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
+                var stampResponse = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileUrl: appraisal.plan_file_url,
+                        appraisalId: appraisalId,
+                        stampDate: new Date().toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        }).toUpperCase()
+                    })
+                });
+
+                if (!stampResponse.ok) {
+                    var errorText = await stampResponse.text();
+                    throw new Error('Stamp failed: ' + errorText);
+                }
+
+                var stampResult = await stampResponse.json();
+
+                if (!stampResult.success) {
+                    throw new Error(stampResult.error || 'Stamp failed');
+                }
+
+                showSuccess('Plan approved and stamp applied successfully!');
+
+                // 4. Reload the schedule
+                setTimeout(function() {
+                    loadSchedule();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Approve error:', error);
+                showError('Error approving plan: ' + error.message);
+            }
+
+            hideLoading();
+        }
+
+        // ============================================
+        // UI HELPERS
+        // ============================================
+        function showError(msg) {
+            var el = document.getElementById('errorDisplay');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            el.classList.add('error');
+            setTimeout(function() {
+                el.classList.add('hidden');
+            }, 8000);
+        }
+
+        function hideError() {
+            document.getElementById('errorDisplay').classList.add('hidden');
+        }
+
+        function showSuccess(msg) {
+            var el = document.getElementById('successDisplay');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            el.classList.add('success');
+            setTimeout(function() {
+                el.classList.add('hidden');
+            }, 5000);
+        }
+
+        function hideSuccess() {
+            document.getElementById('successDisplay').classList.add('hidden');
+        }
+
+        function showLoading(msg) {
+            // Show in success area as loading
+            var el = document.getElementById('successDisplay');
+            el.textContent = '⏳ ' + msg;
+            el.classList.remove('hidden', 'success');
+            el.style.background = '#fff3cd';
+            el.style.color = '#856404';
+        }
+
+        function hideLoading() {
+            document.getElementById('successDisplay').classList.add('hidden');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        initSupabase();
+        if (checkAccess()) {
+            loadSchedule();
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(function() {
+            if (document.visibilityState === 'visible') {
+                loadSchedule();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
