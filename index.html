@@ -155,6 +155,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .logout-btn {
@@ -249,6 +251,11 @@
             color: white;
         }
         
+        .status-pending {
+            background: #ffc107;
+            color: #856404;
+        }
+        
         .action-btn {
             background: #6c757d;
             padding: 6px 12px;
@@ -263,6 +270,14 @@
         
         .action-btn:hover {
             transform: translateY(-1px);
+        }
+        
+        .action-btn.schedule {
+            background: #17a2b8;
+        }
+        
+        .action-btn.schedule:hover {
+            background: #138496;
         }
         
         .empty-row td {
@@ -302,6 +317,38 @@
             color: white;
         }
         
+        .schedule-count {
+            background: #dc3545;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .quick-action-btn {
+            background: #f8f9fa;
+            color: #1e3c72;
+            padding: 10px 20px;
+            border: 2px solid #1e3c72;
+            border-radius: 8px;
+            font-weight: bold;
+            width: auto;
+            font-size: 14px;
+        }
+        
+        .quick-action-btn:hover {
+            background: #1e3c72;
+            color: white;
+        }
+        
         @media (max-width: 768px) {
             .permit-table th, .permit-table td {
                 padding: 8px;
@@ -310,6 +357,11 @@
             .action-btn {
                 padding: 4px 8px;
                 font-size: 10px;
+            }
+            .quick-action-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+                width: 100%;
             }
         }
         
@@ -335,7 +387,7 @@
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MANY/311/2026">
+                <input type="text" id="verifyDocId" placeholder="Example: MANY/311/2026 or APR-1234567890-123">
             </div>
             <button id="verifyBtn">Verify Document</button>
             <div id="verifyResult"></div>
@@ -379,6 +431,15 @@
                 
                 <div class="dashboard-header">
                     <h3>My Documents</h3>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="goToNewPermit()">📋 New Development Permit</button>
+                    <button class="quick-action-btn" onclick="goToNewAppraisal()">📄 New Plan Appraisal</button>
+                    <button class="quick-action-btn schedule" id="scheduleQuickBtn" style="display:none;" onclick="goToConsiderationSchedule()">
+                        📊 Consideration Schedule 261 <span id="schedulePendingCount" class="schedule-count">0</span>
+                    </button>
                 </div>
                 
                 <!-- Document Type Selection -->
@@ -478,6 +539,15 @@
             if (!badge) return;
             badge.textContent = getStaffRoleDisplay(currentStaffRole);
             badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
+            
+            // Show/hide schedule button based on role
+            const scheduleBtn = document.getElementById('scheduleQuickBtn');
+            if (currentStaffRole === 'district_planner') {
+                scheduleBtn.style.display = 'inline-block';
+                updateScheduleCount();
+            } else {
+                scheduleBtn.style.display = 'none';
+            }
         }
         
         // Tab switching
@@ -509,7 +579,7 @@
             }
         }
         
-        // Staff Login - FIXED to store userId
+        // Staff Login
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
@@ -534,7 +604,6 @@
                 
                 if (error) throw error;
                 
-                // STORE USER ID (UUID) - CRITICAL FIX
                 const userId = data.user.id;
                 sessionStorage.setItem('staffUserId', userId);
                 currentStaffUserId = userId;
@@ -542,7 +611,6 @@
                 let displayName = email.split('@')[0];
                 let staffRole = 'building_inspector';
                 
-                // Fetch user's role from profiles table using ID (uuid)
                 const { data: profileData, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('full_name, role')
@@ -617,7 +685,7 @@
                         allDocs.push({
                             id: doc.id,
                             document_number: doc.document_number,
-                            document_type: doc.document_type || 'development_permit',
+                            document_type: 'development_permit',
                             property_location: doc.document_data ? doc.document_data.property_location : doc.property_location,
                             applicant_name: doc.document_data ? doc.document_data.applicant_name : doc.issued_to,
                             hod_approved: doc.hod_approved || false,
@@ -665,6 +733,7 @@
                 
                 allDocuments = allDocs;
                 renderDocumentsTable();
+                updateScheduleCount();
                 
             } catch (error) {
                 console.error('Error loading documents:', error);
@@ -686,6 +755,7 @@
                 var statusClass = '';
                 var showDownload = false;
                 var docTypeDisplay = '';
+                var scheduleAction = '';
                 
                 if (doc.document_type === 'plan_appraisal') {
                     docTypeDisplay = 'Plan Appraisal';
@@ -693,6 +763,9 @@
                         statusText = 'Approved';
                         statusClass = 'status-approved';
                         showDownload = true;
+                        
+                        // Check if in consideration schedule
+                        scheduleAction = `<button class="action-btn schedule" onclick="viewScheduleForAppraisal('${doc.id}')">View Schedule</button>`;
                     } else if (doc.hod_approved) {
                         statusText = 'District Planner Pending';
                         statusClass = 'status-ceo';
@@ -725,6 +798,7 @@
                     actionsHtml = `<button class="action-btn" onclick="viewAppraisalProgress('${doc.id}')">View Progress</button>`;
                     if (showDownload) {
                         actionsHtml += `<button class="action-btn download" onclick="downloadAppraisal('${doc.id}')">Download PDF</button>`;
+                        actionsHtml += scheduleAction;
                     }
                 } else {
                     actionsHtml = `<button class="action-btn" onclick="viewPermitProgress('${doc.id}', '${doc.document_number}')">View Progress</button>`;
@@ -743,6 +817,71 @@
                 
                 permitsTableBody.appendChild(row);
             }
+        }
+        
+        // ============================================
+        // CONSIDERATION SCHEDULE FUNCTIONS
+        // ============================================
+        async function updateScheduleCount() {
+            if (currentStaffRole !== 'district_planner') return;
+            
+            try {
+                const { count, error } = await supabaseClient
+                    .from('consideration_schedule')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'pending');
+                    
+                if (!error && count !== null) {
+                    const pendingEl = document.getElementById('schedulePendingCount');
+                    if (pendingEl) {
+                        pendingEl.textContent = count;
+                        if (count > 0) {
+                            pendingEl.style.display = 'inline-block';
+                            pendingEl.style.background = '#dc3545';
+                        } else {
+                            pendingEl.style.display = 'none';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating schedule count:', error);
+            }
+        }
+        
+        function goToConsiderationSchedule() {
+            window.location.href = 'consideration-schedule.html';
+        }
+        
+        async function viewScheduleForAppraisal(appraisalId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('consideration_schedule')
+                    .select('id')
+                    .eq('appraisal_id', appraisalId)
+                    .single();
+                    
+                if (error) throw error;
+                
+                if (data) {
+                    window.location.href = 'consideration-schedule.html?id=' + data.id;
+                } else {
+                    alert('No schedule found for this appraisal.');
+                }
+            } catch (error) {
+                console.error('Error finding schedule:', error);
+                alert('No schedule found for this appraisal.');
+            }
+        }
+        
+        // ============================================
+        // NAVIGATION FUNCTIONS
+        // ============================================
+        function goToNewPermit() {
+            window.location.href = 'development-permit.html';
+        }
+        
+        function goToNewAppraisal() {
+            window.location.href = 'plan-appraisal-form.html';
         }
         
         function viewAppraisalProgress(appraisalId) {
@@ -804,6 +943,9 @@
             }
         }
         
+        // ============================================
+        // VERIFICATION
+        // ============================================
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
             
@@ -916,10 +1058,16 @@
         verifyBtn.addEventListener('click', verifyDocument);
         if (continueBtn) continueBtn.addEventListener('click', goToDocumentForm);
         
+        // Make functions globally accessible
         window.viewPermitProgress = viewPermitProgress;
         window.downloadPermit = downloadPermit;
         window.viewAppraisalProgress = viewAppraisalProgress;
         window.downloadAppraisal = downloadAppraisal;
+        window.goToNewPermit = goToNewPermit;
+        window.goToNewAppraisal = goToNewAppraisal;
+        window.goToConsiderationSchedule = goToConsiderationSchedule;
+        window.viewScheduleForAppraisal = viewScheduleForAppraisal;
+        window.updateScheduleCount = updateScheduleCount;
         
         checkLoginState();
         
