@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manyame RDC - Plan Appraisal Form</title>
+    <title>Plan Appraisal Form - Manyame RDC</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .back-link {
-            max-width: 1100px;
+            max-width: 1400px;
             margin: 0 auto 15px auto;
         }
 
@@ -30,7 +30,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 16px;
@@ -42,7 +42,9 @@
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
             padding: 20px 25px;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .header h1 {
@@ -50,90 +52,13 @@
         }
 
         .header h2 {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: normal;
             opacity: 0.9;
         }
 
         .content {
             padding: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #333;
-            font-size: 13px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 40px;
-        }
-
-        button {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn-primary {
-            background: #007bff;
-        }
-
-        .btn-primary:hover {
-            background: #0069d9;
-        }
-
-        .btn-success {
-            background: #28a745;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .btn-warning:hover {
-            background: #e0a800;
         }
 
         .staff-info {
@@ -144,6 +69,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .logout-btn {
@@ -214,7 +141,138 @@
             color: white;
         }
 
-        /* Landscape Table Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 4px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-row.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .appraisal-info {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .appraisal-info h3 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .info-grid div {
+            padding: 6px 0;
+        }
+
+        .info-grid strong {
+            color: #333;
+        }
+
         .table-container {
             overflow-x: auto;
             margin-top: 20px;
@@ -231,146 +289,203 @@
         .appraisal-table td {
             border: 1px solid #333;
             padding: 6px 8px;
-            vertical-align: top;
-            text-align: left;
+            vertical-align: middle;
+            text-align: center;
         }
 
         .appraisal-table th {
-            background: #e9ecef;
+            background: #1e3c72;
+            color: white;
             font-weight: 600;
-            text-align: center;
-            font-size: 11px;
         }
 
         .appraisal-table .section-header {
-            background: #f8f9fa;
+            background: #e9ecef;
             font-weight: bold;
         }
 
-        .appraisal-table .question-cell {
-            font-weight: 500;
-            padding-left: 15px;
+        .appraisal-table .section-header td {
+            text-align: left;
+            padding: 8px 12px;
         }
 
-        .appraisal-table .sub-question {
-            padding-left: 30px;
-            font-weight: normal;
+        .appraisal-table tr:nth-child(even) {
+            background: #f8f9fa;
         }
 
-        .appraisal-table .yes-no-cell {
+        .appraisal-table tr:hover {
+            background: #e9ecef;
+        }
+
+        .signature-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .signature-section h3 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+        }
+
+        .signature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .signature-box {
             text-align: center;
-            min-width: 120px;
-        }
-
-        .appraisal-table .yes-no-cell .yn-option {
-            display: inline-block;
-            padding: 2px 10px;
-            margin: 0 3px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
             border: 1px solid #ddd;
         }
 
-        .appraisal-table .yes-no-cell .yn-option.active-yes {
-            background: #28a745;
-            color: white;
-            border-color: #28a745;
+        .signature-box h4 {
+            margin-bottom: 10px;
+            color: #333;
         }
 
-        .appraisal-table .yes-no-cell .yn-option.active-no {
-            background: #dc3545;
-            color: white;
-            border-color: #dc3545;
-        }
-
-        .comment-small {
-            font-size: 7pt;
-            color: #555;
-            margin-top: 4px;
-            padding: 2px 4px;
-            background: #f8f9fa;
-            border-radius: 3px;
-            width: 100%;
-            border: 1px solid #eee;
-        }
-
-        .comment-small textarea {
-            font-size: 7pt;
-            padding: 2px 4px;
-            min-height: 20px;
-            border: none;
-            background: transparent;
-            width: 100%;
-            resize: none;
-        }
-
-        .comment-small textarea:focus {
-            outline: none;
-        }
-
-        .signature-canvas-container {
-            margin: 10px 0;
-            text-align: center;
-        }
-
-        .signature-canvas-container canvas {
+        .signature-box canvas {
             border: 1px solid #ccc;
             border-radius: 4px;
+            cursor: crosshair;
+            width: 100%;
+            max-width: 200px;
+            height: 80px;
             background: white;
         }
 
-        .signature-controls {
+        .signature-box .status-text {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .signature-box .btn-sm {
+            padding: 4px 12px;
+            font-size: 11px;
+            margin-top: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .signature-box .btn-clear {
+            background: #dc3545;
+            color: white;
+        }
+
+        .signature-box .btn-clear:hover {
+            background: #c82333;
+        }
+
+        .approval-actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .approval-actions button {
+            min-width: 200px;
+        }
+
+        .emergency-link {
+            color: #dc3545;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .emergency-link:hover {
+            color: #c82333;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .modal-content .btn-group {
             display: flex;
             gap: 10px;
-            justify-content: center;
-            margin: 10px 0;
-            flex-wrap: wrap;
         }
 
-        .signature-controls button {
-            padding: 6px 15px;
-            font-size: 12px;
-            width: auto;
+        .modal-content .btn-group button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
-        .btn-clear {
+        .modal-content .btn-confirm {
+            background: #28a745;
+            color: white;
+        }
+
+        .modal-content .btn-confirm:hover {
+            background: #218838;
+        }
+
+        .modal-content .btn-cancel {
             background: #6c757d;
+            color: white;
         }
 
-        .btn-clear:hover {
+        .modal-content .btn-cancel:hover {
             background: #5a6268;
         }
 
-        .btn-approve {
-            background: #28a745;
-        }
-
-        .btn-approve:hover {
-            background: #218838;
+        .modal-content .error-text {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 5px;
         }
 
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
-        }
-
-        .status-inspector {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .status-tech {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .status-planner {
-            background: #fd7e14;
-            color: white;
         }
 
         .status-approved {
@@ -378,30 +493,37 @@
             color: white;
         }
 
-        .file-upload-area {
-            border: 2px dashed #ddd;
-            padding: 20px;
-            text-align: center;
-            border-radius: 8px;
-            background: #fafafa;
+        .status-pending {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .download-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .file-upload-area:hover {
-            border-color: #1e3c72;
-            background: #f0f2f5;
-        }
-
-        .file-upload-area .file-name {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #28a745;
+        .download-btn:hover {
+            background: #0069d9;
         }
 
         @media (max-width: 768px) {
+            .form-row,
+            .form-row.three-col,
+            .signature-grid,
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
             .content {
                 padding: 15px;
+            }
+            .approval-actions button {
+                width: 100%;
             }
             .appraisal-table {
                 font-size: 10px;
@@ -409,7 +531,7 @@
             }
             .appraisal-table th,
             .appraisal-table td {
-                padding: 4px 5px;
+                padding: 4px 6px;
             }
         }
 
@@ -417,26 +539,25 @@
             .no-print {
                 display: none !important;
             }
-            .container {
-                box-shadow: none;
-                border-radius: 0;
-            }
-            .appraisal-table {
-                font-size: 9pt;
-            }
         }
     </style>
 </head>
 <body>
     <div class="back-link no-print">
-        <a href="index.html">← Back to Document Management</a>
+        <a href="index.html">Back to Dashboard</a>
     </div>
 
     <div class="container">
         <div class="header">
-            <h1>Manyame Rural District Council</h1>
-            <h2>Planning Section - Plan Appraisal Form</h2>
+            <div>
+                <h1>Plan Appraisal Form</h1>
+                <h2>Manyame Rural District Council - Planning Department</h2>
+            </div>
+            <div class="header-actions no-print">
+                <span id="appraisalStatusText" class="status-badge status-pending">Status: New</span>
+            </div>
         </div>
+
         <div class="content">
             <div id="staffInfoSection" class="staff-info no-print">
                 <span>Logged in as: <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge"></span></span>
@@ -446,160 +567,145 @@
             <div id="errorDisplay" class="error hidden"></div>
             <div id="successDisplay" class="success hidden"></div>
 
-            <!-- ============================================ -->
-            <!-- STEP 1: CUSTOMER DETAILS & PLAN UPLOAD       -->
-            <!-- ============================================ -->
-            <div id="stepDetails" class="no-print">
-                <div class="warning">
-                    <strong>Step 1:</strong> Enter customer details and upload the building plan.
-                </div>
-                <div class="form-group">
-                    <label>Name of Owner *</label>
-                    <input type="text" id="ownerName" placeholder="e.g., John Smith">
-                </div>
-                <div class="form-group">
-                    <label>Zone *</label>
-                    <input type="text" id="zone" placeholder="e.g., Commercial Zone A">
-                </div>
-                <div class="form-group">
-                    <label>Location *</label>
-                    <input type="text" id="location" placeholder="e.g., Subdivision 1 of Enslidale Farm">
-                </div>
-                <div class="form-group">
-                    <label>Stand Number *</label>
-                    <input type="text" id="standNumber" placeholder="e.g., Stand 123">
-                </div>
-                <div class="form-group">
-                    <label>Upload Building Plan (PDF) *</label>
-                    <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('planFileInput').click()">
-                        <div>📄 Click to upload the building plan (PDF only)</div>
-                        <div class="file-name" id="fileNameDisplay">No file selected</div>
+            <!-- Step 1: Customer Details -->
+            <div id="stepDetails">
+                <h3 style="margin-bottom: 20px; color: #1e3c72;">Customer Details</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Owner Name <span style="color:red;">*</span></label>
+                        <input type="text" id="ownerName" placeholder="Full name of property owner" required>
                     </div>
-                    <input type="file" id="planFileInput" accept=".pdf" style="display:none" onchange="handleFileSelect(event)">
+                    <div class="form-group">
+                        <label>Zone <span style="color:red;">*</span></label>
+                        <input type="text" id="zone" placeholder="e.g., Residential, Commercial" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Location <span style="color:red;">*</span></label>
+                        <input type="text" id="location" placeholder="Physical location/address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Stand Number <span style="color:red;">*</span></label>
+                        <input type="text" id="standNumber" placeholder="e.g., Stand 1234" required>
+                    </div>
+                </div>
+                <div class="form-row three-col">
+                    <div class="form-group">
+                        <label>Sex <span style="color:red;">*</span></label>
+                        <select id="sex" required>
+                            <option value="">Select Sex</option>
+                            <option value="M">Male</option>
+                            <option value="F">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Receipt Number <span style="color:red;">*</span></label>
+                        <input type="text" id="receiptNumber" placeholder="e.g., REC-2026-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number / Email <span style="color:red;">*</span></label>
+                        <input type="text" id="contact" placeholder="e.g., 0712 345 678 or email@example.com" required>
+                        <small>This will be used in the Consideration Schedule 261</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Upload Building Plan (PDF) <span style="color:red;">*</span></label>
+                        <input type="file" id="planFileInput" accept=".pdf" onchange="handleFileSelect(event)" required>
+                        <small id="fileNameDisplay" style="color:#666;font-size:12px;">No file selected</small>
+                    </div>
                 </div>
                 <button class="btn-primary" onclick="startAppraisal()">Start Appraisal</button>
             </div>
 
-            <!-- ============================================ -->
-            <!-- STEP 2: APPRAISAL FORM (LANDSCAPE)           -->
-            <!-- ============================================ -->
+            <!-- Step 2: Appraisal Table -->
             <div id="stepAppraisal" class="hidden">
-                <div class="warning no-print">
-                    <strong>Appraisal In Progress</strong><br>
-                    <span id="appraisalStatusText">Status: Waiting for Building Inspector</span>
-                </div>
-
-                <!-- Customer Details Summary -->
-                <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 13px;">
-                        <div><strong>Owner:</strong> <span id="displayOwnerName">-</span></div>
-                        <div><strong>Zone:</strong> <span id="displayZone">-</span></div>
-                        <div><strong>Location:</strong> <span id="displayLocation">-</span></div>
-                        <div><strong>Stand No:</strong> <span id="displayStandNumber">-</span></div>
-                    </div>
-                    <div style="margin-top: 5px; font-size: 12px; color: #666;">
-                        <strong>Plan:</strong> <span id="displayPlanFile">-</span>
+                <div class="appraisal-info">
+                    <h3>Appraisal Details</h3>
+                    <div class="info-grid">
+                        <div><strong>Appraisal Number:</strong> <span id="displayAppraisalNumber"></span></div>
+                        <div><strong>Owner Name:</strong> <span id="displayOwnerName"></span></div>
+                        <div><strong>Zone:</strong> <span id="displayZone"></span></div>
+                        <div><strong>Location:</strong> <span id="displayLocation"></span></div>
+                        <div><strong>Stand Number:</strong> <span id="displayStandNumber"></span></div>
+                        <div><strong>Contact:</strong> <span id="displayContact"></span></div>
+                        <div><strong>Sex:</strong> <span id="displaySex"></span></div>
+                        <div><strong>Receipt Number:</strong> <span id="displayReceiptNumber"></span></div>
+                        <div><strong>Plan File:</strong> <span id="displayPlanFile"></span></div>
                     </div>
                 </div>
 
-                <!-- Appraisal Number -->
-                <div style="font-size: 14px; font-weight: bold; color: #1e3c72; margin-bottom: 10px;">
-                    Appraisal No: <span id="displayAppraisalNumber">-</span>
-                </div>
-
-                <!-- Appraisal Table -->
                 <div class="table-container">
                     <table class="appraisal-table" id="appraisalTable">
                         <thead>
                             <tr>
-                                <th style="width:5%;">ITEM</th>
-                                <th style="width:25%;">QUESTION</th>
-                                <th style="width:20%;">COMMENTS<br><small>BUILDING INSPECTOR</small></th>
-                                <th style="width:20%;">COMMENTS<br><small>PLANNING TECH</small></th>
-                                <th style="width:20%;">COMMENTS<br><small>DISTRICT PLANNER</small></th>
+                                <th style="width:5%;">No</th>
+                                <th style="width:25%;">Question</th>
+                                <th style="width:25%;">Building Inspector</th>
+                                <th style="width:25%;">Planning Technician</th>
+                                <th style="width:20%;">District Planner</th>
                             </tr>
                         </thead>
                         <tbody id="appraisalTableBody">
-                            <!-- Generated by JavaScript -->
+                            <tr><td colspan="5" style="text-align:center;padding:20px;">Loading questions...</td></tr>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Signatures and Approval -->
-                <div class="no-print" style="margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 20px;">
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                        <div>
-                            <h4 style="font-size: 13px; color: #1e3c72;">Building Inspector</h4>
-                            <div id="inspectorSection">
-                                <div class="signature-canvas-container">
-                                    <canvas id="inspectorCanvas" width="200" height="80"></canvas>
-                                </div>
-                                <div class="signature-controls">
-                                    <button class="btn-clear" onclick="clearSignature('inspector')">Clear</button>
-                                    <button class="btn-approve" onclick="submitInspectorApproval()">Submit</button>
-                                </div>
-                                <div id="inspectorStatus" style="font-size: 12px; color: #666;"></div>
-                            </div>
+                <!-- Signature Section -->
+                <div class="signature-section no-print">
+                    <h3>Signatures</h3>
+                    <div class="signature-grid">
+                        <div class="signature-box">
+                            <h4>Building Inspector</h4>
+                            <canvas id="inspectorCanvas"></canvas>
+                            <div class="status-text" id="inspectorStatus">Awaiting signature</div>
+                            <button class="btn-sm btn-clear" onclick="clearSignature('inspector')">Clear</button>
                         </div>
-                        <div>
-                            <h4 style="font-size: 13px; color: #1e3c72;">Planning Technician</h4>
-                            <div id="techSection">
-                                <div class="signature-canvas-container">
-                                    <canvas id="techCanvas" width="200" height="80"></canvas>
-                                </div>
-                                <div class="signature-controls">
-                                    <button class="btn-clear" onclick="clearSignature('tech')">Clear</button>
-                                    <button class="btn-approve" onclick="submitTechApproval()">Submit</button>
-                                </div>
-                                <div id="techStatus" style="font-size: 12px; color: #666;"></div>
-                                <div style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 10px;">
-                                    <button class="btn-warning" onclick="showEmergencyModal()">🚨 Emergency DP Access</button>
-                                    <div style="font-size: 10px; color: #666; margin-top: 5px;">Use if District Planner is absent</div>
-                                </div>
-                            </div>
+                        <div class="signature-box">
+                            <h4>Planning Technician</h4>
+                            <canvas id="techCanvas"></canvas>
+                            <div class="status-text" id="techStatus">Awaiting signature</div>
+                            <button class="btn-sm btn-clear" onclick="clearSignature('tech')">Clear</button>
                         </div>
-                        <div>
-                            <h4 style="font-size: 13px; color: #1e3c72;">District Planner</h4>
-                            <div id="plannerSection">
-                                <div class="signature-canvas-container">
-                                    <canvas id="plannerCanvas" width="200" height="80"></canvas>
-                                </div>
-                                <div class="signature-controls">
-                                    <button class="btn-clear" onclick="clearSignature('planner')">Clear</button>
-                                    <button class="btn-approve" onclick="submitPlannerApproval()">Final Approve</button>
-                                </div>
-                                <div id="plannerStatus" style="font-size: 12px; color: #666;"></div>
-                            </div>
+                        <div class="signature-box">
+                            <h4>District Planner</h4>
+                            <canvas id="plannerCanvas"></canvas>
+                            <div class="status-text" id="plannerStatus">Awaiting signature</div>
+                            <button class="btn-sm btn-clear" onclick="clearSignature('planner')">Clear</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Download Section -->
-                <div class="no-print" style="margin-top: 20px; text-align: center;">
-                    <button class="btn-success" id="downloadPdfBtn" onclick="downloadFinalPDF()" style="display: none;">📄 Download Final Appraisal (PDF)</button>
+                <!-- Approval Actions -->
+                <div class="approval-actions no-print">
+                    <button class="btn-success" onclick="submitInspectorApproval()" id="btnInspector">Submit as Building Inspector</button>
+                    <button class="btn-success" onclick="submitTechApproval()" id="btnTech">Submit as Planning Technician</button>
+                    <button class="btn-success" onclick="submitPlannerApproval()" id="btnPlanner">Final Approval (District Planner)</button>
+                    <button class="btn-warning" onclick="showEmergencyModal()">Emergency DP Access</button>
+                    <button class="download-btn" id="downloadPdfBtn" style="display:none;" onclick="downloadFinalPDF()">Download Final PDF</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Emergency Access Modal -->
-    <div id="emergencyModal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 30px; border-radius: 16px; max-width: 400px; width: 90%;">
-            <h3 style="margin-bottom: 15px; color: #1e3c72;">Emergency District Planner Access</h3>
-            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Enter the emergency password to act as District Planner.</p>
-            <div class="form-group">
-                <label>Emergency Password</label>
-                <input type="password" id="emergencyPassword" placeholder="Enter emergency password">
+    <!-- Emergency Modal -->
+    <div id="emergencyModal" class="modal">
+        <div class="modal-content">
+            <h3>Emergency District Planner Access</h3>
+            <p style="margin-bottom:15px;color:#666;font-size:14px;">Enter the emergency password to access District Planner rights.</p>
+            <input type="password" id="emergencyPassword" placeholder="Enter emergency password">
+            <div id="emergencyError" class="error-text hidden"></div>
+            <div class="btn-group">
+                <button class="btn-confirm" onclick="verifyEmergencyPassword()">Verify</button>
+                <button class="btn-cancel" onclick="closeEmergencyModal()">Cancel</button>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-success" onclick="verifyEmergencyPassword()" style="flex:1;">Verify</button>
-                <button class="btn-clear" onclick="closeEmergencyModal()" style="flex:1;">Cancel</button>
-            </div>
-            <div id="emergencyError" class="error hidden" style="margin-top: 10px;"></div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="plan-appraisal.js"></script>
 </body>
 </html>
