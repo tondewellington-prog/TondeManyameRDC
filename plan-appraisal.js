@@ -726,7 +726,7 @@ function updateSignatureStatus(id) {
 }
 
 // ============================================
-// POPULATE CONSIDERATION SCHEDULE - UPDATED WITH CONTACT
+// POPULATE CONSIDERATION SCHEDULE - FIXED CONTACT
 // ============================================
 async function populateConsiderationSchedule(appraisalId, appraisalData) {
     try {
@@ -754,7 +754,27 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
         var randomNum = String(Math.floor(Math.random() * 10000)).padStart(5, '0');
         var referenceNumber = 'CS-' + year + '-' + month + '-' + randomNum;
 
-        // Prepare data for consideration_schedule - using contact from appraisal
+        // ============================================
+        // FIX: Use the client's contact from appraisal
+        // ============================================
+        // First priority: Use the contact field from the appraisal
+        // This is the client's phone number or email entered during appraisal creation
+        var clientContact = appraisalData.contact || 'N/A';
+        
+        // If contact is empty or N/A, try created_by_email as fallback
+        if (clientContact === 'N/A' || clientContact === '' || clientContact === null) {
+            clientContact = appraisalData.created_by_email || 'N/A';
+        }
+
+        console.log('Appraisal Data for Schedule:', {
+            id: appraisalData.id,
+            owner_name: appraisalData.owner_name,
+            client_contact: appraisalData.contact,
+            created_by_email: appraisalData.created_by_email,
+            final_contact_used: clientContact
+        });
+
+        // Prepare data for consideration_schedule
         var scheduleData = {
             appraisal_id: appraisalId,
             reference_number: referenceNumber,
@@ -764,10 +784,12 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
             date_of_approval: now.toISOString().split('T')[0],
             remarks: 'Approved - Ready for stamp',
             status: 'pending',
-            contact: appraisalData.contact || appraisalData.created_by_email || '',
+            contact: clientContact,  // Use the client's contact
             sex: 'N/A',
             payments: 'N/A'
         };
+
+        console.log('Schedule Data being saved:', scheduleData);
 
         // Insert into consideration_schedule
         var { data, error } = await supabaseClient
