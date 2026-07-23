@@ -265,17 +265,23 @@ function handleFileSelect(event) {
 }
 
 // ============================================
-// START APPRAISAL
+// START APPRAISAL - UPDATED WITH CONTACT
 // ============================================
 async function startAppraisal() {
     var ownerName = document.getElementById('ownerName').value.trim();
     var zone = document.getElementById('zone').value.trim();
     var location = document.getElementById('location').value.trim();
     var standNumber = document.getElementById('standNumber').value.trim();
+    var contact = document.getElementById('contact').value.trim();
     var fileInput = document.getElementById('planFileInput');
 
     if (!ownerName || !zone || !location || !standNumber) {
         showError('Please fill in all customer details.');
+        return;
+    }
+
+    if (!contact) {
+        showError('Please provide a contact number or email.');
         return;
     }
 
@@ -329,6 +335,7 @@ async function startAppraisal() {
                 zone: zone,
                 location: location,
                 stand_number: standNumber,
+                contact: contact,
                 plan_file_url: planFileUrl,
                 plan_file_path: filePath,
                 status: 'building_inspector',
@@ -351,6 +358,7 @@ async function startAppraisal() {
         document.getElementById('displayZone').textContent = zone;
         document.getElementById('displayLocation').textContent = location;
         document.getElementById('displayStandNumber').textContent = standNumber;
+        document.getElementById('displayContact').textContent = contact;
         document.getElementById('displayPlanFile').textContent = file.name;
         document.getElementById('displayAppraisalNumber').textContent = appraisalNumber;
 
@@ -718,7 +726,7 @@ function updateSignatureStatus(id) {
 }
 
 // ============================================
-// POPULATE CONSIDERATION SCHEDULE
+// POPULATE CONSIDERATION SCHEDULE - UPDATED WITH CONTACT
 // ============================================
 async function populateConsiderationSchedule(appraisalId, appraisalData) {
     try {
@@ -746,7 +754,7 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
         var randomNum = String(Math.floor(Math.random() * 10000)).padStart(5, '0');
         var referenceNumber = 'CS-' + year + '-' + month + '-' + randomNum;
 
-        // Prepare data for consideration_schedule
+        // Prepare data for consideration_schedule - using contact from appraisal
         var scheduleData = {
             appraisal_id: appraisalId,
             reference_number: referenceNumber,
@@ -756,7 +764,7 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
             date_of_approval: now.toISOString().split('T')[0],
             remarks: 'Approved - Ready for stamp',
             status: 'pending',
-            contact: appraisalData.created_by_email || '',
+            contact: appraisalData.contact || appraisalData.created_by_email || '',
             sex: 'N/A',
             payments: 'N/A'
         };
@@ -891,11 +899,11 @@ async function submitPlannerApproval() {
 
         if (fetchError) throw fetchError;
 
-        // POPULATE CONSIDERATION SCHEDULE - NEW AUTO-POPULATE
+        // POPULATE CONSIDERATION SCHEDULE - Auto-populate with contact
         var scheduleEntry = await populateConsiderationSchedule(appraisalId, appraisalData);
 
         if (scheduleEntry) {
-            showSuccess('✅ Final approval complete! Added to Consideration Schedule 261.');
+            showSuccess('Final approval complete! Added to Consideration Schedule 261.');
         } else {
             showSuccess('Final approval complete!');
         }
@@ -1051,7 +1059,7 @@ function showLoading(msg) {
 function hideLoading() {}
 
 // ============================================
-// LOAD EXISTING APPRAISAL
+// LOAD EXISTING APPRAISAL - UPDATED WITH CONTACT
 // ============================================
 function checkForTracking() {
     var urlParams = new URLSearchParams(window.location.search);
@@ -1091,6 +1099,7 @@ async function loadAppraisalForTracking(id) {
         document.getElementById('displayZone').textContent = appraisal.zone || '-';
         document.getElementById('displayLocation').textContent = appraisal.location || '-';
         document.getElementById('displayStandNumber').textContent = appraisal.stand_number || '-';
+        document.getElementById('displayContact').textContent = appraisal.contact || '-';
         document.getElementById('displayPlanFile').textContent = appraisal.plan_file_url || '-';
         document.getElementById('displayAppraisalNumber').textContent = appraisal.appraisal_number;
 
