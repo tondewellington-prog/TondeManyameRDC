@@ -69,6 +69,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .logout-btn {
@@ -211,6 +213,8 @@
             cursor: pointer;
             font-size: 11px;
             text-decoration: none;
+            display: inline-block;
+            margin-top: 3px;
         }
 
         .download-btn:hover {
@@ -283,7 +287,7 @@
 </head>
 <body>
     <div class="back-link no-print">
-        <a href="index.html">← Back to Dashboard</a>
+        <a href="index.html">Back to Dashboard</a>
     </div>
 
     <div class="container">
@@ -294,7 +298,7 @@
             </div>
             <div class="header-actions">
                 <span id="pendingCount" class="count-badge">0 Pending</span>
-                <button class="refresh-btn no-print" onclick="loadSchedule()">⟳ Refresh</button>
+                <button class="refresh-btn no-print" onclick="loadSchedule()">Refresh</button>
             </div>
         </div>
 
@@ -468,12 +472,15 @@
                     var dor = appraisal.created_at ? new Date(appraisal.created_at).toLocaleDateString() : '-';
                     var dar = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : '-';
 
+                    // Use contact from schedule or fallback to appraisal contact
+                    var contactDisplay = item.contact || appraisal.contact || '-';
+
                     row.innerHTML = `
                         <td style="text-align:center;">${rowNumber}</td>
                         <td><strong>${escapeHtml(appraisal.owner_name || '-')}</strong></td>
                         <td>${escapeHtml(appraisal.stand_number || '-')}</td>
                         <td>${escapeHtml(appraisal.location || '-')}</td>
-                        <td>${escapeHtml(item.contact || '-')}</td>
+                        <td>${escapeHtml(contactDisplay)}</td>
                         <td style="text-align:center;">${escapeHtml(item.payments || '-')}</td>
                         <td style="text-align:center;">${dor}</td>
                         <td style="text-align:center;">${dar}</td>
@@ -508,7 +515,7 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - FIXED VERSION
+        // APPROVE SCHEDULE
         // ============================================
         async function approveSchedule(scheduleId) {
             if (!scheduleId) {
@@ -585,7 +592,6 @@
                         }
                     } catch (stampError) {
                         console.warn('Stamp application failed but schedule was approved:', stampError);
-                        // Don't fail the approval if stamp fails
                     }
                 }
 
@@ -638,7 +644,7 @@
 
         function showLoading(msg) {
             var el = document.getElementById('successDisplay');
-            el.textContent = '⏳ ' + msg;
+            el.textContent = 'Processing: ' + msg;
             el.classList.remove('hidden', 'success');
             el.style.background = '#fff3cd';
             el.style.color = '#856404';
@@ -675,3 +681,6 @@
     </script>
 </body>
 </html>
+
+
+
