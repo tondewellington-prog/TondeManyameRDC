@@ -265,7 +265,7 @@ function handleFileSelect(event) {
 }
 
 // ============================================
-// START APPRAISAL - UPDATED WITH CONTACT
+// START APPRAISAL - UPDATED WITH CONTACT, SEX, RECEIPT NUMBER
 // ============================================
 async function startAppraisal() {
     var ownerName = document.getElementById('ownerName').value.trim();
@@ -273,6 +273,8 @@ async function startAppraisal() {
     var location = document.getElementById('location').value.trim();
     var standNumber = document.getElementById('standNumber').value.trim();
     var contact = document.getElementById('contact').value.trim();
+    var sex = document.getElementById('sex').value.trim();
+    var receiptNumber = document.getElementById('receiptNumber').value.trim();
     var fileInput = document.getElementById('planFileInput');
 
     if (!ownerName || !zone || !location || !standNumber) {
@@ -282,6 +284,16 @@ async function startAppraisal() {
 
     if (!contact) {
         showError('Please provide a contact number or email.');
+        return;
+    }
+
+    if (!sex) {
+        showError('Please select the sex of the applicant.');
+        return;
+    }
+
+    if (!receiptNumber) {
+        showError('Please enter the receipt number.');
         return;
     }
 
@@ -336,6 +348,8 @@ async function startAppraisal() {
                 location: location,
                 stand_number: standNumber,
                 contact: contact,
+                sex: sex,
+                receipt_number: receiptNumber,
                 plan_file_url: planFileUrl,
                 plan_file_path: filePath,
                 status: 'building_inspector',
@@ -359,6 +373,8 @@ async function startAppraisal() {
         document.getElementById('displayLocation').textContent = location;
         document.getElementById('displayStandNumber').textContent = standNumber;
         document.getElementById('displayContact').textContent = contact;
+        document.getElementById('displaySex').textContent = sex;
+        document.getElementById('displayReceiptNumber').textContent = receiptNumber;
         document.getElementById('displayPlanFile').textContent = file.name;
         document.getElementById('displayAppraisalNumber').textContent = appraisalNumber;
 
@@ -726,7 +742,7 @@ function updateSignatureStatus(id) {
 }
 
 // ============================================
-// POPULATE CONSIDERATION SCHEDULE - FIXED CONTACT
+// POPULATE CONSIDERATION SCHEDULE - WITH SEX AND RECEIPT NUMBER
 // ============================================
 async function populateConsiderationSchedule(appraisalId, appraisalData) {
     try {
@@ -755,23 +771,32 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
         var referenceNumber = 'CS-' + year + '-' + month + '-' + randomNum;
 
         // ============================================
-        // FIX: Use the client's contact from appraisal
+        // FIX: Use client data from appraisal
         // ============================================
-        // First priority: Use the contact field from the appraisal
-        // This is the client's phone number or email entered during appraisal creation
         var clientContact = appraisalData.contact || 'N/A';
-        
-        // If contact is empty or N/A, try created_by_email as fallback
         if (clientContact === 'N/A' || clientContact === '' || clientContact === null) {
             clientContact = appraisalData.created_by_email || 'N/A';
+        }
+
+        var clientSex = appraisalData.sex || 'N/A';
+        if (clientSex === 'N/A' || clientSex === '' || clientSex === null) {
+            clientSex = 'N/A';
+        }
+
+        var clientReceipt = appraisalData.receipt_number || 'N/A';
+        if (clientReceipt === 'N/A' || clientReceipt === '' || clientReceipt === null) {
+            clientReceipt = 'N/A';
         }
 
         console.log('Appraisal Data for Schedule:', {
             id: appraisalData.id,
             owner_name: appraisalData.owner_name,
             client_contact: appraisalData.contact,
-            created_by_email: appraisalData.created_by_email,
-            final_contact_used: clientContact
+            client_sex: appraisalData.sex,
+            client_receipt: appraisalData.receipt_number,
+            final_contact_used: clientContact,
+            final_sex_used: clientSex,
+            final_receipt_used: clientReceipt
         });
 
         // Prepare data for consideration_schedule
@@ -784,9 +809,9 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
             date_of_approval: now.toISOString().split('T')[0],
             remarks: 'Approved - Ready for stamp',
             status: 'pending',
-            contact: clientContact,  // Use the client's contact
-            sex: 'N/A',
-            payments: 'N/A'
+            contact: clientContact,
+            sex: clientSex,
+            payments: clientReceipt
         };
 
         console.log('Schedule Data being saved:', scheduleData);
@@ -921,7 +946,7 @@ async function submitPlannerApproval() {
 
         if (fetchError) throw fetchError;
 
-        // POPULATE CONSIDERATION SCHEDULE - Auto-populate with contact
+        // POPULATE CONSIDERATION SCHEDULE - Auto-populate with contact, sex, receipt
         var scheduleEntry = await populateConsiderationSchedule(appraisalId, appraisalData);
 
         if (scheduleEntry) {
@@ -1081,7 +1106,7 @@ function showLoading(msg) {
 function hideLoading() {}
 
 // ============================================
-// LOAD EXISTING APPRAISAL - UPDATED WITH CONTACT
+// LOAD EXISTING APPRAISAL - UPDATED WITH SEX AND RECEIPT
 // ============================================
 function checkForTracking() {
     var urlParams = new URLSearchParams(window.location.search);
@@ -1122,6 +1147,8 @@ async function loadAppraisalForTracking(id) {
         document.getElementById('displayLocation').textContent = appraisal.location || '-';
         document.getElementById('displayStandNumber').textContent = appraisal.stand_number || '-';
         document.getElementById('displayContact').textContent = appraisal.contact || '-';
+        document.getElementById('displaySex').textContent = appraisal.sex || '-';
+        document.getElementById('displayReceiptNumber').textContent = appraisal.receipt_number || '-';
         document.getElementById('displayPlanFile').textContent = appraisal.plan_file_url || '-';
         document.getElementById('displayAppraisalNumber').textContent = appraisal.appraisal_number;
 
