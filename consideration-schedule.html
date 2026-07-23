@@ -45,6 +45,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .header h1 {
@@ -78,6 +80,14 @@
             width: auto;
             padding: 6px 15px;
             font-size: 13px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: #5a6268;
         }
 
         .error {
@@ -237,6 +247,11 @@
             margin-left: 10px;
         }
 
+        .count-badge.zero {
+            background: #28a745;
+            color: white;
+        }
+
         .refresh-btn {
             background: #6c757d;
             color: white;
@@ -255,6 +270,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .action-cell {
@@ -269,6 +285,34 @@
             color: #1e3c72;
         }
 
+        .sex-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .sex-male {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .sex-female {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .sex-other {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .receipt-highlight {
+            font-weight: bold;
+            color: #856404;
+        }
+
         @media (max-width: 768px) {
             .content {
                 padding: 15px;
@@ -280,6 +324,10 @@
             .schedule-table th,
             .schedule-table td {
                 padding: 6px 8px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: flex-start;
             }
         }
 
@@ -324,16 +372,16 @@
                 <table class="schedule-table" id="scheduleTable">
                     <thead>
                         <tr>
-                            <th style="width:5%;">NO</th>
+                            <th style="width:4%;">NO</th>
                             <th style="width:12%;">NAME</th>
                             <th style="width:8%;">STAND NO</th>
-                            <th style="width:15%;">PLAN DETAILS</th>
-                            <th style="width:15%;">CONTACT</th>
-                            <th style="width:8%;">PAYMENTS</th>
+                            <th style="width:12%;">PLAN DETAILS</th>
+                            <th style="width:12%;">CONTACT</th>
+                            <th style="width:6%;">SEX</th>
+                            <th style="width:10%;">RECEIPT NO</th>
                             <th style="width:8%;">DOR</th>
                             <th style="width:8%;">DAR</th>
-                            <th style="width:5%;">SEX</th>
-                            <th style="width:16%;">REMARKS</th>
+                            <th style="width:15%;">REMARKS</th>
                         </tr>
                     </thead>
                     <tbody id="scheduleBody">
@@ -409,7 +457,7 @@
         }
 
         // ============================================
-        // LOAD SCHEDULE - FIXED CONTACT DISPLAY
+        // LOAD SCHEDULE
         // ============================================
         async function loadSchedule() {
             initSupabase();
@@ -437,17 +485,22 @@
                 if (!scheduleData || scheduleData.length === 0) {
                     tbody.innerHTML = '<tr class="empty-row"><td colspan="10">No plans in the consideration schedule.</td></tr>';
                     document.getElementById('pendingCount').textContent = '0 Pending';
+                    document.getElementById('pendingCount').className = 'count-badge zero';
                     return;
                 }
 
                 // DEBUG: Log the data to see what's coming from the database
                 console.log('Schedule Data:', scheduleData);
-                console.log('First item contacts:', {
-                    'schedule.contact': scheduleData[0]?.contact,
-                    'appraisal.contact': scheduleData[0]?.plan_appraisals?.contact,
-                    'appraisal.created_by_email': scheduleData[0]?.plan_appraisals?.created_by_email,
-                    'appraisal.owner_name': scheduleData[0]?.plan_appraisals?.owner_name
-                });
+                if (scheduleData.length > 0) {
+                    console.log('First item contacts:', {
+                        'schedule.contact': scheduleData[0]?.contact,
+                        'schedule.sex': scheduleData[0]?.sex,
+                        'schedule.payments': scheduleData[0]?.payments,
+                        'appraisal.contact': scheduleData[0]?.plan_appraisals?.contact,
+                        'appraisal.sex': scheduleData[0]?.plan_appraisals?.sex,
+                        'appraisal.receipt_number': scheduleData[0]?.plan_appraisals?.receipt_number
+                    });
+                }
 
                 tbody.innerHTML = '';
                 var rowNumber = 1;
@@ -490,30 +543,51 @@
                     // FIX: Get contact from multiple possible sources
                     // ============================================
                     var contactDisplay = 'N/A';
-                    
-                    // First priority: contact from consideration_schedule
                     if (item.contact && item.contact !== '' && item.contact !== 'N/A') {
                         contactDisplay = item.contact;
-                    }
-                    // Second priority: contact from plan_appraisals
-                    else if (appraisal.contact && appraisal.contact !== '' && appraisal.contact !== 'N/A') {
+                    } else if (appraisal.contact && appraisal.contact !== '' && appraisal.contact !== 'N/A') {
                         contactDisplay = appraisal.contact;
-                    }
-                    // Third priority: created_by_email (staff email)
-                    else if (appraisal.created_by_email) {
+                    } else if (appraisal.created_by_email) {
                         contactDisplay = appraisal.created_by_email;
-                    }
-                    // Fourth priority: created_by_name
-                    else if (appraisal.created_by_name) {
+                    } else if (appraisal.created_by_name) {
                         contactDisplay = appraisal.created_by_name;
                     }
 
+                    // ============================================
+                    // FIX: Get sex from schedule or appraisal
+                    // ============================================
+                    var sexDisplay = 'N/A';
+                    if (item.sex && item.sex !== '' && item.sex !== 'N/A') {
+                        sexDisplay = item.sex;
+                    } else if (appraisal.sex && appraisal.sex !== '' && appraisal.sex !== 'N/A') {
+                        sexDisplay = appraisal.sex;
+                    }
+
+                    var sexClass = 'sex-other';
+                    if (sexDisplay === 'M') sexClass = 'sex-male';
+                    else if (sexDisplay === 'F') sexClass = 'sex-female';
+
+                    // ============================================
+                    // FIX: Get receipt number from schedule or appraisal
+                    // ============================================
+                    var receiptDisplay = 'N/A';
+                    if (item.payments && item.payments !== '' && item.payments !== 'N/A') {
+                        receiptDisplay = item.payments;
+                    } else if (appraisal.receipt_number && appraisal.receipt_number !== '' && appraisal.receipt_number !== 'N/A') {
+                        receiptDisplay = appraisal.receipt_number;
+                    }
+
                     // DEBUG: Log contact resolution
-                    console.log('Row ' + rowNumber + ' Contact Resolution:', {
+                    console.log('Row ' + rowNumber + ' Data:', {
                         'item.contact': item.contact,
                         'appraisal.contact': appraisal.contact,
-                        'appraisal.created_by_email': appraisal.created_by_email,
-                        'final_contact': contactDisplay
+                        'final_contact': contactDisplay,
+                        'item.sex': item.sex,
+                        'appraisal.sex': appraisal.sex,
+                        'final_sex': sexDisplay,
+                        'item.payments': item.payments,
+                        'appraisal.receipt_number': appraisal.receipt_number,
+                        'final_receipt': receiptDisplay
                     });
 
                     row.innerHTML = `
@@ -522,10 +596,10 @@
                         <td>${escapeHtml(appraisal.stand_number || '-')}</td>
                         <td>${escapeHtml(appraisal.location || '-')}</td>
                         <td class="contact-highlight">${escapeHtml(contactDisplay)}</td>
-                        <td style="text-align:center;">${escapeHtml(item.payments || '-')}</td>
+                        <td style="text-align:center;"><span class="sex-badge ${sexClass}">${escapeHtml(sexDisplay)}</span></td>
+                        <td class="receipt-highlight" style="text-align:center;">${escapeHtml(receiptDisplay)}</td>
                         <td style="text-align:center;">${dor}</td>
                         <td style="text-align:center;">${dar}</td>
-                        <td style="text-align:center;">${escapeHtml(item.sex || '-')}</td>
                         <td style="text-align:center;">
                             <div class="action-cell">
                                 ${actionsHtml}
@@ -539,13 +613,10 @@
                 }
 
                 document.getElementById('pendingCount').textContent = pendingCount + ' Pending';
-
                 if (pendingCount === 0) {
-                    document.getElementById('pendingCount').style.background = '#28a745';
-                    document.getElementById('pendingCount').style.color = 'white';
+                    document.getElementById('pendingCount').className = 'count-badge zero';
                 } else {
-                    document.getElementById('pendingCount').style.background = '#ffc107';
-                    document.getElementById('pendingCount').style.color = '#333';
+                    document.getElementById('pendingCount').className = 'count-badge';
                 }
 
             } catch (error) {
