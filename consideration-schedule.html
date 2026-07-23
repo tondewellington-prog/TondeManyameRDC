@@ -264,6 +264,11 @@
             align-items: center;
         }
 
+        .contact-highlight {
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
         @media (max-width: 768px) {
             .content {
                 padding: 15px;
@@ -323,7 +328,7 @@
                             <th style="width:12%;">NAME</th>
                             <th style="width:8%;">STAND NO</th>
                             <th style="width:15%;">PLAN DETAILS</th>
-                            <th style="width:10%;">CONTACT</th>
+                            <th style="width:15%;">CONTACT</th>
                             <th style="width:8%;">PAYMENTS</th>
                             <th style="width:8%;">DOR</th>
                             <th style="width:8%;">DAR</th>
@@ -404,7 +409,7 @@
         }
 
         // ============================================
-        // LOAD SCHEDULE
+        // LOAD SCHEDULE - FIXED CONTACT DISPLAY
         // ============================================
         async function loadSchedule() {
             initSupabase();
@@ -434,6 +439,15 @@
                     document.getElementById('pendingCount').textContent = '0 Pending';
                     return;
                 }
+
+                // DEBUG: Log the data to see what's coming from the database
+                console.log('Schedule Data:', scheduleData);
+                console.log('First item contacts:', {
+                    'schedule.contact': scheduleData[0]?.contact,
+                    'appraisal.contact': scheduleData[0]?.plan_appraisals?.contact,
+                    'appraisal.created_by_email': scheduleData[0]?.plan_appraisals?.created_by_email,
+                    'appraisal.owner_name': scheduleData[0]?.plan_appraisals?.owner_name
+                });
 
                 tbody.innerHTML = '';
                 var rowNumber = 1;
@@ -472,15 +486,42 @@
                     var dor = appraisal.created_at ? new Date(appraisal.created_at).toLocaleDateString() : '-';
                     var dar = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : '-';
 
-                    // Use contact from schedule or fallback to appraisal contact
-                    var contactDisplay = item.contact || appraisal.contact || '-';
+                    // ============================================
+                    // FIX: Get contact from multiple possible sources
+                    // ============================================
+                    var contactDisplay = 'N/A';
+                    
+                    // First priority: contact from consideration_schedule
+                    if (item.contact && item.contact !== '' && item.contact !== 'N/A') {
+                        contactDisplay = item.contact;
+                    }
+                    // Second priority: contact from plan_appraisals
+                    else if (appraisal.contact && appraisal.contact !== '' && appraisal.contact !== 'N/A') {
+                        contactDisplay = appraisal.contact;
+                    }
+                    // Third priority: created_by_email (staff email)
+                    else if (appraisal.created_by_email) {
+                        contactDisplay = appraisal.created_by_email;
+                    }
+                    // Fourth priority: created_by_name
+                    else if (appraisal.created_by_name) {
+                        contactDisplay = appraisal.created_by_name;
+                    }
+
+                    // DEBUG: Log contact resolution
+                    console.log('Row ' + rowNumber + ' Contact Resolution:', {
+                        'item.contact': item.contact,
+                        'appraisal.contact': appraisal.contact,
+                        'appraisal.created_by_email': appraisal.created_by_email,
+                        'final_contact': contactDisplay
+                    });
 
                     row.innerHTML = `
                         <td style="text-align:center;">${rowNumber}</td>
                         <td><strong>${escapeHtml(appraisal.owner_name || '-')}</strong></td>
                         <td>${escapeHtml(appraisal.stand_number || '-')}</td>
                         <td>${escapeHtml(appraisal.location || '-')}</td>
-                        <td>${escapeHtml(contactDisplay)}</td>
+                        <td class="contact-highlight">${escapeHtml(contactDisplay)}</td>
                         <td style="text-align:center;">${escapeHtml(item.payments || '-')}</td>
                         <td style="text-align:center;">${dor}</td>
                         <td style="text-align:center;">${dar}</td>
@@ -681,6 +722,3 @@
     </script>
 </body>
 </html>
-
-
-
