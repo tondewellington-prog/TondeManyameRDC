@@ -412,7 +412,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stamp-utils.js"></script>
     <script>
         // ============================================
         // SUPABASE CONFIGURATION
@@ -475,54 +474,7 @@
         }
 
         // ============================================
-        // GENERATE STAMP HTML - Using stamp-utils.js
-        // ============================================
-        function generateStampHTML(stampDate) {
-            var dateFormatted = stampDate || new Date().toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            }).toUpperCase();
-
-            if (typeof StampUtils !== 'undefined') {
-                return StampUtils.generateStampHTML({
-                    title: 'DISTRICT PLANNER',
-                    date: dateFormatted,
-                    councilName: 'Manyame Rural District Council'
-                });
-            }
-
-            // Fallback if stamp-utils.js is not loaded
-            return `
-            <div style="position: absolute; bottom: 30px; right: 30px; width: 220px; height: 140px; 
-                        border: 4px solid #003366; border-radius: 12px; 
-                        background: rgba(255, 255, 255, 0.92);
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                        display: flex; flex-direction: column; 
-                        align-items: center; justify-content: center;
-                        padding: 10px; font-family: 'Times New Roman', serif;
-                        z-index: 1000; page-break-inside: avoid;">
-                <div style="font-size: 11px; font-weight: bold; color: #003366; 
-                            letter-spacing: 1px; text-align: center; 
-                            border-bottom: 2px solid #003366; padding-bottom: 4px; margin-bottom: 4px; width: 100%;">
-                    MANYAME RURAL DISTRICT COUNCIL
-                </div>
-                <div style="font-size: 18px; font-weight: bold; color: #003366; 
-                            text-align: center; letter-spacing: 1px; margin: 2px 0;">
-                    APPROVED
-                </div>
-                <div style="font-size: 11px; color: #003366; text-align: center; 
-                            border-top: 1px dashed #003366; padding-top: 4px; margin-top: 2px; width: 100%;">
-                    Date: ${dateFormatted}
-                </div>
-                <div style="font-size: 9px; color: #666; text-align: center; margin-top: 2px;">
-                    District Planner
-                </div>
-            </div>`;
-        }
-
-        // ============================================
-        // GENERATE STAMPED PDF - Using Edge Function
+        // GENERATE STAMPED PDF - Using stamp-pdf Edge Function
         // ============================================
         async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, stampDate) {
             console.log('=== GENERATE STAMPED PDF ===');
@@ -535,87 +487,22 @@
                     throw new Error('Database connection error');
                 }
 
-                // 1. Fetch the plan PDF
-                console.log('Fetching plan PDF...');
-                const response = await fetch(planFileUrl);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch plan PDF: ' + response.status);
-                }
-                const planBlob = await response.blob();
-                console.log('Plan PDF fetched, size:', planBlob.size);
+                console.log('Calling stamp-pdf Edge Function...');
 
-                // 2. Generate stamp HTML
-                const stampHtml = generateStampHTML(stampDate);
-                console.log('Stamp HTML generated');
-
-                // 3. Convert plan PDF to base64
-                const reader = new FileReader();
-                const planBase64 = await new Promise((resolve, reject) => {
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(planBlob);
-                });
-                console.log('Plan PDF converted to base64');
-
-                // 4. Create the HTML with the plan and stamp
-                const fullHtml = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Stamped Plan</title>
-                    <style>
-                        body { margin: 0; padding: 0; }
-                        .page { 
-                            position: relative; 
-                            width: 100%; 
-                            height: 100vh; 
-                            overflow: hidden;
-                        }
-                        .plan-content {
-                            width: 100%;
-                            height: 100%;
-                        }
-                        .plan-content object,
-                        .plan-content iframe,
-                        .plan-content embed {
-                            width: 100%;
-                            height: 100%;
-                            border: none;
-                        }
-                        ${stampHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/i) ? stampHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/i)[1] : ''}
-                    </style>
-                </head>
-                <body>
-                    <div class="page">
-                        <div class="plan-content">
-                            <object data="data:application/pdf;base64,${planBase64}" type="application/pdf" width="100%" height="100%">
-                                <p>Your browser does not support PDFs.</p>
-                            </object>
-                        </div>
-                        ${stampHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/i, '')}
-                    </div>
-                </body>
-                </html>`;
-
-                console.log('Calling generate-pdf Edge Function...');
-
-                // 5. Call the generate-pdf Edge Function
-                var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
+                // Call the stamp-pdf Edge Function
+                var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
                 var requestBody = {
-                    html_template: fullHtml,
-                    document_type: 'stamped_plan',
-                    data: {
-                        scheduleId: scheduleId,
-                        appraisalId: appraisalId,
-                        stampDate: stampDate
-                    }
+                    fileUrl: planFileUrl,
+                    scheduleId: scheduleId,
+                    appraisalId: appraisalId,
+                    stampDate: stampDate,
+                    councilName: 'Manyame Rural District Council',
+                    stampTitle: 'DISTRICT PLANNER'
                 };
 
-                console.log('Request body keys:', Object.keys(requestBody));
-                console.log('html_template length:', requestBody.html_template.length);
+                console.log('Request body:', requestBody);
 
-                var stampResponse = await fetch(functionUrl, {
+                var response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -624,53 +511,30 @@
                     body: JSON.stringify(requestBody)
                 });
 
-                console.log('Response status:', stampResponse.status);
+                console.log('Response status:', response.status);
 
-                if (!stampResponse.ok) {
-                    var errorText = await stampResponse.text();
+                if (!response.ok) {
+                    var errorText = await response.text();
                     console.error('Error response:', errorText);
-                    throw new Error('PDF generation failed: ' + errorText);
+                    throw new Error('Stamp failed: ' + errorText);
                 }
 
-                // 6. Get the PDF blob
-                const pdfBlob = await stampResponse.blob();
-                console.log('Stamped PDF generated, size:', pdfBlob.size);
+                var result = await response.json();
+                console.log('Stamp result:', result);
 
-                // 7. Upload to Supabase storage
-                console.log('Uploading stamped PDF...');
-                const filePath = `stamped_plans/${scheduleId || appraisalId || Date.now()}_stamped.pdf`;
-
-                const { data: uploadData, error: uploadError } = await supabaseClient
-                    .storage
-                    .from('plan-uploads')
-                    .upload(filePath, pdfBlob, {
-                        contentType: 'application/pdf',
-                        upsert: true
-                    });
-
-                if (uploadError) {
-                    console.error('Upload error:', uploadError);
-                    throw new Error('Failed to upload stamped PDF: ' + uploadError.message);
+                if (result.success && result.stampedUrl) {
+                    console.log('Stamp applied successfully:', result.stampedUrl);
+                    return {
+                        success: true,
+                        stampedUrl: result.stampedUrl,
+                        filePath: result.filePath
+                    };
+                } else {
+                    throw new Error('Stamp failed: ' + (result.error || 'Unknown error'));
                 }
-
-                console.log('Upload successful:', uploadData);
-
-                const { data: urlData } = supabaseClient
-                    .storage
-                    .from('plan-uploads')
-                    .getPublicUrl(filePath);
-
-                const stampedUrl = urlData.publicUrl;
-                console.log('Stamped URL:', stampedUrl);
-
-                return {
-                    success: true,
-                    stampedUrl: stampedUrl,
-                    filePath: filePath
-                };
 
             } catch (error) {
-                console.error('Error generating stamped PDF:', error);
+                console.error('Error applying stamp:', error);
                 throw error;
             }
         }
@@ -817,7 +681,7 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - USING EDGE FUNCTION
+        // APPROVE SCHEDULE - USING stamp-pdf Edge Function
         // ============================================
         async function approveSchedule(scheduleId) {
             console.log('=== APPROVE SCHEDULE CALLED ===');
@@ -872,7 +736,7 @@
                             year: 'numeric'
                         }).toUpperCase();
 
-                        console.log('Generating stamped PDF...');
+                        console.log('Calling stamp-pdf Edge Function...');
                         var result = await generateStampedPDF(
                             appraisal.plan_file_url,
                             scheduleId,
