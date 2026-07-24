@@ -412,7 +412,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="stamp-utils.js"></script>
     <script>
         // ============================================
         // SUPABASE CONFIGURATION
@@ -472,90 +471,6 @@
             sessionStorage.removeItem('staffRole');
             sessionStorage.removeItem('staffUserId');
             window.location.href = 'index.html';
-        }
-
-        // ============================================
-        // GENERATE STAMP HTML - CSS STYLE LIKE DEVELOPMENT PERMIT
-        // ============================================
-        function generateStampHTML(stampDate) {
-            var dateFormatted = stampDate || new Date().toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            }).toUpperCase();
-
-            return `
-            <div style="position: absolute; bottom: 30px; right: 30px; width: 220px; height: 140px; 
-                        border: 4px solid #003366; border-radius: 12px; 
-                        background: rgba(255, 255, 255, 0.92);
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                        display: flex; flex-direction: column; 
-                        align-items: center; justify-content: center;
-                        padding: 10px; font-family: 'Times New Roman', serif;
-                        z-index: 1000; page-break-inside: avoid;">
-                <div style="font-size: 11px; font-weight: bold; color: #003366; 
-                            letter-spacing: 1px; text-align: center; 
-                            border-bottom: 2px solid #003366; padding-bottom: 4px; margin-bottom: 4px; width: 100%;">
-                    MANYAME RURAL DISTRICT COUNCIL
-                </div>
-                <div style="font-size: 18px; font-weight: bold; color: #003366; 
-                            text-align: center; letter-spacing: 1px; margin: 2px 0;">
-                    APPROVED
-                </div>
-                <div style="font-size: 11px; color: #003366; text-align: center; 
-                            border-top: 1px dashed #003366; padding-top: 4px; margin-top: 2px; width: 100%;">
-                    Date: ${dateFormatted}
-                </div>
-                <div style="font-size: 9px; color: #666; text-align: center; margin-top: 2px;">
-                    District Planner
-                </div>
-            </div>`;
-        }
-
-        // ============================================
-        // APPLY STAMP TO PLAN PDF - USING CSS STAMP
-        // ============================================
-        async function applyStampToPlanPDF(planFileUrl, scheduleId, appraisalId, stampDate) {
-            try {
-                initSupabase();
-                if (!supabaseClient) {
-                    throw new Error('Database connection error');
-                }
-
-                // Generate CSS stamp HTML (like development permit)
-                var stampHtml = generateStampHTML(stampDate);
-                
-                console.log('Stamp HTML generated:', stampHtml);
-
-                // Call the stamp-pdf Edge Function with the CSS stamp
-                var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
-                var response = await fetch(functionUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fileUrl: planFileUrl,
-                        scheduleId: scheduleId,
-                        appraisalId: appraisalId,
-                        stampDate: stampDate,
-                        stampHtml: stampHtml,  // Send CSS stamp HTML
-                        stampType: 'css'        // Tell the function it's CSS stamp
-                    })
-                });
-
-                if (!response.ok) {
-                    var errorText = await response.text();
-                    console.error('Stamp function error:', errorText);
-                    throw new Error('Failed to apply stamp: ' + errorText);
-                }
-
-                var result = await response.json();
-                console.log('Stamp applied successfully:', result);
-                return result;
-
-            } catch (error) {
-                console.error('Error applying stamp:', error);
-                throw error;
-            }
         }
 
         // ============================================
@@ -706,7 +621,7 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - WITH CSS STAMP
+        // APPROVE SCHEDULE - WITH STAMP
         // ============================================
         async function approveSchedule(scheduleId) {
             if (!scheduleId) {
@@ -747,7 +662,7 @@
                     throw new Error('Appraisal not found for this schedule');
                 }
 
-                // 2. Apply CSS stamp to the plan PDF
+                // 2. Apply stamp to the plan PDF using Edge Function
                 var stampedUrl = null;
                 if (appraisal.plan_file_url) {
                     try {
@@ -757,11 +672,9 @@
                             year: 'numeric'
                         }).toUpperCase();
 
-                        // Generate CSS stamp HTML (like development permit)
-                        var stampHtml = generateStampHTML(stampDate);
-                        console.log('Stamp HTML generated:', stampHtml);
+                        console.log('Applying stamp to plan:', appraisal.plan_file_url);
 
-                        // Call the stamp-pdf Edge Function with CSS stamp
+                        // Call the stamp-pdf Edge Function
                         var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
                         var stampResponse = await fetch(functionUrl, {
                             method: 'POST',
@@ -771,15 +684,14 @@
                                 scheduleId: scheduleId,
                                 appraisalId: appraisal.id,
                                 stampDate: stampDate,
-                                stampHtml: stampHtml,
-                                stampType: 'css'
+                                councilName: 'Manyame Rural District Council',
+                                stampTitle: 'DISTRICT PLANNER'
                             })
                         });
 
                         if (!stampResponse.ok) {
                             var errorText = await stampResponse.text();
                             console.warn('Stamp application failed:', errorText);
-                            // Don't fail the approval if stamp fails
                         } else {
                             var stampResult = await stampResponse.json();
                             if (stampResult.success && stampResult.stampedUrl) {
