@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manyame RDC - Consideration of Plan</title>
+    <title>Manyame RDC - Consideration of Plans</title>
     <style>
         * {
             margin: 0;
@@ -330,6 +330,65 @@
             color: #856404;
         }
 
+        /* Stamp CSS - Like Development Permit */
+        .stamp-container {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 220px;
+            height: 140px;
+            border: 4px solid #003366;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            font-family: 'Times New Roman', serif;
+            z-index: 1000;
+            page-break-inside: avoid;
+        }
+
+        .stamp-container .council-name {
+            font-size: 11px;
+            font-weight: bold;
+            color: #003366;
+            letter-spacing: 1px;
+            text-align: center;
+            border-bottom: 2px solid #003366;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+            width: 100%;
+        }
+
+        .stamp-container .approved-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #003366;
+            text-align: center;
+            letter-spacing: 1px;
+            margin: 2px 0;
+        }
+
+        .stamp-container .stamp-date {
+            font-size: 11px;
+            color: #003366;
+            text-align: center;
+            border-top: 1px dashed #003366;
+            padding-top: 4px;
+            margin-top: 2px;
+            width: 100%;
+        }
+
+        .stamp-container .stamp-title {
+            font-size: 9px;
+            color: #666;
+            text-align: center;
+            margin-top: 2px;
+        }
+
         @media (max-width: 768px) {
             .content {
                 padding: 15px;
@@ -412,6 +471,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         // ============================================
         // SUPABASE CONFIGURATION
@@ -426,7 +486,7 @@
         var currentStaffUserId = sessionStorage.getItem('staffUserId');
 
         // ============================================
-        // INITIALIZATION
+        // SUPABASE INITIALIZATION
         // ============================================
         function initSupabase() {
             if (!supabaseClient) {
@@ -474,6 +534,158 @@
         }
 
         // ============================================
+        // GENERATE STAMP HTML - LIKE DEVELOPMENT PERMIT
+        // ============================================
+        function generateStampHTML(stampDate) {
+            var dateFormatted = stampDate || new Date().toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }).toUpperCase();
+
+            return `
+            <div class="stamp-container">
+                <div class="council-name">MANYAME RURAL DISTRICT COUNCIL</div>
+                <div class="approved-text">APPROVED</div>
+                <div class="stamp-date">Date: ${dateFormatted}</div>
+                <div class="stamp-title">District Planner</div>
+            </div>`;
+        }
+
+        // ============================================
+        // GENERATE STAMPED PDF - Using html2pdf
+        // ============================================
+        async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, stampDate) {
+            console.log('=== GENERATE STAMPED PDF ===');
+            console.log('Plan URL:', planFileUrl);
+            console.log('Schedule ID:', scheduleId);
+
+            try {
+                // 1. Fetch the plan PDF as a blob
+                console.log('Fetching plan PDF...');
+                const response = await fetch(planFileUrl);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch plan PDF: ' + response.status);
+                }
+                const planBlob = await response.blob();
+                console.log('Plan PDF fetched, size:', planBlob.size);
+
+                // 2. Create a hidden iframe to render the PDF with stamp overlay
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '1px';
+                iframe.style.height = '1px';
+                iframe.style.position = 'absolute';
+                iframe.style.left = '-9999px';
+                document.body.appendChild(iframe);
+
+                // 3. Load the PDF in the iframe
+                const pdfUrl = URL.createObjectURL(planBlob);
+                iframe.src = pdfUrl;
+
+                // Wait for iframe to load
+                await new Promise((resolve) => {
+                    iframe.onload = resolve;
+                    setTimeout(resolve, 3000);
+                });
+
+                // 4. Get the iframe document
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                console.log('Iframe loaded');
+
+                // 5. Add the stamp to the iframe
+                const stampHtml = generateStampHTML(stampDate);
+                const stampDiv = document.createElement('div');
+                stampDiv.innerHTML = stampHtml;
+                stampDiv.style.position = 'fixed';
+                stampDiv.style.bottom = '30px';
+                stampDiv.style.right = '30px';
+                stampDiv.style.zIndex = '9999';
+
+                // Add the stamp to the iframe body
+                iframeDoc.body.appendChild(stampDiv.firstElementChild);
+                console.log('Stamp added to iframe');
+
+                // 6. Use html2pdf to generate the stamped PDF
+                console.log('Generating stamped PDF with html2pdf...');
+                const html2pdf = window.html2pdf;
+
+                // Create a wrapper div with the PDF content + stamp
+                const wrapper = document.createElement('div');
+                wrapper.style.width = '100%';
+                wrapper.style.height = '100%';
+                wrapper.style.position = 'relative';
+
+                // Clone the iframe body content
+                const content = iframeDoc.body.cloneNode(true);
+                wrapper.appendChild(content);
+
+                // Add stamp to wrapper
+                const stampClone = stampDiv.firstElementChild.cloneNode(true);
+                wrapper.appendChild(stampClone);
+
+                // Generate PDF from wrapper
+                const pdfBlob = await new Promise((resolve, reject) => {
+                    html2pdf()
+                        .set({
+                            margin: 0,
+                            filename: 'stamped_plan.pdf',
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { scale: 2, useCORS: true },
+                            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                        })
+                        .from(wrapper)
+                        .outputPdf('blob')
+                        .then(resolve)
+                        .catch(reject);
+                });
+
+                console.log('Stamped PDF generated, size:', pdfBlob.size);
+
+                // 7. Upload the stamped PDF to Supabase storage
+                console.log('Uploading stamped PDF...');
+                const filePath = `stamped_plans/${scheduleId || appraisalId || Date.now()}_stamped.pdf`;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient
+                    .storage
+                    .from('plan-uploads')
+                    .upload(filePath, pdfBlob, {
+                        contentType: 'application/pdf',
+                        upsert: true
+                    });
+
+                if (uploadError) {
+                    console.error('Upload error:', uploadError);
+                    throw new Error('Failed to upload stamped PDF: ' + uploadError.message);
+                }
+
+                console.log('Upload successful:', uploadData);
+
+                // 8. Get public URL
+                const { data: urlData } = supabaseClient
+                    .storage
+                    .from('plan-uploads')
+                    .getPublicUrl(filePath);
+
+                const stampedUrl = urlData.publicUrl;
+                console.log('Stamped URL:', stampedUrl);
+
+                // 9. Clean up
+                URL.revokeObjectURL(pdfUrl);
+                document.body.removeChild(iframe);
+
+                return {
+                    success: true,
+                    stampedUrl: stampedUrl,
+                    filePath: filePath
+                };
+
+            } catch (error) {
+                console.error('Error generating stamped PDF:', error);
+                throw error;
+            }
+        }
+
+        // ============================================
         // LOAD SCHEDULE
         // ============================================
         async function loadSchedule() {
@@ -489,7 +701,6 @@
             hideSuccess();
 
             try {
-                // Get all schedules with appraisal details
                 var { data: scheduleData, error: scheduleError } = await supabaseClient
                     .from('consideration_schedule')
                     .select('*, plan_appraisals(*)')
@@ -525,10 +736,8 @@
                     var statusClass = item.status === 'approved' ? 'status-approved' : 'status-pending';
                     var isApproved = item.status === 'approved';
 
-                    // Actions based on status
                     var actionsHtml = '';
                     if (isApproved) {
-                        // Show download button for stamped PDF if available
                         var stampedUrl = item.stamped_url || appraisal.stamped_url;
                         if (stampedUrl) {
                             actionsHtml = `
@@ -552,7 +761,6 @@
                     var dor = appraisal.created_at ? new Date(appraisal.created_at).toLocaleDateString() : '-';
                     var dar = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : '-';
 
-                    // Get contact from multiple sources
                     var contactDisplay = 'N/A';
                     if (item.contact && item.contact !== '' && item.contact !== 'N/A') {
                         contactDisplay = item.contact;
@@ -564,7 +772,6 @@
                         contactDisplay = appraisal.created_by_name;
                     }
 
-                    // Get sex from schedule or appraisal
                     var sexDisplay = 'N/A';
                     if (item.sex && item.sex !== '' && item.sex !== 'N/A') {
                         sexDisplay = item.sex;
@@ -576,7 +783,6 @@
                     if (sexDisplay === 'M') sexClass = 'sex-male';
                     else if (sexDisplay === 'F') sexClass = 'sex-female';
 
-                    // Get receipt number from schedule or appraisal
                     var receiptDisplay = 'N/A';
                     if (item.payments && item.payments !== '' && item.payments !== 'N/A') {
                         receiptDisplay = item.payments;
@@ -621,12 +827,12 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - WITH STAMP AND DEBUG LOGGING
+        // APPROVE SCHEDULE - GENERATE STAMP IN HTML
         // ============================================
         async function approveSchedule(scheduleId) {
             console.log('=== APPROVE SCHEDULE CALLED ===');
             console.log('Schedule ID:', scheduleId);
-            
+
             if (!scheduleId) {
                 showError('Invalid schedule ID. Please refresh and try again.');
                 return;
@@ -636,7 +842,7 @@
                 return;
             }
 
-            showLoading('Applying stamp and approving schedule...');
+            showLoading('Applying stamp and generating stamped PDF...');
 
             try {
                 initSupabase();
@@ -644,8 +850,7 @@
                     throw new Error('Database connection error. Please refresh.');
                 }
 
-                console.log('Step 1: Fetching schedule data...');
-                // 1. Get the schedule with appraisal details
+                console.log('Fetching schedule data...');
                 var { data: scheduleData, error: scheduleError } = await supabaseClient
                     .from('consideration_schedule')
                     .select('*, plan_appraisals(*)')
@@ -666,11 +871,8 @@
                     throw new Error('Appraisal not found for this schedule');
                 }
 
-                console.log('Schedule data fetched:', scheduleData);
                 console.log('Appraisal data:', appraisal);
-                console.log('Plan file URL:', appraisal.plan_file_url);
 
-                // 2. Apply stamp to the plan PDF using Edge Function
                 var stampedUrl = null;
                 if (appraisal.plan_file_url) {
                     try {
@@ -680,62 +882,34 @@
                             year: 'numeric'
                         }).toUpperCase();
 
-                        console.log('Step 2: Calling Edge Function...');
-                        console.log('Edge Function URL:', SUPABASE_URL + '/functions/v1/stamp-pdf');
-                        console.log('Request payload:', {
-                            fileUrl: appraisal.plan_file_url,
-                            scheduleId: scheduleId,
-                            appraisalId: appraisal.id,
-                            stampDate: stampDate
-                        });
+                        // ============================================
+                        // GENERATE STAMPED PDF IN HTML (Like Development Permit)
+                        // ============================================
+                        console.log('Generating stamped PDF...');
+                        var result = await generateStampedPDF(
+                            appraisal.plan_file_url,
+                            scheduleId,
+                            appraisal.id,
+                            stampDate
+                        );
 
-                        // Call the stamp-pdf Edge Function
-                        var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
-                        var stampResponse = await fetch(functionUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                fileUrl: appraisal.plan_file_url,
-                                scheduleId: scheduleId,
-                                appraisalId: appraisal.id,
-                                stampDate: stampDate,
-                                councilName: 'Manyame Rural District Council',
-                                stampTitle: 'DISTRICT PLANNER'
-                            })
-                        });
-
-                        console.log('Edge Function Response Status:', stampResponse.status);
-                        console.log('Edge Function Response OK:', stampResponse.ok);
-
-                        // Get the response text first
-                        var responseText = await stampResponse.text();
-                        console.log('Edge Function Response Body:', responseText);
-
-                        if (!stampResponse.ok) {
-                            console.warn('Stamp application failed:', responseText);
+                        if (result.success && result.stampedUrl) {
+                            stampedUrl = result.stampedUrl;
+                            console.log('Stamped PDF generated successfully:', stampedUrl);
                         } else {
-                            try {
-                                var stampResult = JSON.parse(responseText);
-                                console.log('Parsed stamp result:', stampResult);
-                                if (stampResult.success && stampResult.stampedUrl) {
-                                    stampedUrl = stampResult.stampedUrl;
-                                    console.log('Stamp applied successfully! Stamped URL:', stampedUrl);
-                                } else {
-                                    console.warn('Stamp result indicates failure:', stampResult);
-                                }
-                            } catch (parseError) {
-                                console.error('Failed to parse response:', parseError);
-                            }
+                            console.warn('Stamp generation failed:', result);
                         }
+
                     } catch (stampError) {
-                        console.error('Stamp application error:', stampError);
+                        console.error('Stamp generation error:', stampError);
+                        // Don't fail the approval if stamp fails
                     }
                 } else {
-                    console.warn('No plan file URL found for appraisal');
+                    console.warn('No plan file URL found');
                 }
 
-                // 3. Update the schedule status to 'approved'
-                console.log('Step 3: Updating schedule status...');
+                // Update schedule status
+                console.log('Updating schedule status...');
                 var updateData = {
                     status: 'approved',
                     considered_at: new Date().toISOString(),
@@ -743,12 +917,8 @@
                     updated_at: new Date().toISOString()
                 };
 
-                // If stamp was applied, save the stamped URL
                 if (stampedUrl) {
-                    console.log('Stamped URL to save:', stampedUrl);
                     updateData.stamped_url = stampedUrl;
-                } else {
-                    console.warn('No stamped URL to save');
                 }
 
                 var { error: updateError } = await supabaseClient
@@ -760,51 +930,35 @@
                     console.error('Update error:', updateError);
                     throw new Error('Failed to update schedule: ' + updateError.message);
                 }
-                console.log('Schedule updated successfully');
 
-                // 4. Also update the appraisal with stamped URL if available
                 if (stampedUrl) {
-                    console.log('Step 4: Updating appraisal with stamped URL...');
                     var { error: appraisalUpdateError } = await supabaseClient
                         .from('plan_appraisals')
                         .update({ stamped_url: stampedUrl })
                         .eq('id', appraisal.id);
 
                     if (appraisalUpdateError) {
-                        console.warn('Failed to update appraisal with stamped URL:', appraisalUpdateError);
-                    } else {
-                        console.log('Appraisal updated successfully');
+                        console.warn('Failed to update appraisal:', appraisalUpdateError);
                     }
                 }
 
-                // 5. Show success message
-                console.log('Step 5: Showing success message...');
-                var message = 'Schedule approved successfully!';
-                if (stampedUrl) {
-                    message = 'Schedule approved and stamp applied successfully! Reference: ' + scheduleData.reference_number;
-                    console.log('Success with stamp:', message);
-                } else {
-                    message = 'Schedule approved! (Stamp could not be applied to plan)';
-                    console.warn('Success without stamp:', message);
-                }
-                showSuccess(message);
+                var message = stampedUrl ? 
+                    'Schedule approved and stamp applied successfully! Reference: ' + scheduleData.reference_number :
+                    'Schedule approved! (Stamp could not be applied to plan)';
                 
-                // 6. Reload the schedule
-                console.log('Step 6: Reloading schedule...');
+                console.log('Success:', message);
+                showSuccess(message);
+
                 setTimeout(function() {
                     loadSchedule();
                 }, 1500);
 
             } catch (error) {
-                console.error('=== APPROVE SCHEDULE ERROR ===');
-                console.error('Error:', error);
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
+                console.error('Approve error:', error);
                 showError('Error approving schedule: ' + error.message);
             }
-            
+
             hideLoading();
-            console.log('=== APPROVE SCHEDULE COMPLETED ===');
         }
 
         // ============================================
@@ -865,11 +1019,11 @@
         // ============================================
         console.log('Initializing Consideration Schedule page...');
         initSupabase();
+
         if (checkAccess()) {
             loadSchedule();
         }
 
-        // Auto-refresh every 30 seconds
         setInterval(function() {
             if (document.visibilityState === 'visible') {
                 loadSchedule();
