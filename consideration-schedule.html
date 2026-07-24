@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manyame RDC - Consideration of Plan</title>
+    <title>Manyame RDC - Consideration of Plans</title>
     <style>
         * {
             margin: 0;
@@ -231,6 +231,23 @@
             background: #0069d9;
         }
 
+        .download-stamped-btn {
+            background: #28a745;
+            color: white;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 3px;
+        }
+
+        .download-stamped-btn:hover {
+            background: #218838;
+        }
+
         .empty-row td {
             text-align: center;
             padding: 40px;
@@ -311,6 +328,21 @@
         .receipt-highlight {
             font-weight: bold;
             color: #856404;
+        }
+
+        /* Stamp preview modal */
+        .stamp-preview {
+            margin-top: 10px;
+            padding: 10px;
+            border: 2px dashed #1e3c72;
+            border-radius: 8px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+
+        .stamp-preview img {
+            max-width: 200px;
+            height: auto;
         }
 
         @media (max-width: 768px) {
@@ -395,6 +427,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="stamp-utils.js"></script>
     <script>
         // ============================================
         // SUPABASE CONFIGURATION
@@ -457,6 +490,89 @@
         }
 
         // ============================================
+        // GENERATE STAMP HTML - Using stamp-utils.js
+        // ============================================
+        function generateStampHTML(options) {
+            if (typeof StampUtils !== 'undefined') {
+                return StampUtils.generateStampHTML({
+                    title: options.title || 'DISTRICT PLANNER',
+                    date: options.date || new Date().toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    }).toUpperCase(),
+                    councilName: options.councilName || 'Manyame Rural District Council'
+                });
+            }
+            return '';
+        }
+
+        // ============================================
+        // APPLY STAMP TO PLAN PDF
+        // ============================================
+        async function applyStampToPlanPDF(planFileUrl, scheduleId, appraisalId, stampDate) {
+            try {
+                initSupabase();
+                if (!supabaseClient) {
+                    throw new Error('Database connection error');
+                }
+
+                // Generate stamp image using stamp-utils.js
+                var stampImageDataUrl = null;
+                if (typeof StampUtils !== 'undefined') {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = 400;
+                    canvas.height = 200;
+                    var ctx = canvas.getContext('2d');
+                    
+                    StampUtils.drawCouncilStamp(ctx, {
+                        councilName: 'Manyame Rural District Council',
+                        date: new Date(stampDate),
+                        width: 400,
+                        height: 200,
+                        title: 'DISTRICT PLANNER'
+                    });
+                    
+                    stampImageDataUrl = canvas.toDataURL('image/png');
+                    console.log('Stamp image generated successfully');
+                } else {
+                    console.warn('StampUtils not loaded, using default stamp');
+                    // Fallback: use a simple text stamp
+                    stampImageDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                }
+
+                // Call the stamp-pdf Edge Function with the stamp image
+                var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
+                var response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileUrl: planFileUrl,
+                        scheduleId: scheduleId,
+                        appraisalId: appraisalId,
+                        stampDate: stampDate,
+                        stampImage: stampImageDataUrl,
+                        stampTitle: 'DISTRICT PLANNER'
+                    })
+                });
+
+                if (!response.ok) {
+                    var errorText = await response.text();
+                    console.error('Stamp function error:', errorText);
+                    throw new Error('Failed to apply stamp: ' + errorText);
+                }
+
+                var result = await response.json();
+                console.log('Stamp applied successfully:', result);
+                return result;
+
+            } catch (error) {
+                console.error('Error applying stamp:', error);
+                throw error;
+            }
+        }
+
+        // ============================================
         // LOAD SCHEDULE
         // ============================================
         async function loadSchedule() {
@@ -489,19 +605,6 @@
                     return;
                 }
 
-                // DEBUG: Log the data to see what's coming from the database
-                console.log('Schedule Data:', scheduleData);
-                if (scheduleData.length > 0) {
-                    console.log('First item contacts:', {
-                        'schedule.contact': scheduleData[0]?.contact,
-                        'schedule.sex': scheduleData[0]?.sex,
-                        'schedule.payments': scheduleData[0]?.payments,
-                        'appraisal.contact': scheduleData[0]?.plan_appraisals?.contact,
-                        'appraisal.sex': scheduleData[0]?.plan_appraisals?.sex,
-                        'appraisal.receipt_number': scheduleData[0]?.plan_appraisals?.receipt_number
-                    });
-                }
-
                 tbody.innerHTML = '';
                 var rowNumber = 1;
 
@@ -524,14 +627,23 @@
                     // Actions based on status
                     var actionsHtml = '';
                     if (isApproved) {
-                        actionsHtml = `
-                            <span class="status-badge status-approved">Approved</span>
-                            ${appraisal.plan_file_url ? `<br><a href="${appraisal.plan_file_url}" target="_blank" class="download-btn">Download PDF</a>` : ''}
-                        `;
+                        // Show download button for stamped PDF if available
+                        var stampedUrl = item.stamped_url || appraisal.stamped_url;
+                        if (stampedUrl) {
+                            actionsHtml = `
+                                <span class="status-badge status-approved">Approved</span>
+                                <br><a href="${stampedUrl}" target="_blank" class="download-stamped-btn">Download Stamped Plan</a>
+                            `;
+                        } else {
+                            actionsHtml = `
+                                <span class="status-badge status-approved">Approved</span>
+                                ${appraisal.plan_file_url ? `<br><a href="${appraisal.plan_file_url}" target="_blank" class="download-btn">Download Original Plan</a>` : ''}
+                            `;
+                        }
                     } else {
                         actionsHtml = `
                             <button class="approve-btn" onclick="approveSchedule('${item.id}')">
-                                Approve
+                                Approve & Apply Stamp
                             </button>
                         `;
                     }
@@ -539,9 +651,7 @@
                     var dor = appraisal.created_at ? new Date(appraisal.created_at).toLocaleDateString() : '-';
                     var dar = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : '-';
 
-                    // ============================================
-                    // FIX: Get contact from multiple possible sources
-                    // ============================================
+                    // Get contact from multiple sources
                     var contactDisplay = 'N/A';
                     if (item.contact && item.contact !== '' && item.contact !== 'N/A') {
                         contactDisplay = item.contact;
@@ -553,9 +663,7 @@
                         contactDisplay = appraisal.created_by_name;
                     }
 
-                    // ============================================
-                    // FIX: Get sex from schedule or appraisal
-                    // ============================================
+                    // Get sex from schedule or appraisal
                     var sexDisplay = 'N/A';
                     if (item.sex && item.sex !== '' && item.sex !== 'N/A') {
                         sexDisplay = item.sex;
@@ -567,28 +675,13 @@
                     if (sexDisplay === 'M') sexClass = 'sex-male';
                     else if (sexDisplay === 'F') sexClass = 'sex-female';
 
-                    // ============================================
-                    // FIX: Get receipt number from schedule or appraisal
-                    // ============================================
+                    // Get receipt number from schedule or appraisal
                     var receiptDisplay = 'N/A';
                     if (item.payments && item.payments !== '' && item.payments !== 'N/A') {
                         receiptDisplay = item.payments;
                     } else if (appraisal.receipt_number && appraisal.receipt_number !== '' && appraisal.receipt_number !== 'N/A') {
                         receiptDisplay = appraisal.receipt_number;
                     }
-
-                    // DEBUG: Log contact resolution
-                    console.log('Row ' + rowNumber + ' Data:', {
-                        'item.contact': item.contact,
-                        'appraisal.contact': appraisal.contact,
-                        'final_contact': contactDisplay,
-                        'item.sex': item.sex,
-                        'appraisal.sex': appraisal.sex,
-                        'final_sex': sexDisplay,
-                        'item.payments': item.payments,
-                        'appraisal.receipt_number': appraisal.receipt_number,
-                        'final_receipt': receiptDisplay
-                    });
 
                     row.innerHTML = `
                         <td style="text-align:center;">${rowNumber}</td>
@@ -627,7 +720,7 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE
+        // APPROVE SCHEDULE - WITH STAMP APPLICATION
         // ============================================
         async function approveSchedule(scheduleId) {
             if (!scheduleId) {
@@ -635,7 +728,7 @@
                 return;
             }
 
-            if (!confirm('Are you sure you want to approve this schedule and apply the council stamp?')) {
+            if (!confirm('Are you sure you want to approve this schedule and apply the council stamp to the plan?')) {
                 return;
             }
 
@@ -647,22 +740,7 @@
                     throw new Error('Database connection error. Please refresh.');
                 }
 
-                // 1. Update the schedule status to 'approved'
-                var { error: updateError } = await supabaseClient
-                    .from('consideration_schedule')
-                    .update({
-                        status: 'approved',
-                        considered_at: new Date().toISOString(),
-                        remarks: 'Approved with council stamp on ' + new Date().toLocaleDateString()
-                    })
-                    .eq('id', scheduleId);
-
-                if (updateError) {
-                    console.error('Update error:', updateError);
-                    throw new Error('Failed to update schedule: ' + updateError.message);
-                }
-
-                // 2. Get the schedule with appraisal details
+                // 1. Get the schedule with appraisal details
                 var { data: scheduleData, error: scheduleError } = await supabaseClient
                     .from('consideration_schedule')
                     .select('*, plan_appraisals(*)')
@@ -678,39 +756,117 @@
                     throw new Error('Schedule not found');
                 }
 
-                // 3. Apply stamp to the plan (if there's a plan file)
-                if (scheduleData.plan_appraisals && scheduleData.plan_appraisals.plan_file_url) {
+                var appraisal = scheduleData.plan_appraisals;
+                if (!appraisal) {
+                    throw new Error('Appraisal not found for this schedule');
+                }
+
+                // 2. Apply stamp to the plan PDF
+                var stampedUrl = null;
+                if (appraisal.plan_file_url) {
                     try {
+                        var stampDate = new Date().toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        }).toUpperCase();
+
+                        // Generate stamp image using stamp-utils.js
+                        var stampImageDataUrl = null;
+                        if (typeof StampUtils !== 'undefined') {
+                            var canvas = document.createElement('canvas');
+                            canvas.width = 400;
+                            canvas.height = 200;
+                            var ctx = canvas.getContext('2d');
+                            
+                            StampUtils.drawCouncilStamp(ctx, {
+                                councilName: 'Manyame Rural District Council',
+                                date: new Date(),
+                                width: 400,
+                                height: 200,
+                                title: 'DISTRICT PLANNER'
+                            });
+                            
+                            stampImageDataUrl = canvas.toDataURL('image/png');
+                            console.log('Stamp image generated successfully');
+                        }
+
+                        // Call the stamp-pdf Edge Function
                         var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
                         var stampResponse = await fetch(functionUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                fileUrl: scheduleData.plan_appraisals.plan_file_url,
+                                fileUrl: appraisal.plan_file_url,
                                 scheduleId: scheduleId,
-                                stampDate: new Date().toLocaleDateString('en-GB', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                }).toUpperCase()
+                                appraisalId: appraisal.id,
+                                stampDate: stampDate,
+                                stampImage: stampImageDataUrl,
+                                stampTitle: 'DISTRICT PLANNER'
                             })
                         });
 
-                        if (stampResponse.ok) {
+                        if (!stampResponse.ok) {
+                            var errorText = await stampResponse.text();
+                            console.warn('Stamp application failed:', errorText);
+                            // Don't fail the approval if stamp fails
+                        } else {
                             var stampResult = await stampResponse.json();
-                            if (stampResult.success) {
-                                console.log('Stamp applied successfully');
+                            if (stampResult.success && stampResult.stampedUrl) {
+                                stampedUrl = stampResult.stampedUrl;
+                                console.log('Stamp applied successfully:', stampedUrl);
                             }
                         }
                     } catch (stampError) {
-                        console.warn('Stamp application failed but schedule was approved:', stampError);
+                        console.warn('Stamp application failed but schedule will still be approved:', stampError);
                     }
                 }
 
-                // 4. Show success message
-                showSuccess('Schedule approved and stamped successfully! Reference: ' + scheduleData.reference_number);
+                // 3. Update the schedule status to 'approved'
+                var updateData = {
+                    status: 'approved',
+                    considered_at: new Date().toISOString(),
+                    remarks: 'Approved with council stamp on ' + new Date().toLocaleDateString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                // If stamp was applied, save the stamped URL
+                if (stampedUrl) {
+                    updateData.stamped_url = stampedUrl;
+                }
+
+                var { error: updateError } = await supabaseClient
+                    .from('consideration_schedule')
+                    .update(updateData)
+                    .eq('id', scheduleId);
+
+                if (updateError) {
+                    console.error('Update error:', updateError);
+                    throw new Error('Failed to update schedule: ' + updateError.message);
+                }
+
+                // 4. Also update the appraisal with stamped URL if available
+                if (stampedUrl) {
+                    var { error: appraisalUpdateError } = await supabaseClient
+                        .from('plan_appraisals')
+                        .update({ stamped_url: stampedUrl })
+                        .eq('id', appraisal.id);
+
+                    if (appraisalUpdateError) {
+                        console.warn('Failed to update appraisal with stamped URL:', appraisalUpdateError);
+                    }
+                }
+
+                // 5. Show success message
+                var message = 'Schedule approved successfully!';
+                if (stampedUrl) {
+                    message = 'Schedule approved and stamp applied successfully! Reference: ' + scheduleData.reference_number;
+                } else {
+                    message = 'Schedule approved! (Stamp could not be applied to plan)';
+                }
+                showSuccess(message);
                 
-                // 5. Reload the schedule
+                // 6. Reload the schedule
                 setTimeout(function() {
                     loadSchedule();
                 }, 1500);
