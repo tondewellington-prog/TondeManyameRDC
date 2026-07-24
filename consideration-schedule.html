@@ -487,9 +487,18 @@
                     throw new Error('Database connection error');
                 }
 
+                // Get the current session for authorization
+                var { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+                if (sessionError) {
+                    console.error('Session error:', sessionError);
+                }
+
+                var accessToken = sessionData?.session?.access_token || '';
+                console.log('Access token present:', !!accessToken);
+
                 console.log('Calling stamp-pdf Edge Function...');
 
-                // Call the stamp-pdf Edge Function
+                // Call the stamp-pdf Edge Function with authorization
                 var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
                 var requestBody = {
                     fileUrl: planFileUrl,
@@ -502,12 +511,19 @@
 
                 console.log('Request body:', requestBody);
 
+                var headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                };
+
+                // Add authorization header if we have a token
+                if (accessToken) {
+                    headers['Authorization'] = 'Bearer ' + accessToken;
+                }
+
                 var response = await fetch(functionUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
+                    headers: headers,
                     body: JSON.stringify(requestBody)
                 });
 
@@ -800,9 +816,10 @@
                 console.log('Success:', message);
                 showSuccess(message);
 
+                // Reload the schedule after a delay
                 setTimeout(function() {
                     loadSchedule();
-                }, 1500);
+                }, 2000);
 
             } catch (error) {
                 console.error('Approve error:', error);
@@ -875,11 +892,10 @@
             loadSchedule();
         }
 
-        setInterval(function() {
-            if (document.visibilityState === 'visible') {
-                loadSchedule();
-            }
-        }, 30000);
+        // ============================================
+        // REMOVED AUTO-REFRESH - Only refresh when user clicks
+        // ============================================
+        // The refresh is now only triggered by the Refresh button or after approval
     </script>
 </body>
 </html>
