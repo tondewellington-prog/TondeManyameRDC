@@ -621,9 +621,12 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - WITH STAMP
+        // APPROVE SCHEDULE - WITH STAMP AND DEBUG LOGGING
         // ============================================
         async function approveSchedule(scheduleId) {
+            console.log('=== APPROVE SCHEDULE CALLED ===');
+            console.log('Schedule ID:', scheduleId);
+            
             if (!scheduleId) {
                 showError('Invalid schedule ID. Please refresh and try again.');
                 return;
@@ -641,6 +644,7 @@
                     throw new Error('Database connection error. Please refresh.');
                 }
 
+                console.log('Step 1: Fetching schedule data...');
                 // 1. Get the schedule with appraisal details
                 var { data: scheduleData, error: scheduleError } = await supabaseClient
                     .from('consideration_schedule')
@@ -662,6 +666,10 @@
                     throw new Error('Appraisal not found for this schedule');
                 }
 
+                console.log('Schedule data fetched:', scheduleData);
+                console.log('Appraisal data:', appraisal);
+                console.log('Plan file URL:', appraisal.plan_file_url);
+
                 // 2. Apply stamp to the plan PDF using Edge Function
                 var stampedUrl = null;
                 if (appraisal.plan_file_url) {
@@ -672,7 +680,14 @@
                             year: 'numeric'
                         }).toUpperCase();
 
-                        console.log('Applying stamp to plan:', appraisal.plan_file_url);
+                        console.log('Step 2: Calling Edge Function...');
+                        console.log('Edge Function URL:', SUPABASE_URL + '/functions/v1/stamp-pdf');
+                        console.log('Request payload:', {
+                            fileUrl: appraisal.plan_file_url,
+                            scheduleId: scheduleId,
+                            appraisalId: appraisal.id,
+                            stampDate: stampDate
+                        });
 
                         // Call the stamp-pdf Edge Function
                         var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
@@ -689,22 +704,38 @@
                             })
                         });
 
+                        console.log('Edge Function Response Status:', stampResponse.status);
+                        console.log('Edge Function Response OK:', stampResponse.ok);
+
+                        // Get the response text first
+                        var responseText = await stampResponse.text();
+                        console.log('Edge Function Response Body:', responseText);
+
                         if (!stampResponse.ok) {
-                            var errorText = await stampResponse.text();
-                            console.warn('Stamp application failed:', errorText);
+                            console.warn('Stamp application failed:', responseText);
                         } else {
-                            var stampResult = await stampResponse.json();
-                            if (stampResult.success && stampResult.stampedUrl) {
-                                stampedUrl = stampResult.stampedUrl;
-                                console.log('Stamp applied successfully:', stampedUrl);
+                            try {
+                                var stampResult = JSON.parse(responseText);
+                                console.log('Parsed stamp result:', stampResult);
+                                if (stampResult.success && stampResult.stampedUrl) {
+                                    stampedUrl = stampResult.stampedUrl;
+                                    console.log('Stamp applied successfully! Stamped URL:', stampedUrl);
+                                } else {
+                                    console.warn('Stamp result indicates failure:', stampResult);
+                                }
+                            } catch (parseError) {
+                                console.error('Failed to parse response:', parseError);
                             }
                         }
                     } catch (stampError) {
-                        console.warn('Stamp application failed but schedule will still be approved:', stampError);
+                        console.error('Stamp application error:', stampError);
                     }
+                } else {
+                    console.warn('No plan file URL found for appraisal');
                 }
 
                 // 3. Update the schedule status to 'approved'
+                console.log('Step 3: Updating schedule status...');
                 var updateData = {
                     status: 'approved',
                     considered_at: new Date().toISOString(),
@@ -714,7 +745,10 @@
 
                 // If stamp was applied, save the stamped URL
                 if (stampedUrl) {
+                    console.log('Stamped URL to save:', stampedUrl);
                     updateData.stamped_url = stampedUrl;
+                } else {
+                    console.warn('No stamped URL to save');
                 }
 
                 var { error: updateError } = await supabaseClient
@@ -726,9 +760,11 @@
                     console.error('Update error:', updateError);
                     throw new Error('Failed to update schedule: ' + updateError.message);
                 }
+                console.log('Schedule updated successfully');
 
                 // 4. Also update the appraisal with stamped URL if available
                 if (stampedUrl) {
+                    console.log('Step 4: Updating appraisal with stamped URL...');
                     var { error: appraisalUpdateError } = await supabaseClient
                         .from('plan_appraisals')
                         .update({ stamped_url: stampedUrl })
@@ -736,29 +772,39 @@
 
                     if (appraisalUpdateError) {
                         console.warn('Failed to update appraisal with stamped URL:', appraisalUpdateError);
+                    } else {
+                        console.log('Appraisal updated successfully');
                     }
                 }
 
                 // 5. Show success message
+                console.log('Step 5: Showing success message...');
                 var message = 'Schedule approved successfully!';
                 if (stampedUrl) {
                     message = 'Schedule approved and stamp applied successfully! Reference: ' + scheduleData.reference_number;
+                    console.log('Success with stamp:', message);
                 } else {
                     message = 'Schedule approved! (Stamp could not be applied to plan)';
+                    console.warn('Success without stamp:', message);
                 }
                 showSuccess(message);
                 
                 // 6. Reload the schedule
+                console.log('Step 6: Reloading schedule...');
                 setTimeout(function() {
                     loadSchedule();
                 }, 1500);
 
             } catch (error) {
-                console.error('Approve error:', error);
+                console.error('=== APPROVE SCHEDULE ERROR ===');
+                console.error('Error:', error);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
                 showError('Error approving schedule: ' + error.message);
             }
             
             hideLoading();
+            console.log('=== APPROVE SCHEDULE COMPLETED ===');
         }
 
         // ============================================
@@ -817,6 +863,7 @@
         // ============================================
         // INITIALIZE
         // ============================================
+        console.log('Initializing Consideration Schedule page...');
         initSupabase();
         if (checkAccess()) {
             loadSchedule();
