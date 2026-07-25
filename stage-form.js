@@ -367,6 +367,7 @@ async function loadStageItems(formId) {
         stageItems = items || [];
         renderStageTable();
         updateProgressBar();
+        updateSaveButtonState();
 
     } catch (error) {
         console.error('Error loading stage items:', error);
@@ -408,7 +409,7 @@ function renderStageTable() {
         statusCell.className = 'stage-status';
         var statusClass = 'status-' + item.status;
         var statusLabel = item.status.toUpperCase();
-        statusCell.innerHTML = `<span class="status-badge ${statusClass}">${statusLabel}</span>`;
+        statusCell.innerHTML = '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>';
         row.appendChild(statusCell);
 
         // Receipt Number Input
@@ -420,10 +421,11 @@ function renderStageTable() {
         receiptInput.value = item.receipt_number || '';
         receiptInput.disabled = isDisabled;
         receiptInput.dataset.stageId = item.id;
-        receiptInput.onchange = function() {
+        receiptInput.oninput = function() {
             var stageItem = stageItems.find(function(s) { return s.id === this.dataset.stageId; });
             if (stageItem) {
                 stageItem.receipt_number = this.value;
+                updateSaveButtonState();
             }
         };
         receiptCell.appendChild(receiptInput);
@@ -484,8 +486,22 @@ async function setStageStatus(stageItemId, status) {
         if (updateError) throw updateError;
 
         item.status = newStatus;
+        
+        // If status is set back to pending, clear the receipt number
+        if (newStatus === 'pending') {
+            item.receipt_number = '';
+            // Update the input field value
+            var inputs = document.querySelectorAll('.stage-receipt input');
+            inputs.forEach(function(input) {
+                if (input.dataset.stageId === item.id) {
+                    input.value = '';
+                }
+            });
+        }
+        
         renderStageTable();
         updateProgressBar();
+        updateSaveButtonState();
 
     } catch (error) {
         console.error('Error setting stage status:', error);
@@ -512,7 +528,7 @@ function updateProgressBar() {
 }
 
 // ============================================
-// UPDATE SAVE BUTTON STATE
+// UPDATE SAVE BUTTON STATE - FIXED
 // ============================================
 function updateSaveButtonState() {
     var saveBtn = document.getElementById('saveProgressBtn');
@@ -523,16 +539,28 @@ function updateSaveButtonState() {
         return;
     }
 
-    // Check if any stages have status (Yes/No/N/A) but no receipt number
-    var missingReceipt = stageItems.some(function(item) {
-        return item.status !== 'pending' && (!item.receipt_number || item.receipt_number.trim() === '');
+    // ONLY check stages that have been marked (Yes/No/N/A)
+    // Pending stages do NOT require receipt numbers
+    var markedStages = stageItems.filter(function(item) {
+        return item.status !== 'pending';
+    });
+
+    // If no stages are marked, save button is enabled (can save empty form)
+    if (markedStages.length === 0) {
+        saveBtn.disabled = false;
+        return;
+    }
+
+    // Check if any marked stage is missing a receipt number
+    var missingReceipt = markedStages.some(function(item) {
+        return !item.receipt_number || item.receipt_number.trim() === '';
     });
 
     saveBtn.disabled = missingReceipt;
 }
 
 // ============================================
-// SAVE PROGRESS
+// SAVE PROGRESS - FIXED
 // ============================================
 async function saveProgress() {
     if (isCompleted) {
@@ -540,9 +568,14 @@ async function saveProgress() {
         return;
     }
 
-    // Check if any stages with status have missing receipt numbers
-    var missingReceipt = stageItems.some(function(item) {
-        return item.status !== 'pending' && (!item.receipt_number || item.receipt_number.trim() === '');
+    // ONLY check stages that have been marked (Yes/No/N/A)
+    var markedStages = stageItems.filter(function(item) {
+        return item.status !== 'pending';
+    });
+
+    // Check if any marked stage is missing a receipt number
+    var missingReceipt = markedStages.some(function(item) {
+        return !item.receipt_number || item.receipt_number.trim() === '';
     });
 
     if (missingReceipt) {
@@ -699,12 +732,3 @@ async function loadExistingStageFormDirect(appraisalId) {
         showError('Error loading form: ' + error.message);
     }
 }
-
-// ============================================
-// UPDATE SAVE BUTTON ON RECEIPT INPUT CHANGE
-// ============================================
-document.addEventListener('input', function(e) {
-    if (e.target && e.target.matches('.stage-receipt input')) {
-        updateSaveButtonState();
-    }
-});
