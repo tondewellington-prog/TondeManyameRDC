@@ -376,7 +376,7 @@ async function loadStageItems(formId) {
 }
 
 // ============================================
-// RENDER STAGE TABLE
+// RENDER STAGE TABLE - NO AUTO-FILL
 // ============================================
 function renderStageTable() {
     var tbody = document.getElementById('stageTableBody');
@@ -388,14 +388,6 @@ function renderStageTable() {
     }
 
     var isDisabled = isCompleted || false;
-
-    // Find the last saved receipt from any completed stage
-    var lastReceiptNumber = '';
-    for (var i = 0; i < stageItems.length; i++) {
-        if (stageItems[i].receipt_number && stageItems[i].receipt_number.trim() !== '') {
-            lastReceiptNumber = stageItems[i].receipt_number;
-        }
-    }
 
     stageItems.forEach(function(item, index) {
         var row = document.createElement('tr');
@@ -420,29 +412,26 @@ function renderStageTable() {
         statusCell.innerHTML = '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>';
         row.appendChild(statusCell);
 
-        // Receipt Number Input
+        // Receipt Number Input - ONLY from Supabase, NO auto-fill
         var receiptCell = document.createElement('td');
         receiptCell.className = 'stage-receipt';
         var receiptInput = document.createElement('input');
         receiptInput.type = 'text';
         receiptInput.placeholder = 'Enter receipt no...';
         
-        // If the stage has a receipt, show it
+        // ONLY show receipt if it exists in Supabase for THIS stage
         if (item.receipt_number && item.receipt_number.trim() !== '') {
             receiptInput.value = item.receipt_number;
-        } 
-        // If this stage is pending and we have a last receipt, auto-fill
-        else if (item.status === 'pending' && lastReceiptNumber) {
-            receiptInput.value = lastReceiptNumber;
-            item.receipt_number = lastReceiptNumber;
+            console.log('Stage ' + item.stage_number + ' has its own receipt:', item.receipt_number);
+        } else {
+            receiptInput.value = '';
+            console.log('Stage ' + item.stage_number + ' has NO receipt in Supabase');
         }
         
-        // Lock the receipt input if the stage already has a status (Yes/No/N/A) with a receipt
-        // This prevents editing of previously completed stages
-        var isReceiptLocked = isCompleted || (item.status !== 'pending' && item.receipt_number && item.receipt_number.trim() !== '');
+        // Lock the receipt input if the stage is already inspected (Yes/No/N/A)
+        var isReceiptLocked = isCompleted || (item.status !== 'pending');
         receiptInput.disabled = isReceiptLocked;
         
-        // Add visual indicator for locked receipts
         if (isReceiptLocked) {
             receiptInput.style.background = '#e9ecef';
             receiptInput.style.cursor = 'not-allowed';
@@ -450,14 +439,20 @@ function renderStageTable() {
         
         receiptInput.dataset.stageIndex = index;
         receiptInput.className = 'receipt-input';
+        
+        // When user types a receipt, save it immediately to Supabase
         receiptInput.oninput = function() {
             var idx = parseInt(this.dataset.stageIndex);
             if (!isNaN(idx) && stageItems[idx]) {
-                stageItems[idx].receipt_number = this.value;
-                console.log('Receipt updated for stage ' + stageItems[idx].stage_number + ': ' + this.value);
+                var receiptValue = this.value;
+                stageItems[idx].receipt_number = receiptValue;
+                console.log('Receipt entered for stage ' + stageItems[idx].stage_number + ': ' + receiptValue);
+                // Auto-save the receipt to database immediately
+                autoSaveReceipt(stageItems[idx].id, receiptValue);
                 updateSaveButtonState();
             }
         };
+        
         receiptCell.appendChild(receiptInput);
         row.appendChild(receiptCell);
 
@@ -491,7 +486,7 @@ function renderStageTable() {
 }
 
 // ============================================
-// SET STAGE STATUS
+// SET STAGE STATUS - NO AUTO-FILL
 // ============================================
 async function setStageStatus(index, status) {
     if (isCompleted) {
@@ -505,21 +500,7 @@ async function setStageStatus(index, status) {
 
         var newStatus = item.status === status ? 'pending' : status;
 
-        // If marking a stage, auto-fill receipt if empty
-        if (newStatus !== 'pending') {
-            // Find the last entered receipt number from any stage
-            var lastReceipt = '';
-            for (var i = 0; i < stageItems.length; i++) {
-                if (stageItems[i].receipt_number && stageItems[i].receipt_number.trim() !== '') {
-                    lastReceipt = stageItems[i].receipt_number;
-                }
-            }
-            
-            if (!item.receipt_number || item.receipt_number.trim() === '') {
-                item.receipt_number = lastReceipt;
-            }
-        }
-
+        // Update status in database
         var { error: updateError } = await supabaseClient
             .from('stage_items')
             .update({ 
@@ -535,6 +516,7 @@ async function setStageStatus(index, status) {
         // If status is set back to pending, clear the receipt number
         if (newStatus === 'pending') {
             item.receipt_number = '';
+            await autoSaveReceipt(item.id, null);
         }
         
         renderStageTable();
@@ -544,6 +526,34 @@ async function setStageStatus(index, status) {
     } catch (error) {
         console.error('Error setting stage status:', error);
         showError('Error updating stage: ' + error.message);
+    }
+}
+
+// ============================================
+// AUTO-SAVE RECEIPT TO DATABASE
+// ============================================
+async function autoSaveReceipt(stageItemId, receiptNumber) {
+    if (!stageItemId) return;
+    
+    try {
+        initSupabase();
+        if (!supabaseClient) return;
+        
+        var { error: updateError } = await supabaseClient
+            .from('stage_items')
+            .update({
+                receipt_number: receiptNumber || null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', stageItemId);
+            
+        if (updateError) {
+            console.error('Error auto-saving receipt:', updateError);
+        } else {
+            console.log('Receipt auto-saved for stage item:', stageItemId, 'Receipt:', receiptNumber);
+        }
+    } catch (error) {
+        console.error('Auto-save receipt error:', error);
     }
 }
 
@@ -574,15 +584,18 @@ function updateSaveButtonState() {
 
     if (isCompleted) {
         saveBtn.disabled = true;
+        console.log('Save button disabled: Form is completed');
         return;
     }
 
-    // ONLY check stages that have been marked (Yes/No/N/A) AND are NOT locked (newly marked by current user)
+    // Get all marked stages (Yes/No/N/A)
     var markedStages = stageItems.filter(function(item) {
         return item.status !== 'pending';
     });
 
-    // If no stages are marked, save button is enabled (can save empty form)
+    console.log('Marked stages count:', markedStages.length);
+
+    // If no stages are marked, save button is enabled
     if (markedStages.length === 0) {
         saveBtn.disabled = false;
         console.log('Save button enabled: No stages marked');
@@ -590,16 +603,16 @@ function updateSaveButtonState() {
     }
 
     // Check if any marked stage is missing a receipt number
-    // This includes both new and existing marked stages
     var missingReceipt = markedStages.some(function(item) {
-        return !item.receipt_number || item.receipt_number.trim() === '';
+        var hasReceipt = item.receipt_number && item.receipt_number.trim() !== '';
+        if (!hasReceipt) {
+            console.log('Stage ' + item.stage_number + ' is marked but missing receipt');
+        }
+        return !hasReceipt;
     });
 
     saveBtn.disabled = missingReceipt;
-    console.log('Save button state:', saveBtn.disabled ? 'DISABLED' : 'ENABLED');
-    console.log('Marked stages with missing receipts:', markedStages.filter(function(item) {
-        return !item.receipt_number || item.receipt_number.trim() === '';
-    }).length);
+    console.log('Save button state:', saveBtn.disabled ? 'DISABLED (missing receipt)' : 'ENABLED (all receipts present)');
 }
 
 // ============================================
