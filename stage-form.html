@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage Form - Manyame RDC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .back-link {
+            max-width: 1200px;
+            margin: 0 auto 15px auto;
+        }
+
+        .back-link a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+        }
+
+        .header h2 {
+            font-size: 13px;
+            font-weight: normal;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .staff-info {
+            background: #e9ecef;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            background: #6c757d;
+            width: auto;
+            padding: 6px 15px;
+            font-size: 13px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: #5a6268;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ffc107;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .role-inspector {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .role-planner {
+            background: #28a745;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-row.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .search-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .search-section h3 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+        }
+
+        .search-results {
+            margin-top: 20px;
+        }
+
+        .appraisal-result {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #28a745;
+            margin-top: 15px;
+        }
+
+        .appraisal-result h4 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+
+        .appraisal-result .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .appraisal-result .info-grid div {
+            padding: 4px 0;
+        }
+
+        .appraisal-result .info-grid strong {
+            color: #333;
+        }
+
+        .stage-form-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .stage-form-section.visible {
+            display: block;
+        }
+
+        .stage-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .stage-table th,
+        .stage-table td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            vertical-align: middle;
+            text-align: left;
+        }
+
+        .stage-table th {
+            background: #1e3c72;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .stage-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .stage-table tr:hover {
+            background: #e9ecef;
+        }
+
+        .stage-table .stage-number {
+            text-align: center;
+            font-weight: bold;
+            width: 5%;
+        }
+
+        .stage-table .stage-description {
+            width: 45%;
+        }
+
+        .stage-table .stage-actions {
+            text-align: center;
+            width: 30%;
+        }
+
+        .stage-table .stage-status {
+            text-align: center;
+            width: 20%;
+        }
+
+        .stage-btn {
+            padding: 4px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 0 2px;
+            transition: all 0.2s;
+        }
+
+        .stage-btn.active-yes {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .stage-btn.active-no {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .stage-btn.active-na {
+            background: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+
+        .stage-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #856404;
+        }
+
+        .status-yes {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-no {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-na {
+            background: #6c757d;
+            color: white;
+        }
+
+        .form-actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .form-actions button {
+            min-width: 200px;
+        }
+
+        .resume-banner {
+            background: #cce5ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #007bff;
+        }
+
+        .completed-banner {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #28a745;
+        }
+
+        .progress-bar-container {
+            margin: 20px 0;
+            background: #e9ecef;
+            border-radius: 20px;
+            overflow: hidden;
+            height: 30px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 20px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row,
+            .form-row.three-col,
+            .appraisal-result .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .content {
+                padding: 15px;
+            }
+            .stage-table {
+                font-size: 12px;
+            }
+            .stage-table th,
+            .stage-table td {
+                padding: 6px 8px;
+            }
+            .form-actions button {
+                width: 100%;
+            }
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .stage-form-section {
+                display: block !important;
+            }
+            .search-section {
+                display: none !important;
+            }
+            .form-actions {
+                display: none !important;
+            }
+            .staff-info {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link no-print">
+        <a href="index.html">Back to Dashboard</a>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Stage Form</h1>
+                <h2>Building Construction Progress Inspection</h2>
+            </div>
+            <div class="header-actions no-print">
+                <span id="formStatus" class="status-badge status-pending">Status: New</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="staffInfoSection" class="staff-info no-print">
+                <span>Logged in as: <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge role-inspector">Building Inspector</span></span>
+                <button class="logout-btn" onclick="staffLogout()">Logout</button>
+            </div>
+
+            <div id="errorDisplay" class="error hidden"></div>
+            <div id="successDisplay" class="success hidden"></div>
+
+            <!-- Search Section -->
+            <div id="searchSection" class="search-section no-print">
+                <h3>Search Approved Plan</h3>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Enter the property details to find the approved plan from the Consideration Schedule 261.</p>
+                <div class="form-row three-col">
+                    <div class="form-group">
+                        <label>Client Name <span style="color:red;">*</span></label>
+                        <input type="text" id="searchOwnerName" placeholder="Enter client name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Stand Type <span style="color:red;">*</span></label>
+                        <input type="text" id="searchStandType" placeholder="e.g., Residential, Commercial" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Location <span style="color:red;">*</span></label>
+                        <input type="text" id="searchLocation" placeholder="Physical location/address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Stand Number <span style="color:red;">*</span></label>
+                        <input type="text" id="searchStandNumber" placeholder="e.g., Stand 1234" required>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="searchApprovedPlan()">Search Plan</button>
+                <div id="searchResults" class="search-results"></div>
+            </div>
+
+            <!-- Stage Form Section -->
+            <div id="stageFormSection" class="stage-form-section">
+                <div id="resumeBanner" class="resume-banner hidden">
+                    <strong>↻ Resuming from previous session</strong><br>
+                    <span id="resumeMessage">Last saved on: [date] by [inspector]</span>
+                </div>
+
+                <div id="completedBanner" class="completed-banner hidden">
+                    <strong>✓ This form has been completed</strong><br>
+                    <span id="completedMessage">Completed on: [date] by [inspector]</span>
+                </div>
+
+                <!-- Appraisal Info -->
+                <div class="appraisal-result" id="appraisalDisplay">
+                    <h4>Plan Details</h4>
+                    <div class="info-grid">
+                        <div><strong>Appraisal Number:</strong> <span id="displayAppraisalNumber">-</span></div>
+                        <div><strong>Owner Name:</strong> <span id="displayOwnerName">-</span></div>
+                        <div><strong>Stand Type:</strong> <span id="displayStandType">-</span></div>
+                        <div><strong>Location:</strong> <span id="displayLocation">-</span></div>
+                        <div><strong>Stand Number:</strong> <span id="displayStandNumber">-</span></div>
+                        <div><strong>Approval Date:</strong> <span id="displayApprovalDate">-</span></div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%;">0% Complete</div>
+                </div>
+
+                <!-- Receipt & Inspector Info -->
+                <div class="form-row" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Receipt Number <span style="color:red;">*</span></label>
+                        <input type="text" id="receiptNumber" placeholder="Enter receipt number" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Inspector Name</label>
+                        <input type="text" id="inspectorName" readonly style="background: #f8f9fa;">
+                    </div>
+                </div>
+
+                <!-- Stages Table -->
+                <div class="table-container">
+                    <table class="stage-table" id="stageTable">
+                        <thead>
+                            <tr>
+                                <th style="width:5%;">No</th>
+                                <th style="width:45%;">Stage Description</th>
+                                <th style="width:30%;">Status</th>
+                                <th style="width:20%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stageTableBody">
+                            <!-- Dynamically loaded -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions no-print">
+                    <button class="btn-success" onclick="saveProgress()">💾 Save Progress</button>
+                    <button class="btn-primary" onclick="completeForm()">✅ Complete & Submit</button>
+                    <button class="btn-secondary" onclick="printForm()">🖨️ Print Form</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="stage-form.js"></script>
+</body>
+</html>
