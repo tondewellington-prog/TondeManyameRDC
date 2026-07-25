@@ -167,6 +167,10 @@
             font-size: 14px;
         }
 
+        .form-group input[type="text"] {
+            width: 100%;
+        }
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -203,6 +207,7 @@
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.2s;
+            width: auto;
         }
 
         .btn-success:hover {
@@ -210,55 +215,10 @@
             transform: translateY(-2px);
         }
 
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-warning:hover {
-            background: #e0a800;
-            transform: translateY(-2px);
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
+        .btn-success:disabled {
             background: #6c757d;
-            color: white;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
+            cursor: not-allowed;
+            transform: none;
         }
 
         .search-section {
@@ -317,14 +277,14 @@
         .stage-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
             margin-top: 20px;
         }
 
         .stage-table th,
         .stage-table td {
             border: 1px solid #ddd;
-            padding: 10px 12px;
+            padding: 8px 10px;
             vertical-align: middle;
             text-align: left;
         }
@@ -351,17 +311,35 @@
         }
 
         .stage-table .stage-description {
-            width: 45%;
+            width: 30%;
         }
 
         .stage-table .stage-actions {
             text-align: center;
-            width: 30%;
+            width: 22%;
         }
 
         .stage-table .stage-status {
             text-align: center;
+            width: 13%;
+        }
+
+        .stage-table .stage-receipt {
+            text-align: center;
             width: 20%;
+        }
+
+        .stage-table .stage-receipt input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .stage-table .stage-receipt input:focus {
+            border-color: #1e3c72;
+            outline: none;
         }
 
         .stage-btn {
@@ -397,6 +375,12 @@
             transform: translateY(-1px);
         }
 
+        .stage-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
@@ -428,8 +412,8 @@
         .form-actions {
             margin-top: 30px;
             display: flex;
-            gap: 15px;
             justify-content: center;
+            gap: 15px;
             flex-wrap: wrap;
         }
 
@@ -476,6 +460,10 @@
             font-size: 13px;
         }
 
+        .required-star {
+            color: red;
+        }
+
         @media (max-width: 768px) {
             .form-row,
             .form-row.three-col,
@@ -486,14 +474,23 @@
                 padding: 15px;
             }
             .stage-table {
-                font-size: 12px;
+                font-size: 11px;
             }
             .stage-table th,
             .stage-table td {
-                padding: 6px 8px;
+                padding: 4px 6px;
             }
             .form-actions button {
                 width: 100%;
+            }
+            .stage-table .stage-description {
+                width: 20%;
+            }
+            .stage-table .stage-actions {
+                width: 25%;
+            }
+            .stage-table .stage-receipt {
+                width: 25%;
             }
         }
 
@@ -547,21 +544,21 @@
                 <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Enter the property details to find the approved plan from the Consideration Schedule 261.</p>
                 <div class="form-row three-col">
                     <div class="form-group">
-                        <label>Client Name <span style="color:red;">*</span></label>
+                        <label>Client Name <span class="required-star">*</span></label>
                         <input type="text" id="searchOwnerName" placeholder="Enter client name" required>
                     </div>
                     <div class="form-group">
-                        <label>Stand Type <span style="color:red;">*</span></label>
+                        <label>Stand Type <span class="required-star">*</span></label>
                         <input type="text" id="searchStandType" placeholder="e.g., Residential, Commercial" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Location <span style="color:red;">*</span></label>
+                        <label>Location <span class="required-star">*</span></label>
                         <input type="text" id="searchLocation" placeholder="Physical location/address" required>
                     </div>
                     <div class="form-group">
-                        <label>Stand Number <span style="color:red;">*</span></label>
+                        <label>Stand Number <span class="required-star">*</span></label>
                         <input type="text" id="searchStandNumber" placeholder="e.g., Stand 1234" required>
                     </div>
                 </div>
@@ -572,12 +569,12 @@
             <!-- Stage Form Section -->
             <div id="stageFormSection" class="stage-form-section">
                 <div id="resumeBanner" class="resume-banner hidden">
-                    <strong>↻ Resuming from previous session</strong><br>
+                    <strong>Resuming from previous session</strong><br>
                     <span id="resumeMessage">Last saved on: [date] by [inspector]</span>
                 </div>
 
                 <div id="completedBanner" class="completed-banner hidden">
-                    <strong>✓ This form has been completed</strong><br>
+                    <strong>This form has been completed</strong><br>
                     <span id="completedMessage">Completed on: [date] by [inspector]</span>
                 </div>
 
@@ -599,27 +596,16 @@
                     <div class="progress-bar" id="progressBar" style="width: 0%;">0% Complete</div>
                 </div>
 
-                <!-- Receipt & Inspector Info -->
-                <div class="form-row" style="margin-top: 20px;">
-                    <div class="form-group">
-                        <label>Receipt Number <span style="color:red;">*</span></label>
-                        <input type="text" id="receiptNumber" placeholder="Enter receipt number" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Inspector Name</label>
-                        <input type="text" id="inspectorName" readonly style="background: #f8f9fa;">
-                    </div>
-                </div>
-
                 <!-- Stages Table -->
                 <div class="table-container">
                     <table class="stage-table" id="stageTable">
                         <thead>
                             <tr>
                                 <th style="width:5%;">No</th>
-                                <th style="width:45%;">Stage Description</th>
-                                <th style="width:30%;">Status</th>
-                                <th style="width:20%;">Action</th>
+                                <th style="width:30%;">Stage Description</th>
+                                <th style="width:22%;">Status</th>
+                                <th style="width:20%;">Receipt Number</th>
+                                <th style="width:13%;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="stageTableBody">
@@ -628,11 +614,9 @@
                     </table>
                 </div>
 
-                <!-- Form Actions -->
+                <!-- Form Actions - Only Save Button -->
                 <div class="form-actions no-print">
-                    <button class="btn-success" onclick="saveProgress()">💾 Save Progress</button>
-                    <button class="btn-primary" onclick="completeForm()">✅ Complete & Submit</button>
-                    <button class="btn-secondary" onclick="printForm()">🖨️ Print Form</button>
+                    <button class="btn-success" id="saveProgressBtn" onclick="saveProgress()">Save Progress</button>
                 </div>
             </div>
         </div>
