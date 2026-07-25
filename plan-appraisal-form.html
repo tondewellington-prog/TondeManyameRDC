@@ -162,6 +162,10 @@
             font-size: 14px;
         }
 
+        .form-group input[type="file"] {
+            padding: 8px;
+        }
+
         .form-group small {
             display: block;
             margin-top: 4px;
@@ -512,6 +516,25 @@
             background: #0069d9;
         }
 
+        .file-name {
+            font-size: 12px;
+            color: #28a745;
+            margin-top: 4px;
+        }
+
+        .file-upload-group {
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .file-upload-group label {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+        }
+
         @media (max-width: 768px) {
             .form-row,
             .form-row.three-col,
@@ -610,13 +633,47 @@
                         <small>This will be used in the Consideration Schedule 261</small>
                     </div>
                 </div>
+
+                <!-- File Upload Section -->
+                <h3 style="margin: 25px 0 15px 0; color: #1e3c72;">Supporting Documents</h3>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Upload Building Plan (PDF) <span style="color:red;">*</span></label>
-                        <input type="file" id="planFileInput" accept=".pdf" onchange="handleFileSelect(event)" required>
-                        <small id="fileNameDisplay" style="color:#666;font-size:12px;">No file selected</small>
+                    <div class="form-group file-upload-group">
+                        <label>Building Plan (PDF) <span style="color:red;">*</span></label>
+                        <input type="file" id="planFileInput" accept=".pdf" onchange="handleFileSelect(event, 'planFileDisplay')" required>
+                        <small id="planFileDisplay" class="file-name">No file selected</small>
+                    </div>
+                    <div class="form-group file-upload-group">
+                        <label>Lease Agreement (PDF) <span style="color:red;">*</span></label>
+                        <input type="file" id="leaseFileInput" accept=".pdf" onchange="handleFileSelect(event, 'leaseFileDisplay')" required>
+                        <small id="leaseFileDisplay" class="file-name">No file selected</small>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group file-upload-group">
+                        <label>Architecture Certificate (PDF) <span style="color:red;">*</span></label>
+                        <input type="file" id="architectureCertInput" accept=".pdf" onchange="handleFileSelect(event, 'architectureCertDisplay')" required>
+                        <small id="architectureCertDisplay" class="file-name">No file selected</small>
+                    </div>
+                    <div class="form-group file-upload-group">
+                        <label>Receipt Architecture (PDF) <span style="color:red;">*</span></label>
+                        <input type="file" id="receiptArchInput" accept=".pdf" onchange="handleFileSelect(event, 'receiptArchDisplay')" required>
+                        <small id="receiptArchDisplay" class="file-name">No file selected</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group file-upload-group">
+                        <label>Health Form (PDF) <span style="color:red;">*</span></label>
+                        <input type="file" id="healthFormInput" accept=".pdf" onchange="handleFileSelect(event, 'healthFormDisplay')" required>
+                        <small id="healthFormDisplay" class="file-name">No file selected</small>
+                    </div>
+                    <div class="form-group file-upload-group">
+                        <label>&nbsp;</label>
+                        <div style="padding-top: 8px; color: #666; font-size: 13px;">
+                            <em>All documents must be in PDF format</em>
+                        </div>
+                    </div>
+                </div>
+
                 <button class="btn-primary" onclick="startAppraisal()">Start Appraisal</button>
             </div>
 
@@ -633,7 +690,11 @@
                         <div><strong>Contact:</strong> <span id="displayContact"></span></div>
                         <div><strong>Sex:</strong> <span id="displaySex"></span></div>
                         <div><strong>Receipt Number:</strong> <span id="displayReceiptNumber"></span></div>
-                        <div><strong>Plan File:</strong> <span id="displayPlanFile"></span></div>
+                        <div><strong>Building Plan:</strong> <span id="displayPlanFile"></span></div>
+                        <div><strong>Lease Agreement:</strong> <span id="displayLeaseFile"></span></div>
+                        <div><strong>Architecture Certificate:</strong> <span id="displayArchCertFile"></span></div>
+                        <div><strong>Receipt Architecture:</strong> <span id="displayReceiptArchFile"></span></div>
+                        <div><strong>Health Form:</strong> <span id="displayHealthFormFile"></span></div>
                     </div>
                 </div>
 
