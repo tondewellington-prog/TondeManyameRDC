@@ -19,6 +19,7 @@ var appraisalId = null;
 var stageItems = [];
 var isCompleted = false;
 
+// ============================================
 // STAGE DATA
 // ============================================
 var STAGES = [
@@ -113,7 +114,7 @@ async function checkStaffLogin() {
     if (!currentStaffUser || !currentStaffName || !currentStaffUserId) {
         var infoSection = document.getElementById('staffInfoSection');
         if (infoSection) {
-            infoSection.innerHTML = '<div class="error">Please login first!!. <a href="index.html">Go to Login</a></div>';
+            infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
         }
         return false;
     }
@@ -375,7 +376,7 @@ async function loadStageItems(formId) {
 }
 
 // ============================================
-// RENDER STAGE TABLE - NO AUTO-FILL
+// RENDER STAGE TABLE - MANUAL SAVE ONLY
 // ============================================
 function renderStageTable() {
     var tbody = document.getElementById('stageTableBody');
@@ -385,8 +386,6 @@ function renderStageTable() {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;">No stages found.</td></tr>';
         return;
     }
-
-    var isDisabled = isCompleted || false;
 
     stageItems.forEach(function(item, index) {
         var row = document.createElement('tr');
@@ -411,43 +410,58 @@ function renderStageTable() {
         statusCell.innerHTML = '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>';
         row.appendChild(statusCell);
 
-        // Receipt Number Input - ONLY from Supabase, NO auto-fill
+        // Receipt Number Input
         var receiptCell = document.createElement('td');
         receiptCell.className = 'stage-receipt';
         var receiptInput = document.createElement('input');
         receiptInput.type = 'text';
         receiptInput.placeholder = 'Enter receipt no...';
         
-        // ONLY show receipt if it exists in Supabase for THIS stage
+        // Show the receipt if it exists (from Supabase)
         if (item.receipt_number && item.receipt_number.trim() !== '') {
             receiptInput.value = item.receipt_number;
-            console.log('Stage ' + item.stage_number + ' has its own receipt:', item.receipt_number);
         } else {
             receiptInput.value = '';
-            console.log('Stage ' + item.stage_number + ' has NO receipt in Supabase');
         }
         
-        // Lock the receipt input if the stage is already inspected (Yes/No/N/A)
-        var isReceiptLocked = isCompleted || (item.status !== 'pending');
+        // ============================================
+        // LOCKING LOGIC:
+        // Only grey/lock if the stage has a receipt in Supabase
+        // (meaning it was saved already)
+        // ============================================
+        var isReceiptLocked = false;
+        
+        // If form is completed, lock everything
+        if (isCompleted) {
+            isReceiptLocked = true;
+        }
+        // If stage has a receipt saved in Supabase, lock it
+        else if (item.receipt_number && item.receipt_number.trim() !== '') {
+            isReceiptLocked = true;
+        }
+        
         receiptInput.disabled = isReceiptLocked;
         
         if (isReceiptLocked) {
             receiptInput.style.background = '#e9ecef';
             receiptInput.style.cursor = 'not-allowed';
+        } else {
+            receiptInput.style.background = 'white';
+            receiptInput.style.cursor = 'text';
         }
         
         receiptInput.dataset.stageIndex = index;
         receiptInput.className = 'receipt-input';
         
-        // When user types a receipt, save it immediately to Supabase
+        // ============================================
+        // NO AUTO-SAVE - Just update the local array
+        // ============================================
         receiptInput.oninput = function() {
             var idx = parseInt(this.dataset.stageIndex);
             if (!isNaN(idx) && stageItems[idx]) {
-                var receiptValue = this.value;
-                stageItems[idx].receipt_number = receiptValue;
-                console.log('Receipt entered for stage ' + stageItems[idx].stage_number + ': ' + receiptValue);
-                // Auto-save the receipt to database immediately
-                autoSaveReceipt(stageItems[idx].id, receiptValue);
+                stageItems[idx].receipt_number = this.value;
+                console.log('Receipt entered for stage ' + stageItems[idx].stage_number + ': ' + this.value);
+                // Only update the button state, don't save to database
                 updateSaveButtonState();
             }
         };
@@ -458,6 +472,8 @@ function renderStageTable() {
         // Actions
         var actionCell = document.createElement('td');
         actionCell.className = 'stage-actions';
+
+        var isDisabled = isCompleted || false;
 
         actionCell.innerHTML = `
             <button class="stage-btn ${item.status === 'yes' ? 'active-yes' : ''}" 
@@ -485,7 +501,7 @@ function renderStageTable() {
 }
 
 // ============================================
-// SET STAGE STATUS - NO AUTO-FILL
+// SET STAGE STATUS - NO AUTO-SAVE
 // ============================================
 async function setStageStatus(index, status) {
     if (isCompleted) {
@@ -499,7 +515,7 @@ async function setStageStatus(index, status) {
 
         var newStatus = item.status === status ? 'pending' : status;
 
-        // Update status in database
+        // Update status in database only
         var { error: updateError } = await supabaseClient
             .from('stage_items')
             .update({ 
@@ -512,10 +528,10 @@ async function setStageStatus(index, status) {
 
         item.status = newStatus;
         
-        // If status is set back to pending, clear the receipt number
+        // If status is set back to pending, clear the receipt number from the UI only
+        // The receipt in the database will be cleared when user saves
         if (newStatus === 'pending') {
             item.receipt_number = '';
-            await autoSaveReceipt(item.id, null);
         }
         
         renderStageTable();
@@ -525,34 +541,6 @@ async function setStageStatus(index, status) {
     } catch (error) {
         console.error('Error setting stage status:', error);
         showError('Error updating stage: ' + error.message);
-    }
-}
-
-// ============================================
-// AUTO-SAVE RECEIPT TO DATABASE
-// ============================================
-async function autoSaveReceipt(stageItemId, receiptNumber) {
-    if (!stageItemId) return;
-    
-    try {
-        initSupabase();
-        if (!supabaseClient) return;
-        
-        var { error: updateError } = await supabaseClient
-            .from('stage_items')
-            .update({
-                receipt_number: receiptNumber || null,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', stageItemId);
-            
-        if (updateError) {
-            console.error('Error auto-saving receipt:', updateError);
-        } else {
-            console.log('Receipt auto-saved for stage item:', stageItemId, 'Receipt:', receiptNumber);
-        }
-    } catch (error) {
-        console.error('Auto-save receipt error:', error);
     }
 }
 
@@ -615,7 +603,7 @@ function updateSaveButtonState() {
 }
 
 // ============================================
-// SAVE PROGRESS
+// SAVE PROGRESS - MANUAL SAVE ONLY
 // ============================================
 async function saveProgress() {
     if (isCompleted) {
@@ -685,12 +673,12 @@ async function saveProgress() {
             }]);
 
         hideLoading();
-        showSuccess('Progress saved successfully! You can continue later.');
+        showSuccess('Progress saved successfully! Receipts are now locked.');
 
         document.getElementById('formStatus').textContent = 'Status: In Progress';
         document.getElementById('formStatus').className = 'status-badge status-pending';
 
-        // Refresh the table to lock in the receipts
+        // Refresh the table to lock the receipts
         renderStageTable();
 
     } catch (error) {
