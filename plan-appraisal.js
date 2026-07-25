@@ -15,8 +15,18 @@ var currentStaffUserId = sessionStorage.getItem('staffUserId');
 var currentStaffRole = 'building_inspector';
 
 var appraisalId = null;
-var planFileUrl = null;
-var planFilePath = null;
+var uploadedFiles = {
+    planFileUrl: null,
+    planFilePath: null,
+    leaseFileUrl: null,
+    leaseFilePath: null,
+    architectureCertUrl: null,
+    architectureCertPath: null,
+    receiptArchUrl: null,
+    receiptArchPath: null,
+    healthFormUrl: null,
+    healthFormPath: null
+};
 
 // ============================================
 // QUESTIONS DATA
@@ -257,15 +267,15 @@ function staffLogout() {
 // ============================================
 // FILE UPLOAD HANDLING
 // ============================================
-function handleFileSelect(event) {
+function handleFileSelect(event, displayId) {
     var file = event.target.files[0];
     if (file) {
-        document.getElementById('fileNameDisplay').textContent = file.name;
+        document.getElementById(displayId).textContent = file.name;
     }
 }
 
 // ============================================
-// START APPRAISAL - UPDATED WITH CONTACT, SEX, RECEIPT NUMBER
+// START APPRAISAL - UPDATED WITH ALL FILES
 // ============================================
 async function startAppraisal() {
     var ownerName = document.getElementById('ownerName').value.trim();
@@ -275,8 +285,15 @@ async function startAppraisal() {
     var contact = document.getElementById('contact').value.trim();
     var sex = document.getElementById('sex').value.trim();
     var receiptNumber = document.getElementById('receiptNumber').value.trim();
-    var fileInput = document.getElementById('planFileInput');
+    
+    // Get all file inputs
+    var planFileInput = document.getElementById('planFileInput');
+    var leaseFileInput = document.getElementById('leaseFileInput');
+    var architectureCertInput = document.getElementById('architectureCertInput');
+    var receiptArchInput = document.getElementById('receiptArchInput');
+    var healthFormInput = document.getElementById('healthFormInput');
 
+    // Validate customer details
     if (!ownerName || !zone || !location || !standNumber) {
         showError('Please fill in all customer details.');
         return;
@@ -297,15 +314,46 @@ async function startAppraisal() {
         return;
     }
 
-    if (!fileInput.files || fileInput.files.length === 0) {
+    // Validate all files are selected
+    if (!planFileInput.files || planFileInput.files.length === 0) {
         showError('Please upload the building plan (PDF).');
         return;
     }
 
-    var file = fileInput.files[0];
-    if (file.type !== 'application/pdf') {
-        showError('Please upload a PDF file.');
+    if (!leaseFileInput.files || leaseFileInput.files.length === 0) {
+        showError('Please upload the lease agreement (PDF).');
         return;
+    }
+
+    if (!architectureCertInput.files || architectureCertInput.files.length === 0) {
+        showError('Please upload the architecture certificate (PDF).');
+        return;
+    }
+
+    if (!receiptArchInput.files || receiptArchInput.files.length === 0) {
+        showError('Please upload the receipt architecture (PDF).');
+        return;
+    }
+
+    if (!healthFormInput.files || healthFormInput.files.length === 0) {
+        showError('Please upload the health form (PDF).');
+        return;
+    }
+
+    // Validate all files are PDF
+    var files = [
+        planFileInput.files[0],
+        leaseFileInput.files[0],
+        architectureCertInput.files[0],
+        receiptArchInput.files[0],
+        healthFormInput.files[0]
+    ];
+
+    for (var i = 0; i < files.length; i++) {
+        if (files[i].type !== 'application/pdf') {
+            showError('All files must be PDF format. Please check: ' + files[i].name);
+            return;
+        }
     }
 
     initSupabase();
@@ -315,30 +363,64 @@ async function startAppraisal() {
     }
 
     hideError();
-    showLoading('Uploading plan and creating appraisal...');
+    showLoading('Uploading files and creating appraisal...');
 
     try {
         var appraisalNumber = 'APR-' + Date.now() + '-' + Math.floor(Math.random() * 900 + 100);
-        var filePath = 'plan_appraisals/' + appraisalNumber + '_' + file.name;
+        
+        // Upload all files
+        var planFile = planFileInput.files[0];
+        var leaseFile = leaseFileInput.files[0];
+        var archCertFile = architectureCertInput.files[0];
+        var receiptArchFile = receiptArchInput.files[0];
+        var healthFormFile = healthFormInput.files[0];
 
-        var { data: uploadData, error: uploadError } = await supabaseClient
+        // Upload Building Plan
+        var planPath = 'plan_appraisals/' + appraisalNumber + '_plan_' + planFile.name;
+        var { data: planUpload, error: planError } = await supabaseClient
             .storage
             .from('plan-uploads')
-            .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false
-            });
+            .upload(planPath, planFile, { cacheControl: '3600', upsert: false });
+        if (planError) throw planError;
+        var { data: planUrlData } = supabaseClient.storage.from('plan-uploads').getPublicUrl(planPath);
 
-        if (uploadError) throw uploadError;
-
-        var { data: publicUrlData } = supabaseClient
+        // Upload Lease Agreement
+        var leasePath = 'plan_appraisals/' + appraisalNumber + '_lease_' + leaseFile.name;
+        var { data: leaseUpload, error: leaseError } = await supabaseClient
             .storage
             .from('plan-uploads')
-            .getPublicUrl(filePath);
+            .upload(leasePath, leaseFile, { cacheControl: '3600', upsert: false });
+        if (leaseError) throw leaseError;
+        var { data: leaseUrlData } = supabaseClient.storage.from('plan-uploads').getPublicUrl(leasePath);
 
-        planFileUrl = publicUrlData.publicUrl;
-        planFilePath = filePath;
+        // Upload Architecture Certificate
+        var archCertPath = 'plan_appraisals/' + appraisalNumber + '_archcert_' + archCertFile.name;
+        var { data: archCertUpload, error: archCertError } = await supabaseClient
+            .storage
+            .from('plan-uploads')
+            .upload(archCertPath, archCertFile, { cacheControl: '3600', upsert: false });
+        if (archCertError) throw archCertError;
+        var { data: archCertUrlData } = supabaseClient.storage.from('plan-uploads').getPublicUrl(archCertPath);
 
+        // Upload Receipt Architecture
+        var receiptArchPath = 'plan_appraisals/' + appraisalNumber + '_receiptarch_' + receiptArchFile.name;
+        var { data: receiptArchUpload, error: receiptArchError } = await supabaseClient
+            .storage
+            .from('plan-uploads')
+            .upload(receiptArchPath, receiptArchFile, { cacheControl: '3600', upsert: false });
+        if (receiptArchError) throw receiptArchError;
+        var { data: receiptArchUrlData } = supabaseClient.storage.from('plan-uploads').getPublicUrl(receiptArchPath);
+
+        // Upload Health Form
+        var healthFormPath = 'plan_appraisals/' + appraisalNumber + '_health_' + healthFormFile.name;
+        var { data: healthFormUpload, error: healthFormError } = await supabaseClient
+            .storage
+            .from('plan-uploads')
+            .upload(healthFormPath, healthFormFile, { cacheControl: '3600', upsert: false });
+        if (healthFormError) throw healthFormError;
+        var { data: healthFormUrlData } = supabaseClient.storage.from('plan-uploads').getPublicUrl(healthFormPath);
+
+        // Save to database
         var { data: appraisalData, error: insertError } = await supabaseClient
             .from('plan_appraisals')
             .insert([{
@@ -350,8 +432,16 @@ async function startAppraisal() {
                 contact: contact,
                 sex: sex,
                 receipt_number: receiptNumber,
-                plan_file_url: planFileUrl,
-                plan_file_path: filePath,
+                plan_file_url: planUrlData.publicUrl,
+                plan_file_path: planPath,
+                lease_file_url: leaseUrlData.publicUrl,
+                lease_file_path: leasePath,
+                architecture_cert_url: archCertUrlData.publicUrl,
+                architecture_cert_path: archCertPath,
+                receipt_arch_url: receiptArchUrlData.publicUrl,
+                receipt_arch_path: receiptArchPath,
+                health_form_url: healthFormUrlData.publicUrl,
+                health_form_path: healthFormPath,
                 status: 'building_inspector',
                 answers: {},
                 comments: {},
@@ -368,6 +458,7 @@ async function startAppraisal() {
         document.getElementById('stepDetails').classList.add('hidden');
         document.getElementById('stepAppraisal').classList.remove('hidden');
 
+        // Display customer details
         document.getElementById('displayOwnerName').textContent = ownerName;
         document.getElementById('displayZone').textContent = zone;
         document.getElementById('displayLocation').textContent = location;
@@ -375,14 +466,20 @@ async function startAppraisal() {
         document.getElementById('displayContact').textContent = contact;
         document.getElementById('displaySex').textContent = sex;
         document.getElementById('displayReceiptNumber').textContent = receiptNumber;
-        document.getElementById('displayPlanFile').textContent = file.name;
+        
+        // Display file names
+        document.getElementById('displayPlanFile').textContent = planFile.name;
+        document.getElementById('displayLeaseFile').textContent = leaseFile.name;
+        document.getElementById('displayArchCertFile').textContent = archCertFile.name;
+        document.getElementById('displayReceiptArchFile').textContent = receiptArchFile.name;
+        document.getElementById('displayHealthFormFile').textContent = healthFormFile.name;
         document.getElementById('displayAppraisalNumber').textContent = appraisalNumber;
 
         renderAppraisalTable();
         initializeCanvases();
 
         hideLoading();
-        showSuccess('Appraisal created successfully!');
+        showSuccess('Appraisal created successfully! All documents uploaded.');
 
     } catch (error) {
         console.error('Error:', error);
@@ -742,7 +839,7 @@ function updateSignatureStatus(id) {
 }
 
 // ============================================
-// POPULATE CONSIDERATION SCHEDULE - WITH SEX AND RECEIPT NUMBER
+// POPULATE CONSIDERATION SCHEDULE - FIXED: ONLY USES CLIENT CONTACT
 // ============================================
 async function populateConsiderationSchedule(appraisalId, appraisalData) {
     try {
@@ -771,21 +868,26 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
         var referenceNumber = 'CS-' + year + '-' + month + '-' + randomNum;
 
         // ============================================
-        // FIX: Use client data from appraisal
+        // FIX: ONLY use the client's contact from the appraisal
+        // DO NOT fall back to created_by_email
         // ============================================
+        
+        // Contact - ONLY from the appraisal form
         var clientContact = appraisalData.contact || 'N/A';
-        if (clientContact === 'N/A' || clientContact === '' || clientContact === null) {
-            clientContact = appraisalData.created_by_email || 'N/A';
+        
+        console.log('Client Contact from appraisal:', clientContact);
+        console.log('DO NOT use created_by_email:', appraisalData.created_by_email);
+
+        // Sex - from the appraisal form
+        var clientSex = 'N/A';
+        if (appraisalData.sex && appraisalData.sex !== '' && appraisalData.sex !== 'N/A' && appraisalData.sex !== 'null') {
+            clientSex = appraisalData.sex;
         }
 
-        var clientSex = appraisalData.sex || 'N/A';
-        if (clientSex === 'N/A' || clientSex === '' || clientSex === null) {
-            clientSex = 'N/A';
-        }
-
-        var clientReceipt = appraisalData.receipt_number || 'N/A';
-        if (clientReceipt === 'N/A' || clientReceipt === '' || clientReceipt === null) {
-            clientReceipt = 'N/A';
+        // Receipt Number - from the appraisal form
+        var clientReceipt = 'N/A';
+        if (appraisalData.receipt_number && appraisalData.receipt_number !== '' && appraisalData.receipt_number !== 'N/A' && appraisalData.receipt_number !== 'null') {
+            clientReceipt = appraisalData.receipt_number;
         }
 
         console.log('Appraisal Data for Schedule:', {
@@ -809,12 +911,12 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
             date_of_approval: now.toISOString().split('T')[0],
             remarks: 'Approved - Ready for stamp',
             status: 'pending',
-            contact: clientContact,
+            contact: clientContact,  // ONLY the client's contact
             sex: clientSex,
             payments: clientReceipt
         };
 
-        console.log('Schedule Data being saved:', scheduleData);
+        console.log('Schedule Data being saved (contact from client only):', scheduleData);
 
         // Insert into consideration_schedule
         var { data, error } = await supabaseClient
@@ -827,7 +929,7 @@ async function populateConsiderationSchedule(appraisalId, appraisalData) {
             throw error;
         }
 
-        console.log('Consideration schedule populated successfully:', data);
+        console.log('Consideration schedule populated successfully with client contact:', clientContact);
         return data ? data[0] : null;
 
     } catch (error) {
@@ -1106,7 +1208,7 @@ function showLoading(msg) {
 function hideLoading() {}
 
 // ============================================
-// LOAD EXISTING APPRAISAL - UPDATED WITH SEX AND RECEIPT
+// LOAD EXISTING APPRAISAL - UPDATED WITH ALL FILES
 // ============================================
 function checkForTracking() {
     var urlParams = new URLSearchParams(window.location.search);
@@ -1142,6 +1244,7 @@ async function loadAppraisalForTracking(id) {
         document.getElementById('stepDetails').classList.add('hidden');
         document.getElementById('stepAppraisal').classList.remove('hidden');
 
+        // Display customer details
         document.getElementById('displayOwnerName').textContent = appraisal.owner_name;
         document.getElementById('displayZone').textContent = appraisal.zone || '-';
         document.getElementById('displayLocation').textContent = appraisal.location || '-';
@@ -1149,7 +1252,14 @@ async function loadAppraisalForTracking(id) {
         document.getElementById('displayContact').textContent = appraisal.contact || '-';
         document.getElementById('displaySex').textContent = appraisal.sex || '-';
         document.getElementById('displayReceiptNumber').textContent = appraisal.receipt_number || '-';
-        document.getElementById('displayPlanFile').textContent = appraisal.plan_file_url || '-';
+        
+        // Display file names
+        document.getElementById('displayPlanFile').textContent = appraisal.plan_file_url ? 'Uploaded' : 'Not uploaded';
+        document.getElementById('displayLeaseFile').textContent = appraisal.lease_file_url ? 'Uploaded' : 'Not uploaded';
+        document.getElementById('displayArchCertFile').textContent = appraisal.architecture_cert_url ? 'Uploaded' : 'Not uploaded';
+        document.getElementById('displayReceiptArchFile').textContent = appraisal.receipt_arch_url ? 'Uploaded' : 'Not uploaded';
+        document.getElementById('displayHealthFormFile').textContent = appraisal.health_form_url ? 'Uploaded' : 'Not uploaded';
+        
         document.getElementById('displayAppraisalNumber').textContent = appraisal.appraisal_number;
 
         renderAppraisalTable();
