@@ -113,7 +113,7 @@ async function checkStaffLogin() {
     if (!currentStaffUser || !currentStaffName || !currentStaffUserId) {
         var infoSection = document.getElementById('staffInfoSection');
         if (infoSection) {
-            infoSection.innerHTML = '<div class="error">Please login first. <a href="index.html">Go to Login</a></div>';
+            infoSection.innerHTML = '<div class="error">Please login first!!. <a href="index.html">Go to Login</a></div>';
         }
         return false;
     }
