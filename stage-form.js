@@ -389,7 +389,15 @@ function renderStageTable() {
 
     var isDisabled = isCompleted || false;
 
-    stageItems.forEach(function(item) {
+    // Find the last saved receipt from any completed stage
+    var lastReceiptNumber = '';
+    for (var i = 0; i < stageItems.length; i++) {
+        if (stageItems[i].receipt_number && stageItems[i].receipt_number.trim() !== '') {
+            lastReceiptNumber = stageItems[i].receipt_number;
+        }
+    }
+
+    stageItems.forEach(function(item, index) {
         var row = document.createElement('tr');
 
         // Stage Number
@@ -418,10 +426,29 @@ function renderStageTable() {
         var receiptInput = document.createElement('input');
         receiptInput.type = 'text';
         receiptInput.placeholder = 'Enter receipt no...';
-        receiptInput.value = item.receipt_number || '';
-        receiptInput.disabled = isDisabled;
-        receiptInput.dataset.stageId = item.id;
-        receiptInput.dataset.stageIndex = stageItems.indexOf(item);
+        
+        // If the stage has a receipt, show it
+        if (item.receipt_number && item.receipt_number.trim() !== '') {
+            receiptInput.value = item.receipt_number;
+        } 
+        // If this stage is pending and we have a last receipt, auto-fill
+        else if (item.status === 'pending' && lastReceiptNumber) {
+            receiptInput.value = lastReceiptNumber;
+            item.receipt_number = lastReceiptNumber;
+        }
+        
+        // Lock the receipt input if the stage already has a status (Yes/No/N/A) with a receipt
+        // This prevents editing of previously completed stages
+        var isReceiptLocked = isCompleted || (item.status !== 'pending' && item.receipt_number && item.receipt_number.trim() !== '');
+        receiptInput.disabled = isReceiptLocked;
+        
+        // Add visual indicator for locked receipts
+        if (isReceiptLocked) {
+            receiptInput.style.background = '#e9ecef';
+            receiptInput.style.cursor = 'not-allowed';
+        }
+        
+        receiptInput.dataset.stageIndex = index;
         receiptInput.className = 'receipt-input';
         receiptInput.oninput = function() {
             var idx = parseInt(this.dataset.stageIndex);
@@ -440,17 +467,17 @@ function renderStageTable() {
 
         actionCell.innerHTML = `
             <button class="stage-btn ${item.status === 'yes' ? 'active-yes' : ''}" 
-                    onclick="setStageStatus(${stageItems.indexOf(item)}, 'yes')" 
+                    onclick="setStageStatus(${index}, 'yes')" 
                     ${isDisabled ? 'disabled' : ''}>
                 Yes
             </button>
             <button class="stage-btn ${item.status === 'no' ? 'active-no' : ''}" 
-                    onclick="setStageStatus(${stageItems.indexOf(item)}, 'no')" 
+                    onclick="setStageStatus(${index}, 'no')" 
                     ${isDisabled ? 'disabled' : ''}>
                 No
             </button>
             <button class="stage-btn ${item.status === 'n/a' ? 'active-na' : ''}" 
-                    onclick="setStageStatus(${stageItems.indexOf(item)}, 'n/a')" 
+                    onclick="setStageStatus(${index}, 'n/a')" 
                     ${isDisabled ? 'disabled' : ''}>
                 N/A
             </button>
@@ -478,6 +505,21 @@ async function setStageStatus(index, status) {
 
         var newStatus = item.status === status ? 'pending' : status;
 
+        // If marking a stage, auto-fill receipt if empty
+        if (newStatus !== 'pending') {
+            // Find the last entered receipt number from any stage
+            var lastReceipt = '';
+            for (var i = 0; i < stageItems.length; i++) {
+                if (stageItems[i].receipt_number && stageItems[i].receipt_number.trim() !== '') {
+                    lastReceipt = stageItems[i].receipt_number;
+                }
+            }
+            
+            if (!item.receipt_number || item.receipt_number.trim() === '') {
+                item.receipt_number = lastReceipt;
+            }
+        }
+
         var { error: updateError } = await supabaseClient
             .from('stage_items')
             .update({ 
@@ -493,13 +535,6 @@ async function setStageStatus(index, status) {
         // If status is set back to pending, clear the receipt number
         if (newStatus === 'pending') {
             item.receipt_number = '';
-            // Update the input field value
-            var inputs = document.querySelectorAll('.receipt-input');
-            inputs.forEach(function(input) {
-                if (parseInt(input.dataset.stageIndex) === index) {
-                    input.value = '';
-                }
-            });
         }
         
         renderStageTable();
@@ -531,7 +566,7 @@ function updateProgressBar() {
 }
 
 // ============================================
-// UPDATE SAVE BUTTON STATE - FIXED
+// UPDATE SAVE BUTTON STATE
 // ============================================
 function updateSaveButtonState() {
     var saveBtn = document.getElementById('saveProgressBtn');
@@ -542,8 +577,7 @@ function updateSaveButtonState() {
         return;
     }
 
-    // ONLY check stages that have been marked (Yes/No/N/A)
-    // Pending stages do NOT require receipt numbers
+    // ONLY check stages that have been marked (Yes/No/N/A) AND are NOT locked (newly marked by current user)
     var markedStages = stageItems.filter(function(item) {
         return item.status !== 'pending';
     });
@@ -556,18 +590,20 @@ function updateSaveButtonState() {
     }
 
     // Check if any marked stage is missing a receipt number
+    // This includes both new and existing marked stages
     var missingReceipt = markedStages.some(function(item) {
         return !item.receipt_number || item.receipt_number.trim() === '';
     });
 
     saveBtn.disabled = missingReceipt;
     console.log('Save button state:', saveBtn.disabled ? 'DISABLED' : 'ENABLED');
-    console.log('Marked stages:', markedStages.length);
-    console.log('Missing receipt:', missingReceipt);
+    console.log('Marked stages with missing receipts:', markedStages.filter(function(item) {
+        return !item.receipt_number || item.receipt_number.trim() === '';
+    }).length);
 }
 
 // ============================================
-// SAVE PROGRESS - FIXED
+// SAVE PROGRESS
 // ============================================
 async function saveProgress() {
     if (isCompleted) {
@@ -575,12 +611,11 @@ async function saveProgress() {
         return;
     }
 
-    // ONLY check stages that have been marked (Yes/No/N/A)
+    // Check all marked stages have receipt numbers
     var markedStages = stageItems.filter(function(item) {
         return item.status !== 'pending';
     });
 
-    // Check if any marked stage is missing a receipt number
     var missingReceipt = markedStages.some(function(item) {
         return !item.receipt_number || item.receipt_number.trim() === '';
     });
@@ -642,6 +677,9 @@ async function saveProgress() {
 
         document.getElementById('formStatus').textContent = 'Status: In Progress';
         document.getElementById('formStatus').className = 'status-badge status-pending';
+
+        // Refresh the table to lock in the receipts
+        renderStageTable();
 
     } catch (error) {
         console.error('Save error:', error);
