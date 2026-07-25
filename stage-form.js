@@ -417,26 +417,17 @@ function renderStageTable() {
         receiptInput.type = 'text';
         receiptInput.placeholder = 'Enter receipt no...';
         
-        // Show the receipt if it exists (from Supabase)
         if (item.receipt_number && item.receipt_number.trim() !== '') {
             receiptInput.value = item.receipt_number;
         } else {
             receiptInput.value = '';
         }
         
-        // ============================================
-        // LOCKING LOGIC:
-        // Only grey/lock if the stage has a receipt in Supabase
-        // (meaning it was saved already)
-        // ============================================
         var isReceiptLocked = false;
         
-        // If form is completed, lock everything
         if (isCompleted) {
             isReceiptLocked = true;
-        }
-        // If stage has a receipt saved in Supabase, lock it
-        else if (item.receipt_number && item.receipt_number.trim() !== '') {
+        } else if (item.receipt_number && item.receipt_number.trim() !== '') {
             isReceiptLocked = true;
         }
         
@@ -453,15 +444,11 @@ function renderStageTable() {
         receiptInput.dataset.stageIndex = index;
         receiptInput.className = 'receipt-input';
         
-        // ============================================
-        // NO AUTO-SAVE - Just update the local array
-        // ============================================
         receiptInput.oninput = function() {
             var idx = parseInt(this.dataset.stageIndex);
             if (!isNaN(idx) && stageItems[idx]) {
                 stageItems[idx].receipt_number = this.value;
                 console.log('Receipt entered for stage ' + stageItems[idx].stage_number + ': ' + this.value);
-                // Only update the button state, don't save to database
                 updateSaveButtonState();
             }
         };
@@ -469,7 +456,6 @@ function renderStageTable() {
         receiptCell.appendChild(receiptInput);
         row.appendChild(receiptCell);
 
-        // Actions
         var actionCell = document.createElement('td');
         actionCell.className = 'stage-actions';
 
@@ -515,7 +501,6 @@ async function setStageStatus(index, status) {
 
         var newStatus = item.status === status ? 'pending' : status;
 
-        // Update status in database only
         var { error: updateError } = await supabaseClient
             .from('stage_items')
             .update({ 
@@ -528,8 +513,6 @@ async function setStageStatus(index, status) {
 
         item.status = newStatus;
         
-        // If status is set back to pending, clear the receipt number from the UI only
-        // The receipt in the database will be cleared when user saves
         if (newStatus === 'pending') {
             item.receipt_number = '';
         }
@@ -575,21 +558,16 @@ function updateSaveButtonState() {
         return;
     }
 
-    // Get all marked stages (Yes/No/N/A)
     var markedStages = stageItems.filter(function(item) {
         return item.status !== 'pending';
     });
 
-    console.log('Marked stages count:', markedStages.length);
-
-    // If no stages are marked, save button is enabled
     if (markedStages.length === 0) {
         saveBtn.disabled = false;
         console.log('Save button enabled: No stages marked');
         return;
     }
 
-    // Check if any marked stage is missing a receipt number
     var missingReceipt = markedStages.some(function(item) {
         var hasReceipt = item.receipt_number && item.receipt_number.trim() !== '';
         if (!hasReceipt) {
@@ -611,7 +589,6 @@ async function saveProgress() {
         return;
     }
 
-    // Check all marked stages have receipt numbers
     var markedStages = stageItems.filter(function(item) {
         return item.status !== 'pending';
     });
@@ -633,7 +610,6 @@ async function saveProgress() {
             throw new Error('Database connection error');
         }
 
-        // Update each stage item with its receipt number
         for (var i = 0; i < stageItems.length; i++) {
             var item = stageItems[i];
             var { error: updateError } = await supabaseClient
@@ -650,7 +626,6 @@ async function saveProgress() {
             }
         }
 
-        // Update stage form
         var { error: formUpdateError } = await supabaseClient
             .from('stage_forms')
             .update({
@@ -661,7 +636,6 @@ async function saveProgress() {
 
         if (formUpdateError) throw formUpdateError;
 
-        // Add history entry
         await supabaseClient
             .from('stage_form_history')
             .insert([{
@@ -678,7 +652,6 @@ async function saveProgress() {
         document.getElementById('formStatus').textContent = 'Status: In Progress';
         document.getElementById('formStatus').className = 'status-badge status-pending';
 
-        // Refresh the table to lock the receipts
         renderStageTable();
 
     } catch (error) {
@@ -742,22 +715,9 @@ function escapeHtml(str) {
 }
 
 // ============================================
-// INITIALIZE
+// LOAD STAGE FORM BY APPRAISAL ID
 // ============================================
-(async function init() {
-    console.log('Initializing Stage Form...');
-    initSupabase();
-    await checkStaffLogin();
-
-    var urlParams = new URLSearchParams(window.location.search);
-    var trackId = urlParams.get('track');
-    if (trackId) {
-        document.getElementById('searchSection').classList.add('hidden');
-        await loadExistingStageFormDirect(trackId);
-    }
-})();
-
-async function loadExistingStageFormDirect(appraisalId) {
+async function loadExistingStageFormByAppraisal(appraisalId) {
     try {
         var { data: appraisal, error: appraisalError } = await supabaseClient
             .from('plan_appraisals')
@@ -768,12 +728,105 @@ async function loadExistingStageFormDirect(appraisalId) {
         if (appraisalError) throw appraisalError;
 
         if (appraisal) {
-            document.getElementById('searchSection').classList.add('hidden');
             await loadExistingStageForm(appraisal.id, appraisal);
             document.getElementById('stageFormSection').classList.add('visible');
+        } else {
+            showError('Appraisal not found.');
         }
     } catch (error) {
-        console.error('Error loading direct form:', error);
+        console.error('Error loading by appraisal:', error);
         showError('Error loading form: ' + error.message);
     }
 }
+
+// ============================================
+// LOAD STAGE FORM BY FORM ID - NEW
+// ============================================
+async function loadExistingStageFormById(formId) {
+    try {
+        // First, get the stage form
+        var { data: stageForm, error: formError } = await supabaseClient
+            .from('stage_forms')
+            .select('*')
+            .eq('id', formId)
+            .single();
+
+        if (formError) throw formError;
+
+        if (!stageForm) {
+            showError('Stage form not found.');
+            return;
+        }
+
+        // Then get the appraisal
+        var { data: appraisal, error: appraisalError } = await supabaseClient
+            .from('plan_appraisals')
+            .select('*')
+            .eq('id', stageForm.appraisal_id)
+            .single();
+
+        if (appraisalError) throw appraisalError;
+
+        // Display appraisal info
+        document.getElementById('displayAppraisalNumber').textContent = appraisal.appraisal_number;
+        document.getElementById('displayOwnerName').textContent = appraisal.owner_name;
+        document.getElementById('displayStandType').textContent = appraisal.zone;
+        document.getElementById('displayLocation').textContent = appraisal.location;
+        document.getElementById('displayStandNumber').textContent = appraisal.stand_number;
+        document.getElementById('displayApprovalDate').textContent = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : 'N/A';
+
+        // Set the form ID and load items
+        stageFormId = stageForm.id;
+        isCompleted = stageForm.status === 'completed';
+
+        if (isCompleted) {
+            var completedBanner = document.getElementById('completedBanner');
+            completedBanner.classList.remove('hidden');
+            document.getElementById('completedMessage').textContent = 
+                'Completed on: ' + new Date(stageForm.completed_at).toLocaleDateString() + 
+                ' by ' + (stageForm.completed_by || 'Unknown');
+            document.getElementById('formStatus').textContent = 'Status: Completed';
+            document.getElementById('formStatus').className = 'status-badge status-yes';
+            document.getElementById('saveProgressBtn').disabled = true;
+        } else {
+            var resumeBanner = document.getElementById('resumeBanner');
+            resumeBanner.classList.remove('hidden');
+            document.getElementById('resumeMessage').textContent = 
+                'Last saved on: ' + new Date(stageForm.updated_at).toLocaleString() + 
+                ' by ' + (stageForm.inspector_name || 'Unknown');
+            document.getElementById('formStatus').textContent = 'Status: In Progress';
+            document.getElementById('formStatus').className = 'status-badge status-pending';
+            document.getElementById('saveProgressBtn').disabled = false;
+        }
+
+        await loadStageItems(stageForm.id);
+        document.getElementById('stageFormSection').classList.add('visible');
+
+    } catch (error) {
+        console.error('Error loading by form ID:', error);
+        showError('Error loading form: ' + error.message);
+    }
+}
+
+// ============================================
+// INITIALIZE - UPDATED
+// ============================================
+(async function init() {
+    console.log('Initializing Stage Form...');
+    initSupabase();
+    await checkStaffLogin();
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var trackId = urlParams.get('track');
+    var formId = urlParams.get('formId');
+    
+    if (trackId) {
+        // Load by appraisal ID
+        document.getElementById('searchSection').classList.add('hidden');
+        await loadExistingStageFormByAppraisal(trackId);
+    } else if (formId) {
+        // Load by stage form ID
+        document.getElementById('searchSection').classList.add('hidden');
+        await loadExistingStageFormById(formId);
+    }
+})();
