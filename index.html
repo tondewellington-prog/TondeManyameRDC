@@ -256,6 +256,16 @@
             color: #856404;
         }
         
+        .status-inprogress {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .status-stage {
+            background: #ffc107;
+            color: #856404;
+        }
+        
         .action-btn {
             background: #6c757d;
             padding: 6px 12px;
@@ -278,6 +288,15 @@
         
         .action-btn.schedule:hover {
             background: #138496;
+        }
+        
+        .action-btn.stage {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .action-btn.stage:hover {
+            background: #e0a800;
         }
         
         .empty-row td {
@@ -412,6 +431,7 @@
                         <option value="">-- Select Document Type --</option>
                         <option value="development_permit">Development Permit (Change of Use)</option>
                         <option value="plan_appraisal">Plan Appraisal Form</option>
+                        <option value="stage_form">Stage Form (Construction Inspection)</option>
                         <option value="consideration_schedule" id="scheduleOption" style="display:none;">Consideration Schedule 261</option>
                     </select>
                     <button id="continueBtn" class="continue-btn">Continue</button>
@@ -508,11 +528,9 @@
             // Show/hide schedule option based on role
             if (currentStaffRole === 'district_planner') {
                 scheduleOption.style.display = 'block';
-                // Update the label with pending count
                 updateScheduleOptionLabel();
             } else {
                 scheduleOption.style.display = 'none';
-                // If schedule is selected but user is not planner, reset
                 if (documentTypeSelect.value === 'consideration_schedule') {
                     documentTypeSelect.value = '';
                 }
@@ -715,6 +733,35 @@
                     });
                 }
                 
+                // Load stage forms
+                const { data: stageForms, error: stageError } = await supabaseClient
+                    .from('stage_forms')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (!stageError && stageForms) {
+                    stageForms.forEach(function(form) {
+                        var statusDisplay = form.status === 'completed' ? 'Completed' : 'In Progress';
+                        var statusClass = form.status === 'completed' ? 'status-approved' : 'status-inprogress';
+                        
+                        allDocs.push({
+                            id: form.id,
+                            document_number: form.appraisal_number || 'STAGE-' + form.id.substring(0, 8),
+                            document_type: 'stage_form',
+                            property_location: form.location || 'N/A',
+                            applicant_name: form.owner_name || 'N/A',
+                            hod_approved: false,
+                            ceo_approved: form.status === 'completed',
+                            status: form.status,
+                            status_display: statusDisplay,
+                            status_class: statusClass,
+                            created_at: form.created_at,
+                            source_table: 'stage_forms',
+                            raw_data: form
+                        });
+                    });
+                }
+                
                 allDocs.sort(function(a, b) {
                     return new Date(b.created_at) - new Date(a.created_at);
                 });
@@ -744,6 +791,7 @@
                 var showDownload = false;
                 var docTypeDisplay = '';
                 var scheduleAction = '';
+                var stageAction = '';
                 
                 if (doc.document_type === 'plan_appraisal') {
                     docTypeDisplay = 'Plan Appraisal';
@@ -754,6 +802,8 @@
                         
                         // Check if in consideration schedule
                         scheduleAction = `<button class="action-btn schedule" onclick="viewScheduleForAppraisal('${doc.id}')">View Schedule</button>`;
+                        // Check if stage form exists
+                        stageAction = `<button class="action-btn stage" onclick="viewStageForm('${doc.id}')">Stage Form</button>`;
                     } else if (doc.hod_approved) {
                         statusText = 'District Planner Pending';
                         statusClass = 'status-ceo';
@@ -764,6 +814,11 @@
                         statusText = 'Building Inspector Pending';
                         statusClass = 'status-hod';
                     }
+                } else if (doc.document_type === 'stage_form') {
+                    docTypeDisplay = 'Stage Form';
+                    statusText = doc.status_display || 'In Progress';
+                    statusClass = doc.status_class || 'status-inprogress';
+                    stageAction = `<button class="action-btn stage" onclick="viewStageFormByFormId('${doc.id}')">View Form</button>`;
                 } else {
                     docTypeDisplay = 'Dev Permit';
                     if (doc.ceo_approved && doc.hod_approved) {
@@ -787,7 +842,10 @@
                     if (showDownload) {
                         actionsHtml += `<button class="action-btn download" onclick="downloadAppraisal('${doc.id}')">Download PDF</button>`;
                         actionsHtml += scheduleAction;
+                        actionsHtml += stageAction;
                     }
+                } else if (doc.document_type === 'stage_form') {
+                    actionsHtml = stageAction;
                 } else {
                     actionsHtml = `<button class="action-btn" onclick="viewPermitProgress('${doc.id}', '${doc.document_number}')">View Progress</button>`;
                     if (showDownload) {
@@ -805,6 +863,17 @@
                 
                 permitsTableBody.appendChild(row);
             }
+        }
+        
+        // ============================================
+        // STAGE FORM FUNCTIONS
+        // ============================================
+        function viewStageForm(appraisalId) {
+            window.location.href = 'stage-form.html?track=' + appraisalId;
+        }
+        
+        function viewStageFormByFormId(formId) {
+            window.location.href = 'stage-form.html?formId=' + formId;
         }
         
         // ============================================
@@ -991,6 +1060,8 @@
                 window.location.href = 'development-permit.html';
             } else if (docType === 'plan_appraisal') {
                 window.location.href = 'plan-appraisal-form.html';
+            } else if (docType === 'stage_form') {
+                window.location.href = 'stage-form.html';
             } else if (docType === 'consideration_schedule') {
                 window.location.href = 'consideration-schedule.html';
             }
@@ -1021,6 +1092,8 @@
         window.downloadAppraisal = downloadAppraisal;
         window.goToConsiderationSchedule = goToConsiderationSchedule;
         window.viewScheduleForAppraisal = viewScheduleForAppraisal;
+        window.viewStageForm = viewStageForm;
+        window.viewStageFormByFormId = viewStageFormByFormId;
         
         checkLoginState();
         
