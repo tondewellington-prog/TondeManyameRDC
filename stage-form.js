@@ -421,10 +421,13 @@ function renderStageTable() {
         receiptInput.value = item.receipt_number || '';
         receiptInput.disabled = isDisabled;
         receiptInput.dataset.stageId = item.id;
+        receiptInput.dataset.stageIndex = stageItems.indexOf(item);
+        receiptInput.className = 'receipt-input';
         receiptInput.oninput = function() {
-            var stageItem = stageItems.find(function(s) { return s.id === this.dataset.stageId; });
-            if (stageItem) {
-                stageItem.receipt_number = this.value;
+            var idx = parseInt(this.dataset.stageIndex);
+            if (!isNaN(idx) && stageItems[idx]) {
+                stageItems[idx].receipt_number = this.value;
+                console.log('Receipt updated for stage ' + stageItems[idx].stage_number + ': ' + this.value);
                 updateSaveButtonState();
             }
         };
@@ -437,17 +440,17 @@ function renderStageTable() {
 
         actionCell.innerHTML = `
             <button class="stage-btn ${item.status === 'yes' ? 'active-yes' : ''}" 
-                    onclick="setStageStatus('${item.id}', 'yes')" 
+                    onclick="setStageStatus(${stageItems.indexOf(item)}, 'yes')" 
                     ${isDisabled ? 'disabled' : ''}>
                 Yes
             </button>
             <button class="stage-btn ${item.status === 'no' ? 'active-no' : ''}" 
-                    onclick="setStageStatus('${item.id}', 'no')" 
+                    onclick="setStageStatus(${stageItems.indexOf(item)}, 'no')" 
                     ${isDisabled ? 'disabled' : ''}>
                 No
             </button>
             <button class="stage-btn ${item.status === 'n/a' ? 'active-na' : ''}" 
-                    onclick="setStageStatus('${item.id}', 'n/a')" 
+                    onclick="setStageStatus(${stageItems.indexOf(item)}, 'n/a')" 
                     ${isDisabled ? 'disabled' : ''}>
                 N/A
             </button>
@@ -463,14 +466,14 @@ function renderStageTable() {
 // ============================================
 // SET STAGE STATUS
 // ============================================
-async function setStageStatus(stageItemId, status) {
+async function setStageStatus(index, status) {
     if (isCompleted) {
         showError('This form is already completed. No further changes allowed.');
         return;
     }
 
     try {
-        var item = stageItems.find(function(i) { return i.id === stageItemId; });
+        var item = stageItems[index];
         if (!item) return;
 
         var newStatus = item.status === status ? 'pending' : status;
@@ -491,9 +494,9 @@ async function setStageStatus(stageItemId, status) {
         if (newStatus === 'pending') {
             item.receipt_number = '';
             // Update the input field value
-            var inputs = document.querySelectorAll('.stage-receipt input');
+            var inputs = document.querySelectorAll('.receipt-input');
             inputs.forEach(function(input) {
-                if (input.dataset.stageId === item.id) {
+                if (parseInt(input.dataset.stageIndex) === index) {
                     input.value = '';
                 }
             });
@@ -548,6 +551,7 @@ function updateSaveButtonState() {
     // If no stages are marked, save button is enabled (can save empty form)
     if (markedStages.length === 0) {
         saveBtn.disabled = false;
+        console.log('Save button enabled: No stages marked');
         return;
     }
 
@@ -557,6 +561,9 @@ function updateSaveButtonState() {
     });
 
     saveBtn.disabled = missingReceipt;
+    console.log('Save button state:', saveBtn.disabled ? 'DISABLED' : 'ENABLED');
+    console.log('Marked stages:', markedStages.length);
+    console.log('Missing receipt:', missingReceipt);
 }
 
 // ============================================
