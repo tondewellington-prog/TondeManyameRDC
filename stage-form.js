@@ -19,7 +19,6 @@ var appraisalId = null;
 var stageItems = [];
 var isCompleted = false;
 
-// ============================================
 // STAGE DATA
 // ============================================
 var STAGES = [
