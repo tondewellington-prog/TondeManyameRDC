@@ -382,7 +382,7 @@
             <div id="successDisplay" class="success hidden"></div>
 
             <div class="warning no-print">
-                <strong>Schedule 261:</strong> Plans that have been approved by the District Planner are listed below. Click <strong>"Approve"</strong> to finalize and apply the council stamp. The stamped plan will then be available for download.
+                <strong>Schedule 261:</strong> Plans that have been approved by the District Planner are listed below. Click <strong>"Approve"</strong> to finalize and apply the council stamp with QR code. The stamped plan will then be available for download.
             </div>
 
             <div id="tableContainer" class="table-container">
@@ -424,6 +424,11 @@
         var currentStaffName = sessionStorage.getItem('staffDisplayName');
         var currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
         var currentStaffUserId = sessionStorage.getItem('staffUserId');
+
+        // ============================================
+        // BASE URL FOR VERIFICATION
+        // ============================================
+        var BASE_URL = 'https://tondewellington-prog.github.io/TondeManyameRDC';
 
         // ============================================
         // SUPABASE INITIALIZATION
@@ -474,11 +479,12 @@
         }
 
         // ============================================
-        // GENERATE STAMPED PDF - Using stamp-pdf Edge Function
+        // GENERATE STAMPED PDF WITH QR CODE
         // ============================================
-        async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, stampDate) {
-            console.log('=== GENERATE STAMPED PDF ===');
+        async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, permitNumber) {
+            console.log('=== GENERATE STAMPED PDF WITH QR ===');
             console.log('Plan URL:', planFileUrl);
+            console.log('Permit Number:', permitNumber);
             console.log('Schedule ID:', scheduleId);
 
             try {
@@ -486,6 +492,10 @@
                 if (!supabaseClient) {
                     throw new Error('Database connection error');
                 }
+
+                // Generate verification URL for QR code
+                var verificationUrl = BASE_URL + '/index.html?id=' + encodeURIComponent(permitNumber);
+                console.log('Verification URL:', verificationUrl);
 
                 // Get the current session for authorization
                 var { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
@@ -496,17 +506,20 @@
                 var accessToken = sessionData?.session?.access_token || '';
                 console.log('Access token present:', !!accessToken);
 
-                console.log('Calling stamp-pdf Edge Function...');
+                console.log('Calling stamp-pdf Edge Function with QR data...');
 
-                // Call the stamp-pdf Edge Function with authorization
                 var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
                 var requestBody = {
                     fileUrl: planFileUrl,
                     scheduleId: scheduleId,
                     appraisalId: appraisalId,
-                    stampDate: stampDate,
-                    councilName: 'Manyame Rural District Council',
-                    stampTitle: 'DISTRICT PLANNER'
+                    permitNumber: permitNumber,
+                    verificationUrl: verificationUrl,
+                    stampDate: new Date().toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    }).toUpperCase()
                 };
 
                 console.log('Request body:', requestBody);
@@ -516,7 +529,6 @@
                     'Accept': 'application/json'
                 };
 
-                // Add authorization header if we have a token
                 if (accessToken) {
                     headers['Authorization'] = 'Bearer ' + accessToken;
                 }
@@ -539,11 +551,12 @@
                 console.log('Stamp result:', result);
 
                 if (result.success && result.stampedUrl) {
-                    console.log('Stamp applied successfully:', result.stampedUrl);
+                    console.log('Stamp + QR applied successfully:', result.stampedUrl);
                     return {
                         success: true,
                         stampedUrl: result.stampedUrl,
-                        filePath: result.filePath
+                        filePath: result.filePath,
+                        qrCodeUrl: result.qrCodeUrl
                     };
                 } else {
                     throw new Error('Stamp failed: ' + (result.error || 'Unknown error'));
@@ -697,10 +710,10 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - USING stamp-pdf Edge Function
+        // APPROVE SCHEDULE - WITH QR CODE
         // ============================================
         async function approveSchedule(scheduleId) {
-            console.log('=== APPROVE SCHEDULE CALLED ===');
+            console.log('=== APPROVE SCHEDULE WITH QR ===');
             console.log('Schedule ID:', scheduleId);
 
             if (!scheduleId) {
@@ -708,11 +721,11 @@
                 return;
             }
 
-            if (!confirm('Are you sure you want to approve this schedule and apply the council stamp to the plan?')) {
+            if (!confirm('Are you sure you want to approve this schedule and apply the council stamp with QR code to the plan?')) {
                 return;
             }
 
-            showLoading('Applying stamp and generating stamped PDF...');
+            showLoading('Applying stamp and QR code...');
 
             try {
                 initSupabase();
@@ -743,33 +756,29 @@
 
                 console.log('Appraisal data:', appraisal);
 
+                var permitNumber = appraisal.appraisal_number || appraisal.id;
                 var stampedUrl = null;
+
                 if (appraisal.plan_file_url) {
                     try {
-                        var stampDate = new Date().toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                        }).toUpperCase();
-
-                        console.log('Calling stamp-pdf Edge Function...');
+                        console.log('Calling stamp-pdf Edge Function with QR...');
                         var result = await generateStampedPDF(
                             appraisal.plan_file_url,
                             scheduleId,
                             appraisal.id,
-                            stampDate
+                            permitNumber
                         );
 
                         if (result.success && result.stampedUrl) {
                             stampedUrl = result.stampedUrl;
-                            console.log('Stamped PDF generated successfully:', stampedUrl);
+                            console.log('Stamped PDF with QR generated successfully:', stampedUrl);
+                            showSuccess('Stamp and QR code applied successfully!');
                         } else {
                             console.warn('Stamp generation failed:', result);
                         }
 
                     } catch (stampError) {
                         console.error('Stamp generation error:', stampError);
-                        // Don't fail the approval if stamp fails
                     }
                 } else {
                     console.warn('No plan file URL found');
@@ -780,7 +789,7 @@
                 var updateData = {
                     status: 'approved',
                     considered_at: new Date().toISOString(),
-                    remarks: 'Approved with council stamp on ' + new Date().toLocaleDateString(),
+                    remarks: 'Approved with council stamp and QR code on ' + new Date().toLocaleDateString(),
                     updated_at: new Date().toISOString()
                 };
 
@@ -801,7 +810,11 @@
                 if (stampedUrl) {
                     var { error: appraisalUpdateError } = await supabaseClient
                         .from('plan_appraisals')
-                        .update({ stamped_url: stampedUrl })
+                        .update({ 
+                            stamped_url: stampedUrl,
+                            stamp_applied: true,
+                            stamp_date: new Date().toISOString()
+                        })
                         .eq('id', appraisal.id);
 
                     if (appraisalUpdateError) {
@@ -810,11 +823,15 @@
                 }
 
                 var message = stampedUrl ? 
-                    'Schedule approved and stamp applied successfully! Reference: ' + scheduleData.reference_number :
-                    'Schedule approved! (Stamp could not be applied to plan)';
+                    'Schedule approved and stamp with QR code applied successfully!' :
+                    'Schedule approved! (Stamp could not be applied)';
                 
                 console.log('Success:', message);
-                showSuccess(message);
+                if (!stampedUrl) {
+                    showWarning('Schedule approved, but stamp could not be applied. Please check the plan file.');
+                } else {
+                    showSuccess(message);
+                }
 
                 // Reload the schedule after a delay
                 setTimeout(function() {
@@ -856,6 +873,17 @@
             }, 5000);
         }
 
+        function showWarning(msg) {
+            var el = document.getElementById('successDisplay');
+            el.textContent = msg;
+            el.classList.remove('hidden', 'success');
+            el.style.background = '#fff3cd';
+            el.style.color = '#856404';
+            setTimeout(function() {
+                el.classList.add('hidden');
+            }, 8000);
+        }
+
         function hideSuccess() {
             document.getElementById('successDisplay').classList.add('hidden');
         }
@@ -891,11 +919,6 @@
         if (checkAccess()) {
             loadSchedule();
         }
-
-        // ============================================
-        // REMOVED AUTO-REFRESH - Only refresh when user clicks
-        // ============================================
-        // The refresh is now only triggered by the Refresh button or after approval
     </script>
 </body>
 </html>
