@@ -330,6 +330,24 @@
             color: #856404;
         }
 
+        .doc-number-display {
+            font-size: 11px;
+            color: #1e3c72;
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
+            max-width: 200px;
+            word-break: break-all;
+        }
+
+        .qr-info {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+
         @media (max-width: 768px) {
             .content {
                 padding: 15px;
@@ -479,7 +497,7 @@
         }
 
         // ============================================
-        // GENERATE STAMPED PDF WITH QR CODE - WITH APPRAISAL DATA
+        // GENERATE STAMPED PDF WITH QR CODE
         // ============================================
         async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, permitNumber, appraisalData) {
             console.log('=== GENERATE STAMPED PDF WITH QR AND APPRAISAL DATA ===');
@@ -554,6 +572,8 @@
 
                 if (result.success && result.stampedUrl) {
                     console.log('Stamp + QR applied successfully:', result.stampedUrl);
+                    console.log('Document Number from Edge Function:', result.documentNumber);
+                    console.log('QR Code URL:', result.qrCodeUrl);
                     return {
                         success: true,
                         stampedUrl: result.stampedUrl,
@@ -618,28 +638,32 @@
 
                     var row = document.createElement('tr');
 
-                    var statusText = item.status === 'approved' ? 'Approved' : 'Pending';
-                    var statusClass = item.status === 'approved' ? 'status-approved' : 'status-pending';
                     var isApproved = item.status === 'approved';
 
                     var actionsHtml = '';
                     if (isApproved) {
                         var stampedUrl = item.stamped_url || appraisal.stamped_url;
+                        var docNumber = item.document_number || appraisal.issued_document_number || 'N/A';
+                        var qrUrl = item.verification_url || '';
+                        
                         if (stampedUrl) {
                             actionsHtml = `
                                 <span class="status-badge status-approved">Approved</span>
-                                <br><a href="${stampedUrl}" target="_blank" class="download-stamped-btn">Download Stamped Plan</a>
+                                <br><span class="doc-number-display">📄 ${docNumber}</span>
+                                ${qrUrl ? `<br><span class="qr-info">QR: ${qrUrl}</span>` : ''}
+                                <br><a href="${stampedUrl}" target="_blank" class="download-stamped-btn">⬇ Download Stamped</a>
                             `;
                         } else {
                             actionsHtml = `
                                 <span class="status-badge status-approved">Approved</span>
-                                ${appraisal.plan_file_url ? `<br><a href="${appraisal.plan_file_url}" target="_blank" class="download-btn">Download Original Plan</a>` : ''}
+                                <br><span class="doc-number-display">📄 ${docNumber}</span>
+                                ${appraisal.plan_file_url ? `<br><a href="${appraisal.plan_file_url}" target="_blank" class="download-btn">Download Original</a>` : ''}
                             `;
                         }
                     } else {
                         actionsHtml = `
                             <button class="approve-btn" onclick="approveSchedule('${item.id}')">
-                                Approve & Apply Stamp
+                                ✅ Approve & Apply Stamp
                             </button>
                         `;
                     }
@@ -782,6 +806,7 @@
                 var permitNumber = appraisal.appraisal_number || appraisal.id;
                 var stampedUrl = null;
                 var documentNumber = null;
+                var qrCodeUrl = null;
 
                 if (appraisal.plan_file_url) {
                     try {
@@ -797,8 +822,10 @@
                         if (result.success && result.stampedUrl) {
                             stampedUrl = result.stampedUrl;
                             documentNumber = result.documentNumber;
+                            qrCodeUrl = result.qrCodeUrl;
                             console.log('Stamped PDF with QR generated successfully:', stampedUrl);
                             console.log('Document Number created:', documentNumber);
+                            console.log('QR Code URL:', qrCodeUrl);
                             showSuccess('Stamp, QR code and document record created successfully!');
                         } else {
                             console.warn('Stamp generation failed:', result);
@@ -806,14 +833,14 @@
 
                     } catch (stampError) {
                         console.error('Stamp generation error:', stampError);
+                        showWarning('Stamp generation failed: ' + stampError.message);
                     }
                 } else {
                     console.warn('No plan file URL found');
                 }
 
                 // ============================================
-                // STEP 1: UPDATE SCHEDULE STATUS ONLY
-                // NO document_number HERE - that goes to issued_documents
+                // STEP 1: UPDATE SCHEDULE STATUS
                 // ============================================
                 console.log('Updating schedule status...');
                 var updateData = {
@@ -823,9 +850,14 @@
                     updated_at: new Date().toISOString()
                 };
 
-                // Only add stamped_url if we have one and if the column exists
                 if (stampedUrl) {
                     updateData.stamped_url = stampedUrl;
+                }
+                if (documentNumber) {
+                    updateData.document_number = documentNumber;
+                }
+                if (qrCodeUrl) {
+                    updateData.verification_url = qrCodeUrl;
                 }
 
                 console.log('Update data (schedule):', updateData);
@@ -837,31 +869,11 @@
 
                 if (updateError) {
                     console.error('Update error:', updateError);
-                    // If the error is about missing columns, try without those columns
-                    if (updateError.message && updateError.message.includes('column')) {
-                        console.log('Retrying without optional columns...');
-                        var retryData = {
-                            status: 'approved',
-                            considered_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        };
-                        
-                        var { error: retryError } = await supabaseClient
-                            .from('consideration_schedule')
-                            .update(retryData)
-                            .eq('id', scheduleId);
-                            
-                        if (retryError) {
-                            throw new Error('Failed to update schedule: ' + retryError.message);
-                        }
-                    } else {
-                        throw new Error('Failed to update schedule: ' + updateError.message);
-                    }
+                    throw new Error('Failed to update schedule: ' + updateError.message);
                 }
 
                 // ============================================
                 // STEP 2: CREATE RECORD IN issued_documents TABLE
-                // This is where document_number SHOULD be stored
                 // ============================================
                 if (documentNumber && stampedUrl) {
                     console.log('Creating record in issued_documents table...');
@@ -911,7 +923,8 @@
                         .update({ 
                             stamped_url: stampedUrl,
                             stamp_applied: true,
-                            stamp_date: new Date().toISOString()
+                            stamp_date: new Date().toISOString(),
+                            issued_document_number: documentNumber
                         })
                         .eq('id', appraisal.id);
 
