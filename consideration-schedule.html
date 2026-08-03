@@ -479,13 +479,14 @@
         }
 
         // ============================================
-        // GENERATE STAMPED PDF WITH QR CODE
+        // GENERATE STAMPED PDF WITH QR CODE - WITH APPRAISAL DATA
         // ============================================
-        async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, permitNumber) {
-            console.log('=== GENERATE STAMPED PDF WITH QR ===');
+        async function generateStampedPDF(planFileUrl, scheduleId, appraisalId, permitNumber, appraisalData) {
+            console.log('=== GENERATE STAMPED PDF WITH QR AND APPRAISAL DATA ===');
             console.log('Plan URL:', planFileUrl);
             console.log('Permit Number:', permitNumber);
             console.log('Schedule ID:', scheduleId);
+            console.log('Appraisal Data:', appraisalData);
 
             try {
                 initSupabase();
@@ -506,7 +507,7 @@
                 var accessToken = sessionData?.session?.access_token || '';
                 console.log('Access token present:', !!accessToken);
 
-                console.log('Calling stamp-pdf Edge Function with QR data...');
+                console.log('Calling stamp-pdf Edge Function with QR data and appraisal data...');
 
                 var functionUrl = SUPABASE_URL + '/functions/v1/stamp-pdf';
                 var requestBody = {
@@ -515,6 +516,7 @@
                     appraisalId: appraisalId,
                     permitNumber: permitNumber,
                     verificationUrl: verificationUrl,
+                    appraisalData: appraisalData,
                     stampDate: new Date().toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'long',
@@ -556,7 +558,8 @@
                         success: true,
                         stampedUrl: result.stampedUrl,
                         filePath: result.filePath,
-                        qrCodeUrl: result.qrCodeUrl
+                        qrCodeUrl: result.qrCodeUrl,
+                        documentNumber: result.documentNumber
                     };
                 } else {
                     throw new Error('Stamp failed: ' + (result.error || 'Unknown error'));
@@ -710,10 +713,10 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - WITH QR CODE
+        // APPROVE SCHEDULE - WITH APPRAISAL DATA PASSED TO EDGE FUNCTION
         // ============================================
         async function approveSchedule(scheduleId) {
-            console.log('=== APPROVE SCHEDULE WITH QR ===');
+            console.log('=== APPROVE SCHEDULE WITH QR AND APPRAISAL DATA ===');
             console.log('Schedule ID:', scheduleId);
 
             if (!scheduleId) {
@@ -756,23 +759,47 @@
 
                 console.log('Appraisal data:', appraisal);
 
+                // ============================================
+                // PREPARE FULL APPRAISAL DATA FOR issued_documents
+                // ============================================
+                var fullAppraisalData = {
+                    owner_name: appraisal.owner_name || '',
+                    stand_number: appraisal.stand_number || '',
+                    location: appraisal.location || '',
+                    zone: appraisal.zone || '',
+                    status: appraisal.status || '',
+                    created_by_name: appraisal.created_by_name || '',
+                    created_by_email: appraisal.created_by_email || '',
+                    appraisal_number: appraisal.appraisal_number || '',
+                    contact: appraisal.contact || '',
+                    sex: appraisal.sex || '',
+                    receipt_number: appraisal.receipt_number || '',
+                    plan_file_url: appraisal.plan_file_url || '',
+                    stamped_url: appraisal.stamped_url || '',
+                    stamp_applied: appraisal.stamp_applied || false
+                };
+
                 var permitNumber = appraisal.appraisal_number || appraisal.id;
                 var stampedUrl = null;
+                var documentNumber = null;
 
                 if (appraisal.plan_file_url) {
                     try {
-                        console.log('Calling stamp-pdf Edge Function with QR...');
+                        console.log('Calling stamp-pdf Edge Function with QR and appraisal data...');
                         var result = await generateStampedPDF(
                             appraisal.plan_file_url,
                             scheduleId,
                             appraisal.id,
-                            permitNumber
+                            permitNumber,
+                            fullAppraisalData
                         );
 
                         if (result.success && result.stampedUrl) {
                             stampedUrl = result.stampedUrl;
+                            documentNumber = result.documentNumber;
                             console.log('Stamped PDF with QR generated successfully:', stampedUrl);
-                            showSuccess('Stamp and QR code applied successfully!');
+                            console.log('Document Number created:', documentNumber);
+                            showSuccess('Stamp, QR code and document record created successfully!');
                         } else {
                             console.warn('Stamp generation failed:', result);
                         }
@@ -796,6 +823,9 @@
                 if (stampedUrl) {
                     updateData.stamped_url = stampedUrl;
                 }
+                if (documentNumber) {
+                    updateData.document_number = documentNumber;
+                }
 
                 var { error: updateError } = await supabaseClient
                     .from('consideration_schedule')
@@ -813,7 +843,8 @@
                         .update({ 
                             stamped_url: stampedUrl,
                             stamp_applied: true,
-                            stamp_date: new Date().toISOString()
+                            stamp_date: new Date().toISOString(),
+                            issued_document_number: documentNumber
                         })
                         .eq('id', appraisal.id);
 
@@ -823,7 +854,7 @@
                 }
 
                 var message = stampedUrl ? 
-                    'Schedule approved and stamp with QR code applied successfully!' :
+                    'Schedule approved and stamp with QR code applied successfully! The document has been recorded in the system.' :
                     'Schedule approved! (Stamp could not be applied)';
                 
                 console.log('Success:', message);
