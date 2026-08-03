@@ -345,6 +345,31 @@
             margin-left: 8px;
         }
         
+        .doc-type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .doc-type-badge.permit {
+            background: #cce5ff;
+            color: #004085;
+        }
+        
+        .doc-type-badge.appraisal {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .doc-type-badge.stage {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
         @media (max-width: 768px) {
             .permit-table th, .permit-table td {
                 padding: 8px;
@@ -519,6 +544,32 @@
             return roleMap[role] || 'Building Inspector';
         }
         
+        function getDocumentTypeDisplay(docType) {
+            if (!docType) return 'Unknown';
+            var typeMap = {
+                'building_permit': 'Building Permit',
+                'development_permit': 'Development Permit',
+                'plan_appraisal': 'Plan Appraisal',
+                'inspection_certificate': 'Inspection Certificate',
+                'site_plan_approval': 'Site Plan Approval',
+                'occupancy_certificate': 'Occupancy Certificate',
+                'stage_form': 'Stage Form',
+                'issued_document': 'Issued Document'
+            };
+            return typeMap[docType.toLowerCase()] || docType;
+        }
+        
+        function getDocumentTypeBadgeClass(docType) {
+            if (!docType) return '';
+            var typeMap = {
+                'building_permit': 'permit',
+                'development_permit': 'permit',
+                'plan_appraisal': 'appraisal',
+                'stage_form': 'stage'
+            };
+            return typeMap[docType.toLowerCase()] || '';
+        }
+        
         function updateRoleBadge() {
             const badge = document.getElementById('staffRoleBadge');
             if (!badge) return;
@@ -670,7 +721,7 @@
         }
         
         // ============================================
-        // LOAD MY DOCUMENTS - UPDATED FOR issued_documents
+        // LOAD MY DOCUMENTS - USING issued_documents
         // ============================================
         async function loadMyDocuments() {
             if (!supabaseClient || !currentStaffUser) return;
@@ -680,7 +731,7 @@
             try {
                 let allDocs = [];
                 
-                // Load from issued_documents - using correct fields
+                // Load from issued_documents
                 const { data: issuedDocs, error: issuedError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -689,7 +740,6 @@
                 
                 if (!issuedError && issuedDocs) {
                     issuedDocs.forEach(function(doc) {
-                        // Determine status display
                         let statusDisplay = 'Pending';
                         let statusClass = 'status-pending';
                         
@@ -826,23 +876,11 @@
             
             for (var i = 0; i < allDocuments.length; i++) {
                 var doc = allDocuments[i];
-                var docTypeDisplay = '';
+                var docTypeDisplay = getDocumentTypeDisplay(doc.document_type);
+                var badgeClass = getDocumentTypeBadgeClass(doc.document_type);
                 var scheduleAction = '';
                 var stageAction = '';
                 var downloadAction = '';
-                
-                // Determine document type display
-                if (doc.document_type === 'plan_appraisal') {
-                    docTypeDisplay = 'Plan Appraisal';
-                } else if (doc.document_type === 'stage_form') {
-                    docTypeDisplay = 'Stage Form';
-                } else if (doc.document_type === 'issued_document' || doc.document_type === 'development_permit') {
-                    docTypeDisplay = 'Issued Document';
-                } else if (doc.document_type === 'building_permit') {
-                    docTypeDisplay = 'Building Permit';
-                } else {
-                    docTypeDisplay = doc.document_type || 'Document';
-                }
                 
                 // Build actions
                 var actionsHtml = '';
@@ -873,7 +911,10 @@
                 
                 var row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${escapeHtml(doc.document_number)}</strong><br><small style="font-size:10px;color:#666;">${docTypeDisplay}</small></td>
+                    <td>
+                        <strong>${escapeHtml(doc.document_number)}</strong>
+                        <br><span class="doc-type-badge ${badgeClass}">${docTypeDisplay}</span>
+                    </td>
                     <td>${escapeHtml(doc.property_location || '-')}</td>
                     <td>${escapeHtml(doc.applicant_name || '-')}</td>
                     <td><span class="status-badge ${doc.status_class || 'status-pending'}">${doc.status_display || doc.status || 'Pending'}</span></td>
@@ -885,7 +926,7 @@
         }
         
         // ============================================
-        // VERIFICATION - UPDATED FOR issued_documents
+        // VERIFICATION - CHECKS document_type FIELD
         // ============================================
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
@@ -937,36 +978,48 @@
                 const doc = data[0];
                 const isValid = doc.status === 'active' || doc.status === 'approved' || doc.status === 'issued';
                 
-                let docTypeName = doc.document_type === 'plan_appraisal' ? 'Plan Appraisal Form' : 'Building Permit / Issued Document';
+                // ============================================
+                // CHECK document_type FIELD
+                // ============================================
+                let docTypeDisplay = getDocumentTypeDisplay(doc.document_type);
+                
                 let issuedToName = doc.owner_name || doc.issued_to || 'N/A';
                 let propertyLoc = doc.location || doc.property_location || doc.stand_number || 'N/A';
                 
                 // Build verification result
                 let resultHtml = `
                     <div class="${isValid ? 'valid' : 'invalid'}">
-                        <strong>${isValid ? 'VERIFIED - VALID OFFICIAL DOCUMENT' : 'INVALID - Document not fully approved'}</strong><br><br>
-                        <strong>Document ID:</strong> ${escapeHtml(doc.document_number)}<br>
-                        <strong>Type:</strong> ${docTypeName}<br>
-                        <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
-                        <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
-                        <strong>Issue Date:</strong> ${doc.issue_date || 'N/A'}<br>
-                        <strong>Status:</strong> ${doc.status ? doc.status.toUpperCase() : 'Unknown'}
+                        <strong>${isValid ? '✓ VERIFIED - VALID OFFICIAL DOCUMENT' : '✗ INVALID - Document not fully approved'}</strong>
+                        <br><br>
+                        <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+                            <tr><td style="padding:4px 8px;font-weight:bold;width:140px;">Document ID:</td><td style="padding:4px 8px;">${escapeHtml(doc.document_number)}</td></tr>
+                            <tr><td style="padding:4px 8px;font-weight:bold;">Document Type:</td><td style="padding:4px 8px;"><strong>${docTypeDisplay}</strong> <span style="font-size:11px;color:#666;">(${escapeHtml(doc.document_type || 'N/A')})</span></td></tr>
+                            <tr><td style="padding:4px 8px;font-weight:bold;">Issued To:</td><td style="padding:4px 8px;">${escapeHtml(issuedToName)}</td></tr>
+                            <tr><td style="padding:4px 8px;font-weight:bold;">Property:</td><td style="padding:4px 8px;">${escapeHtml(propertyLoc)}</td></tr>
+                            <tr><td style="padding:4px 8px;font-weight:bold;">Issue Date:</td><td style="padding:4px 8px;">${doc.issue_date || 'N/A'}</td></tr>
+                            <tr><td style="padding:4px 8px;font-weight:bold;">Status:</td><td style="padding:4px 8px;"><span class="status-badge ${isValid ? 'status-approved' : 'status-pending'}">${doc.status ? doc.status.toUpperCase() : 'Unknown'}</span></td></tr>
                 `;
                 
                 if (doc.stamped_url) {
-                    resultHtml += `<br><br><a href="${doc.stamped_url}" target="_blank" class="action-btn download" style="display:inline-block;text-decoration:none;color:white;padding:8px 16px;">Download Stamped Document</a>`;
+                    resultHtml += `
+                        <tr><td style="padding:4px 8px;font-weight:bold;">Stamped Document:</td>
+                        <td style="padding:4px 8px;"><a href="${doc.stamped_url}" target="_blank" class="action-btn download" style="display:inline-block;text-decoration:none;color:white;padding:6px 12px;border-radius:4px;">Download Stamped Document</a></td></tr>
+                    `;
                 }
                 
                 if (doc.verification_url) {
-                    resultHtml += `<br><br><small>Verification URL: ${escapeHtml(doc.verification_url)}</small>`;
+                    resultHtml += `
+                        <tr><td style="padding:4px 8px;font-weight:bold;">Verification URL:</td>
+                        <td style="padding:4px 8px;font-size:12px;word-break:break-all;">${escapeHtml(doc.verification_url)}</td></tr>
+                    `;
                 }
                 
-                resultHtml += `</div>`;
+                resultHtml += `</table></div>`;
                 verifyResult.innerHTML = resultHtml;
                 
             } catch (error) {
                 console.error('Verification error:', error);
-                verifyResult.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
+                verifyResult.innerHTML = `<div class="error">Verification error: ${error.message || 'Please try again.'}</div>`;
             }
         }
         
@@ -981,7 +1034,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('issued_documents')
-                    .select('stamped_url, document_number')
+                    .select('stamped_url, document_number, document_type')
                     .eq('id', docId)
                     .single();
                 
@@ -990,7 +1043,7 @@
                 if (data && data.stamped_url) {
                     window.open(data.stamped_url, '_blank');
                 } else {
-                    alert('No stamped document found.');
+                    alert('No stamped document found for this ' + getDocumentTypeDisplay(data?.document_type) + '.');
                 }
             } catch (error) {
                 console.error('Download error:', error);
@@ -1148,6 +1201,7 @@
         window.downloadOriginalPlan = downloadOriginalPlan;
         window.viewDocument = viewDocument;
         window.downloadDocument = downloadDocument;
+        window.verifyDocument = verifyDocument;
         
         checkLoginState();
         
