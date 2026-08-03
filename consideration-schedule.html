@@ -760,7 +760,7 @@
                 console.log('Appraisal data:', appraisal);
 
                 // ============================================
-                // PREPARE FULL APPRAISAL DATA FOR issued_documents
+                // PREPARE FULL APPRAISAL DATA
                 // ============================================
                 var fullAppraisalData = {
                     owner_name: appraisal.owner_name || '',
@@ -812,7 +812,56 @@
                 }
 
                 // ============================================
-                // CREATE RECORD IN issued_documents TABLE
+                // STEP 1: UPDATE SCHEDULE STATUS ONLY
+                // NO document_number HERE - that goes to issued_documents
+                // ============================================
+                console.log('Updating schedule status...');
+                var updateData = {
+                    status: 'approved',
+                    considered_at: new Date().toISOString(),
+                    remarks: 'Approved with council stamp and QR code on ' + new Date().toLocaleDateString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                // Only add stamped_url if we have one and if the column exists
+                if (stampedUrl) {
+                    updateData.stamped_url = stampedUrl;
+                }
+
+                console.log('Update data (schedule):', updateData);
+
+                var { error: updateError } = await supabaseClient
+                    .from('consideration_schedule')
+                    .update(updateData)
+                    .eq('id', scheduleId);
+
+                if (updateError) {
+                    console.error('Update error:', updateError);
+                    // If the error is about missing columns, try without those columns
+                    if (updateError.message && updateError.message.includes('column')) {
+                        console.log('Retrying without optional columns...');
+                        var retryData = {
+                            status: 'approved',
+                            considered_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        };
+                        
+                        var { error: retryError } = await supabaseClient
+                            .from('consideration_schedule')
+                            .update(retryData)
+                            .eq('id', scheduleId);
+                            
+                        if (retryError) {
+                            throw new Error('Failed to update schedule: ' + retryError.message);
+                        }
+                    } else {
+                        throw new Error('Failed to update schedule: ' + updateError.message);
+                    }
+                }
+
+                // ============================================
+                // STEP 2: CREATE RECORD IN issued_documents TABLE
+                // This is where document_number SHOULD be stored
                 // ============================================
                 if (documentNumber && stampedUrl) {
                     console.log('Creating record in issued_documents table...');
@@ -842,45 +891,19 @@
 
                     if (issuedError) {
                         console.error('Error creating issued document:', issuedError);
-                        // Don't throw here - we still want to update the schedule
                         showWarning('Document created but could not save to issued_documents: ' + issuedError.message);
                     } else {
                         console.log('Issued document created successfully:', issuedData);
+                        showSuccess('Document recorded in issued_documents successfully!');
                     }
                 } else {
                     console.warn('No document number or stamped URL - skipping issued_documents insert');
+                    if (!documentNumber) console.warn('Missing document number');
+                    if (!stampedUrl) console.warn('Missing stamped URL');
                 }
 
                 // ============================================
-                // UPDATE SCHEDULE STATUS
-                // ============================================
-                console.log('Updating schedule status...');
-                var updateData = {
-                    status: 'approved',
-                    considered_at: new Date().toISOString(),
-                    remarks: 'Approved with council stamp and QR code on ' + new Date().toLocaleDateString(),
-                    updated_at: new Date().toISOString()
-                };
-
-                if (stampedUrl) {
-                    updateData.stamped_url = stampedUrl;
-                }
-                if (documentNumber) {
-                    updateData.document_number = documentNumber;
-                }
-
-                var { error: updateError } = await supabaseClient
-                    .from('consideration_schedule')
-                    .update(updateData)
-                    .eq('id', scheduleId);
-
-                if (updateError) {
-                    console.error('Update error:', updateError);
-                    throw new Error('Failed to update schedule: ' + updateError.message);
-                }
-
-                // ============================================
-                // UPDATE APPRAISAL WITH STAMP INFO
+                // STEP 3: UPDATE APPRAISAL WITH STAMP INFO
                 // ============================================
                 if (stampedUrl) {
                     var { error: appraisalUpdateError } = await supabaseClient
@@ -888,8 +911,7 @@
                         .update({ 
                             stamped_url: stampedUrl,
                             stamp_applied: true,
-                            stamp_date: new Date().toISOString(),
-                            issued_document_number: documentNumber
+                            stamp_date: new Date().toISOString()
                         })
                         .eq('id', appraisal.id);
 
