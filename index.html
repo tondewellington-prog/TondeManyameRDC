@@ -378,7 +378,7 @@
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MANY/311/2026 or APR-1234567890-123">
+                <input type="text" id="verifyDocId" placeholder="Example: MANY/PLAN/8173/2026 or MANY/311/2026">
             </div>
             <button id="verifyBtn">Verify Document</button>
             <div id="verifyResult"></div>
@@ -669,7 +669,9 @@
             loginError.innerHTML = '';
         }
         
-        // Load My Documents
+        // ============================================
+        // LOAD MY DOCUMENTS - UPDATED FOR issued_documents
+        // ============================================
         async function loadMyDocuments() {
             if (!supabaseClient || !currentStaffUser) return;
             
@@ -678,28 +680,50 @@
             try {
                 let allDocs = [];
                 
-                // Load from issued_documents
-                const { data: permits, error: permitsError } = await supabaseClient
+                // Load from issued_documents - using correct fields
+                const { data: issuedDocs, error: issuedError } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
-                    .eq('issued_by_email', currentStaffUser)
-                    .neq('status', 'downloaded')
-                    .order('created_at', { ascending: false });
+                    .eq('created_by', currentStaffUser)
+                    .order('issue_date', { ascending: false });
                 
-                if (!permitsError && permits) {
-                    permits.forEach(function(doc) {
+                if (!issuedError && issuedDocs) {
+                    issuedDocs.forEach(function(doc) {
+                        // Determine status display
+                        let statusDisplay = 'Pending';
+                        let statusClass = 'status-pending';
+                        
+                        if (doc.status === 'issued' || doc.status === 'active') {
+                            statusDisplay = 'Issued';
+                            statusClass = 'status-approved';
+                        } else if (doc.status === 'approved') {
+                            statusDisplay = 'Approved';
+                            statusClass = 'status-approved';
+                        } else if (doc.status === 'pending') {
+                            statusDisplay = 'Pending';
+                            statusClass = 'status-pending';
+                        } else if (doc.status === 'downloaded') {
+                            statusDisplay = 'Downloaded';
+                            statusClass = 'status-ceo';
+                        }
+                        
                         allDocs.push({
                             id: doc.id,
-                            document_number: doc.document_number,
-                            document_type: 'development_permit',
-                            property_location: doc.document_data ? doc.document_data.property_location : doc.property_location,
-                            applicant_name: doc.document_data ? doc.document_data.applicant_name : doc.issued_to,
-                            hod_approved: doc.hod_approved || false,
-                            ceo_approved: doc.ceo_approved || false,
+                            document_number: doc.document_number || 'N/A',
+                            document_type: doc.document_type || 'issued_document',
+                            property_location: doc.location || doc.stand_number || 'N/A',
+                            applicant_name: doc.owner_name || 'N/A',
+                            hod_approved: doc.status === 'approved' || doc.status === 'issued',
+                            ceo_approved: doc.status === 'approved' || doc.status === 'issued',
                             status: doc.status,
-                            created_at: doc.created_at,
+                            status_display: statusDisplay,
+                            status_class: statusClass,
+                            created_at: doc.issue_date || doc.created_at,
                             source_table: 'issued_documents',
-                            raw_data: doc
+                            raw_data: doc,
+                            stamped_url: doc.stamped_url,
+                            original_plan_url: doc.original_plan_url,
+                            verification_url: doc.verification_url
                         });
                     });
                 }
@@ -717,15 +741,31 @@
                         var hodApproved = (statusText === 'planning_tech' || statusText === 'district_planner' || statusText === 'approved');
                         var ceoApproved = (statusText === 'approved');
                         
+                        var statusDisplay = 'Building Inspector Pending';
+                        var statusClass = 'status-hod';
+                        
+                        if (ceoApproved) {
+                            statusDisplay = 'Approved';
+                            statusClass = 'status-approved';
+                        } else if (hodApproved) {
+                            statusDisplay = 'District Planner Pending';
+                            statusClass = 'status-ceo';
+                        } else if (statusText === 'planning_tech') {
+                            statusDisplay = 'Planning Tech Pending';
+                            statusClass = 'status-ceo';
+                        }
+                        
                         allDocs.push({
                             id: doc.id,
-                            document_number: doc.appraisal_number,
+                            document_number: doc.appraisal_number || 'N/A',
                             document_type: 'plan_appraisal',
                             property_location: doc.location || doc.stand_number || 'N/A',
                             applicant_name: doc.owner_name || 'N/A',
                             hod_approved: hodApproved,
                             ceo_approved: ceoApproved,
                             status: doc.status,
+                            status_display: statusDisplay,
+                            status_class: statusClass,
                             created_at: doc.created_at,
                             source_table: 'plan_appraisals',
                             raw_data: doc
@@ -786,82 +826,218 @@
             
             for (var i = 0; i < allDocuments.length; i++) {
                 var doc = allDocuments[i];
-                var statusText = '';
-                var statusClass = '';
-                var showDownload = false;
                 var docTypeDisplay = '';
                 var scheduleAction = '';
                 var stageAction = '';
+                var downloadAction = '';
                 
+                // Determine document type display
                 if (doc.document_type === 'plan_appraisal') {
                     docTypeDisplay = 'Plan Appraisal';
-                    if (doc.ceo_approved) {
-                        statusText = 'Approved';
-                        statusClass = 'status-approved';
-                        showDownload = true;
-                        
-                        // Check if in consideration schedule
-                        scheduleAction = `<button class="action-btn schedule" onclick="viewScheduleForAppraisal('${doc.id}')">View Schedule</button>`;
-                        // Check if stage form exists
-                        stageAction = `<button class="action-btn stage" onclick="viewStageForm('${doc.id}')">Stage Form</button>`;
-                    } else if (doc.hod_approved) {
-                        statusText = 'District Planner Pending';
-                        statusClass = 'status-ceo';
-                    } else if (doc.status === 'planning_tech') {
-                        statusText = 'Planning Tech Pending';
-                        statusClass = 'status-ceo';
-                    } else {
-                        statusText = 'Building Inspector Pending';
-                        statusClass = 'status-hod';
-                    }
                 } else if (doc.document_type === 'stage_form') {
                     docTypeDisplay = 'Stage Form';
-                    statusText = doc.status_display || 'In Progress';
-                    statusClass = doc.status_class || 'status-inprogress';
-                    stageAction = `<button class="action-btn stage" onclick="viewStageFormByFormId('${doc.id}')">View Form</button>`;
+                } else if (doc.document_type === 'issued_document' || doc.document_type === 'development_permit') {
+                    docTypeDisplay = 'Issued Document';
+                } else if (doc.document_type === 'building_permit') {
+                    docTypeDisplay = 'Building Permit';
                 } else {
-                    docTypeDisplay = 'Dev Permit';
-                    if (doc.ceo_approved && doc.hod_approved) {
-                        statusText = 'Approved';
-                        statusClass = 'status-approved';
-                        showDownload = true;
-                    } else if (doc.hod_approved) {
-                        statusText = 'CEO Pending';
-                        statusClass = 'status-ceo';
-                    } else {
-                        statusText = 'HOD Pending';
-                        statusClass = 'status-hod';
-                    }
+                    docTypeDisplay = doc.document_type || 'Document';
                 }
                 
-                var row = document.createElement('tr');
+                // Build actions
                 var actionsHtml = '';
                 
                 if (doc.document_type === 'plan_appraisal') {
                     actionsHtml = `<button class="action-btn" onclick="viewAppraisalProgress('${doc.id}')">View Progress</button>`;
-                    if (showDownload) {
-                        actionsHtml += `<button class="action-btn download" onclick="downloadAppraisal('${doc.id}')">Download PDF</button>`;
-                        actionsHtml += scheduleAction;
-                        actionsHtml += stageAction;
+                    if (doc.ceo_approved) {
+                        actionsHtml += `<button class="action-btn schedule" onclick="viewScheduleForAppraisal('${doc.id}')">Schedule</button>`;
+                        actionsHtml += `<button class="action-btn stage" onclick="viewStageForm('${doc.id}')">Stage Form</button>`;
+                        actionsHtml += `<button class="action-btn download" onclick="downloadAppraisal('${doc.id}')">Download</button>`;
                     }
                 } else if (doc.document_type === 'stage_form') {
-                    actionsHtml = stageAction;
+                    actionsHtml = `<button class="action-btn stage" onclick="viewStageFormByFormId('${doc.id}')">View Form</button>`;
+                } else if (doc.source_table === 'issued_documents' || doc.document_type === 'issued_document' || doc.document_type === 'development_permit' || doc.document_type === 'building_permit') {
+                    actionsHtml = `<button class="action-btn" onclick="viewIssuedDocument('${doc.id}')">View</button>`;
+                    if (doc.stamped_url) {
+                        actionsHtml += `<button class="action-btn download" onclick="downloadStampedDocument('${doc.id}')">Download Stamped</button>`;
+                    }
+                    if (doc.original_plan_url) {
+                        actionsHtml += `<button class="action-btn" onclick="downloadOriginalPlan('${doc.id}')">Original Plan</button>`;
+                    }
                 } else {
-                    actionsHtml = `<button class="action-btn" onclick="viewPermitProgress('${doc.id}', '${doc.document_number}')">View Progress</button>`;
-                    if (showDownload) {
-                        actionsHtml += `<button class="action-btn download" onclick="downloadPermit('${doc.id}', '${doc.document_number}')">Download PDF</button>`;
+                    actionsHtml = `<button class="action-btn" onclick="viewDocument('${doc.id}', '${doc.source_table}')">View</button>`;
+                    if (doc.status === 'approved' || doc.status === 'issued') {
+                        actionsHtml += `<button class="action-btn download" onclick="downloadDocument('${doc.id}', '${doc.source_table}')">Download</button>`;
                     }
                 }
                 
+                var row = document.createElement('tr');
                 row.innerHTML = `
                     <td><strong>${escapeHtml(doc.document_number)}</strong><br><small style="font-size:10px;color:#666;">${docTypeDisplay}</small></td>
                     <td>${escapeHtml(doc.property_location || '-')}</td>
                     <td>${escapeHtml(doc.applicant_name || '-')}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td><span class="status-badge ${doc.status_class || 'status-pending'}">${doc.status_display || doc.status || 'Pending'}</span></td>
                     <td>${actionsHtml}</td>
                 `;
                 
                 permitsTableBody.appendChild(row);
+            }
+        }
+        
+        // ============================================
+        // VERIFICATION - UPDATED FOR issued_documents
+        // ============================================
+        async function verifyDocument() {
+            const docId = document.getElementById('verifyDocId').value.trim();
+            
+            if (!docId) {
+                verifyResult.innerHTML = '<div class="error">Please enter a Document ID.</div>';
+                return;
+            }
+            
+            verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
+            
+            try {
+                // First check issued_documents table
+                let { data, error } = await supabaseClient
+                    .from('issued_documents')
+                    .select('*')
+                    .eq('document_number', docId);
+                
+                if (error) throw error;
+                
+                // If not found in issued_documents, check plan_appraisals
+                if (!data || data.length === 0) {
+                    const { data: appraisalData, error: appraisalError } = await supabaseClient
+                        .from('plan_appraisals')
+                        .select('*')
+                        .eq('appraisal_number', docId);
+                    
+                    if (!appraisalError && appraisalData && appraisalData.length > 0) {
+                        data = appraisalData.map(function(d) {
+                            return {
+                                document_number: d.appraisal_number,
+                                owner_name: d.owner_name,
+                                location: d.location || d.stand_number,
+                                issue_date: d.created_at ? d.created_at.split('T')[0] : 'N/A',
+                                status: d.status === 'approved' ? 'approved' : 'pending',
+                                document_type: 'plan_appraisal',
+                                stamped_url: d.stamped_url,
+                                verification_url: null
+                            };
+                        });
+                    }
+                }
+                
+                if (!data || data.length === 0) {
+                    verifyResult.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found.</div>`;
+                    return;
+                }
+                
+                const doc = data[0];
+                const isValid = doc.status === 'active' || doc.status === 'approved' || doc.status === 'issued';
+                
+                let docTypeName = doc.document_type === 'plan_appraisal' ? 'Plan Appraisal Form' : 'Building Permit / Issued Document';
+                let issuedToName = doc.owner_name || doc.issued_to || 'N/A';
+                let propertyLoc = doc.location || doc.property_location || doc.stand_number || 'N/A';
+                
+                // Build verification result
+                let resultHtml = `
+                    <div class="${isValid ? 'valid' : 'invalid'}">
+                        <strong>${isValid ? 'VERIFIED - VALID OFFICIAL DOCUMENT' : 'INVALID - Document not fully approved'}</strong><br><br>
+                        <strong>Document ID:</strong> ${escapeHtml(doc.document_number)}<br>
+                        <strong>Type:</strong> ${docTypeName}<br>
+                        <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
+                        <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
+                        <strong>Issue Date:</strong> ${doc.issue_date || 'N/A'}<br>
+                        <strong>Status:</strong> ${doc.status ? doc.status.toUpperCase() : 'Unknown'}
+                `;
+                
+                if (doc.stamped_url) {
+                    resultHtml += `<br><br><a href="${doc.stamped_url}" target="_blank" class="action-btn download" style="display:inline-block;text-decoration:none;color:white;padding:8px 16px;">Download Stamped Document</a>`;
+                }
+                
+                if (doc.verification_url) {
+                    resultHtml += `<br><br><small>Verification URL: ${escapeHtml(doc.verification_url)}</small>`;
+                }
+                
+                resultHtml += `</div>`;
+                verifyResult.innerHTML = resultHtml;
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+                verifyResult.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
+            }
+        }
+        
+        // ============================================
+        // DOCUMENT VIEW FUNCTIONS
+        // ============================================
+        function viewIssuedDocument(docId) {
+            window.location.href = 'view-document.html?id=' + docId;
+        }
+        
+        async function downloadStampedDocument(docId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('issued_documents')
+                    .select('stamped_url, document_number')
+                    .eq('id', docId)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (data && data.stamped_url) {
+                    window.open(data.stamped_url, '_blank');
+                } else {
+                    alert('No stamped document found.');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Error downloading document: ' + error.message);
+            }
+        }
+        
+        async function downloadOriginalPlan(docId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('issued_documents')
+                    .select('original_plan_url, document_number')
+                    .eq('id', docId)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (data && data.original_plan_url) {
+                    window.open(data.original_plan_url, '_blank');
+                } else {
+                    alert('No original plan found.');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Error downloading plan: ' + error.message);
+            }
+        }
+        
+        function viewDocument(docId, sourceTable) {
+            if (sourceTable === 'issued_documents') {
+                viewIssuedDocument(docId);
+            } else if (sourceTable === 'plan_appraisals') {
+                viewAppraisalProgress(docId);
+            } else if (sourceTable === 'stage_forms') {
+                viewStageFormByFormId(docId);
+            } else {
+                alert('View document functionality coming soon.');
+            }
+        }
+        
+        function downloadDocument(docId, sourceTable) {
+            if (sourceTable === 'issued_documents') {
+                downloadStampedDocument(docId);
+            } else if (sourceTable === 'plan_appraisals') {
+                downloadAppraisal(docId);
+            } else {
+                alert('Download functionality coming soon.');
             }
         }
         
@@ -929,141 +1105,14 @@
                 
                 if (error) throw error;
                 
-                var functionUrl = SUPABASE_URL + '/functions/v1/generate-pdf';
-                var response = await fetch(functionUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        document_type: 'development_permit',
-                        data: permit.document_data
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('PDF generation failed');
+                if (permit && permit.stamped_url) {
+                    window.open(permit.stamped_url, '_blank');
+                } else {
+                    alert('No stamped document available.');
                 }
-                
-                var pdfBlob = await response.blob();
-                var url = window.URL.createObjectURL(pdfBlob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'Development_Permit_' + permitNumber + '.pdf';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-                await supabaseClient
-                    .from('issued_documents')
-                    .update({ status: 'downloaded' })
-                    .eq('id', permitId);
-                
-                loadMyDocuments();
-                
             } catch (error) {
                 console.error('Download error:', error);
                 alert('Error downloading permit: ' + error.message);
-            }
-        }
-        
-        // ============================================
-        // VERIFICATION
-        // ============================================
-        async function verifyDocument() {
-            const docId = document.getElementById('verifyDocId').value.trim();
-            
-            if (!docId) {
-                verifyResult.innerHTML = '<div class="error">Please enter a Document ID.</div>';
-                return;
-            }
-            
-            verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
-            
-            try {
-                let { data, error } = await supabaseClient
-                    .from('issued_documents')
-                    .select('*')
-                    .eq('document_number', docId);
-                
-                if (error) throw error;
-                
-                if (!data || data.length === 0) {
-                    const { data: appraisalData, error: appraisalError } = await supabaseClient
-                        .from('plan_appraisals')
-                        .select('*')
-                        .eq('appraisal_number', docId);
-                    
-                    if (!appraisalError && appraisalData && appraisalData.length > 0) {
-                        data = appraisalData.map(function(d) {
-                            return {
-                                document_number: d.appraisal_number,
-                                issued_to: d.owner_name,
-                                property_location: d.location || d.stand_number,
-                                issue_date: d.created_at ? d.created_at.split('T')[0] : 'N/A',
-                                expiry_date: null,
-                                status: d.status === 'approved' ? 'active' : 'pending',
-                                hod_approved: (d.status === 'planning_tech' || d.status === 'district_planner' || d.status === 'approved'),
-                                ceo_approved: (d.status === 'approved'),
-                                document_type: 'plan_appraisal',
-                                document_data: d
-                            };
-                        });
-                    }
-                }
-                
-                if (!data || data.length === 0) {
-                    verifyResult.innerHTML = `<div class="invalid">INVALID - Document ID "${escapeHtml(docId)}" not found.</div>`;
-                    return;
-                }
-                
-                const doc = data[0];
-                const isValid = doc.status === 'active' || doc.status === 'approved';
-                
-                let docTypeName = doc.document_type === 'plan_appraisal' ? 'Plan Appraisal Form' : 'Development Permit';
-                let issuedToName = doc.issued_to || doc.owner_name || 'N/A';
-                let propertyLoc = doc.property_location || doc.location || doc.stand_number || 'N/A';
-                
-                if (isValid && (doc.ceo_approved || doc.status === 'approved')) {
-                    verifyResult.innerHTML = `
-                        <div class="valid">
-                            <strong>VERIFIED - VALID OFFICIAL DOCUMENT</strong><br><br>
-                            <strong>Document ID:</strong> ${escapeHtml(doc.document_number)}<br>
-                            <strong>Type:</strong> ${docTypeName}<br>
-                            <strong>Issued To:</strong> ${escapeHtml(issuedToName)}<br>
-                            <strong>Property:</strong> ${escapeHtml(propertyLoc)}<br>
-                            <strong>Issue Date:</strong> ${doc.issue_date || 'N/A'}<br>
-                            <strong>Status:</strong> Active Council Record
-                        </div>
-                    `;
-                } else {
-                    verifyResult.innerHTML = `<div class="invalid">INVALID - This document has not been fully approved.</div>`;
-                }
-            } catch (error) {
-                verifyResult.innerHTML = `<div class="error">Verification error. Please try again.</div>`;
-            }
-        }
-        
-        function goToDocumentForm() {
-            const docType = documentTypeSelect.value;
-            
-            if (!docType) {
-                alert('Please select a document type.');
-                return;
-            }
-            
-            if (!currentStaffUser) {
-                alert('Please login first.');
-                return;
-            }
-            
-            if (docType === 'development_permit') {
-                window.location.href = 'development-permit.html';
-            } else if (docType === 'plan_appraisal') {
-                window.location.href = 'plan-appraisal-form.html';
-            } else if (docType === 'stage_form') {
-                window.location.href = 'stage-form.html';
-            } else if (docType === 'consideration_schedule') {
-                window.location.href = 'consideration-schedule.html';
             }
         }
         
@@ -1094,6 +1143,11 @@
         window.viewScheduleForAppraisal = viewScheduleForAppraisal;
         window.viewStageForm = viewStageForm;
         window.viewStageFormByFormId = viewStageFormByFormId;
+        window.viewIssuedDocument = viewIssuedDocument;
+        window.downloadStampedDocument = downloadStampedDocument;
+        window.downloadOriginalPlan = downloadOriginalPlan;
+        window.viewDocument = viewDocument;
+        window.downloadDocument = downloadDocument;
         
         checkLoginState();
         
@@ -1111,6 +1165,37 @@
             verifyDocument();
             showVerifyTab();
         }
+        
+        // ============================================
+        // CONTINUE BUTTON HANDLER
+        // ============================================
+        function goToDocumentForm() {
+            const docType = documentTypeSelect.value;
+            
+            if (!docType) {
+                alert('Please select a document type.');
+                return;
+            }
+            
+            if (!currentStaffUser) {
+                alert('Please login first.');
+                return;
+            }
+            
+            if (docType === 'development_permit') {
+                window.location.href = 'development-permit.html';
+            } else if (docType === 'plan_appraisal') {
+                window.location.href = 'plan-appraisal-form.html';
+            } else if (docType === 'stage_form') {
+                window.location.href = 'stage-form.html';
+            } else if (docType === 'consideration_schedule') {
+                window.location.href = 'consideration-schedule.html';
+            }
+        }
+        
+        // Reassign continueBtn listener
+        continueBtn.removeEventListener('click', goToDocumentForm);
+        continueBtn.addEventListener('click', goToDocumentForm);
     </script>
 </body>
 </html>
