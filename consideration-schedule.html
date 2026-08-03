@@ -713,10 +713,10 @@
         }
 
         // ============================================
-        // APPROVE SCHEDULE - WITH APPRAISAL DATA PASSED TO EDGE FUNCTION
+        // APPROVE SCHEDULE - WITH issued_documents TABLE
         // ============================================
         async function approveSchedule(scheduleId) {
-            console.log('=== APPROVE SCHEDULE WITH QR AND APPRAISAL DATA ===');
+            console.log('=== APPROVE SCHEDULE WITH issued_documents TABLE ===');
             console.log('Schedule ID:', scheduleId);
 
             if (!scheduleId) {
@@ -811,7 +811,49 @@
                     console.warn('No plan file URL found');
                 }
 
-                // Update schedule status
+                // ============================================
+                // CREATE RECORD IN issued_documents TABLE
+                // ============================================
+                if (documentNumber && stampedUrl) {
+                    console.log('Creating record in issued_documents table...');
+                    
+                    var issuedDocument = {
+                        document_number: documentNumber,
+                        schedule_id: scheduleId,
+                        appraisal_id: appraisal.id,
+                        owner_name: appraisal.owner_name || '',
+                        stand_number: appraisal.stand_number || '',
+                        location: appraisal.location || '',
+                        document_type: 'building_permit',
+                        status: 'issued',
+                        stamped_url: stampedUrl,
+                        original_plan_url: appraisal.plan_file_url || '',
+                        issue_date: new Date().toISOString(),
+                        created_by: currentStaffUserId || currentStaffName || 'district_planner',
+                        verification_url: BASE_URL + '/index.html?id=' + encodeURIComponent(documentNumber)
+                    };
+
+                    console.log('Issued document data:', issuedDocument);
+
+                    var { data: issuedData, error: issuedError } = await supabaseClient
+                        .from('issued_documents')
+                        .insert(issuedDocument)
+                        .select();
+
+                    if (issuedError) {
+                        console.error('Error creating issued document:', issuedError);
+                        // Don't throw here - we still want to update the schedule
+                        showWarning('Document created but could not save to issued_documents: ' + issuedError.message);
+                    } else {
+                        console.log('Issued document created successfully:', issuedData);
+                    }
+                } else {
+                    console.warn('No document number or stamped URL - skipping issued_documents insert');
+                }
+
+                // ============================================
+                // UPDATE SCHEDULE STATUS
+                // ============================================
                 console.log('Updating schedule status...');
                 var updateData = {
                     status: 'approved',
@@ -837,6 +879,9 @@
                     throw new Error('Failed to update schedule: ' + updateError.message);
                 }
 
+                // ============================================
+                // UPDATE APPRAISAL WITH STAMP INFO
+                // ============================================
                 if (stampedUrl) {
                     var { error: appraisalUpdateError } = await supabaseClient
                         .from('plan_appraisals')
@@ -854,7 +899,7 @@
                 }
 
                 var message = stampedUrl ? 
-                    'Schedule approved and stamp with QR code applied successfully! The document has been recorded in the system.' :
+                    'Schedule approved and stamp with QR code applied successfully! Document recorded in issued_documents.' :
                     'Schedule approved! (Stamp could not be applied)';
                 
                 console.log('Success:', message);
