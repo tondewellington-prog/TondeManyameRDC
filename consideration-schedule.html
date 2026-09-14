@@ -649,21 +649,21 @@
                         if (stampedUrl) {
                             actionsHtml = `
                                 <span class="status-badge status-approved">Approved</span>
-                                <br><span class="doc-number-display">${docNumber}</span>
+                                <br><span class="doc-number-display">📄 ${docNumber}</span>
                                 ${qrUrl ? `<br><span class="qr-info">QR: ${qrUrl}</span>` : ''}
-                                <br><a href="${stampedUrl}" target="_blank" class="download-stamped-btn">Download Stamped</a>
+                                <br><a href="${stampedUrl}" target="_blank" class="download-stamped-btn">⬇ Download Stamped</a>
                             `;
                         } else {
                             actionsHtml = `
                                 <span class="status-badge status-approved">Approved</span>
-                                <br><span class="doc-number-display">${docNumber}</span>
+                                <br><span class="doc-number-display">📄 ${docNumber}</span>
                                 ${appraisal.plan_file_url ? `<br><a href="${appraisal.plan_file_url}" target="_blank" class="download-btn">Download Original</a>` : ''}
                             `;
                         }
                     } else {
                         actionsHtml = `
                             <button class="approve-btn" onclick="approveSchedule('${item.id}')">
-                                Approve & Apply Stamp
+                                ✅ Approve & Apply Stamp
                             </button>
                         `;
                     }
@@ -672,16 +672,14 @@
                     var dar = appraisal.updated_at ? new Date(appraisal.updated_at).toLocaleDateString() : '-';
 
                     // ============================================
-                    // FIXED: ONLY read from client contact fields
-                    // NEVER fall back to created_by_email or created_by_name
+                    // FIXED: Contact reads ONLY from the appraisal's client contact field.
+                    // Never falls back to created_by_email or created_by_name.
                     // ============================================
                     var contactDisplay = 'N/A';
-                    if (item.contact && item.contact !== '' && item.contact !== 'N/A') {
-                        contactDisplay = item.contact;
-                    } else if (appraisal.contact && appraisal.contact !== '' && appraisal.contact !== 'N/A') {
+                    if (appraisal.contact && appraisal.contact !== '' && appraisal.contact !== 'N/A') {
                         contactDisplay = appraisal.contact;
-                    } else if (appraisal.customer_contact && appraisal.customer_contact !== '' && appraisal.customer_contact !== 'N/A') {
-                        contactDisplay = appraisal.customer_contact;
+                    } else if (item.contact && item.contact !== '' && item.contact !== 'N/A') {
+                        contactDisplay = item.contact;
                     }
 
                     var sexDisplay = 'N/A';
