@@ -406,6 +406,7 @@
                 <input type="text" id="verifyDocId" placeholder="Example: MANY/PLAN/8173/2026 or MANY/311/2026">
             </div>
             <button id="verifyBtn">Verify Document</button>
+            <button style="background:#28a745;margin-top:10px;" onclick="window.location.href='market-booking.html'">Book a Market Stand</button>
             <div id="verifyResult"></div>
             <div class="footer">
                 This is an official verification system of Manyame Rural District Council, created by Tonderai Nyamandi.
@@ -458,6 +459,7 @@
                         <option value="plan_appraisal">Plan Appraisal Form</option>
                         <option value="stage_form">Stage Form (Construction Inspection)</option>
                         <option value="consideration_schedule" id="scheduleOption" style="display:none;">Consideration Schedule 261</option>
+                        <option value="market_stands" id="marketOption" style="display:none;">Market Stands Management</option>
                     </select>
                     <button id="continueBtn" class="continue-btn">Continue</button>
                 </div>
@@ -576,13 +578,20 @@
             badge.textContent = getStaffRoleDisplay(currentStaffRole);
             badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
             
+            const marketOption = document.getElementById('marketOption');
+            
             // Show/hide schedule option based on role
             if (currentStaffRole === 'district_planner') {
                 scheduleOption.style.display = 'block';
+                if (marketOption) marketOption.style.display = 'block';
                 updateScheduleOptionLabel();
             } else {
                 scheduleOption.style.display = 'none';
+                if (marketOption) marketOption.style.display = 'none';
                 if (documentTypeSelect.value === 'consideration_schedule') {
+                    documentTypeSelect.value = '';
+                }
+                if (documentTypeSelect.value === 'market_stands') {
                     documentTypeSelect.value = '';
                 }
             }
@@ -1236,6 +1245,11 @@
                 return;
             }
             
+            if (docType === 'market_stands' && currentStaffRole !== 'district_planner') {
+                alert('Only the District Planner can manage market stands.');
+                return;
+            }
+            
             if (docType === 'development_permit') {
                 window.location.href = 'development-permit.html';
             } else if (docType === 'plan_appraisal') {
@@ -1244,6 +1258,8 @@
                 window.location.href = 'stage-form.html';
             } else if (docType === 'consideration_schedule') {
                 window.location.href = 'consideration-schedule.html';
+            } else if (docType === 'market_stands') {
+                window.location.href = 'market-admin.html';
             }
         }
         
