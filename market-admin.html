@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Stand Management - Manyame RDC</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f0f2f5; min-height:100vh; padding:20px; }
+  .back-link { max-width:1300px; margin:0 auto 15px auto; }
+  .back-link a { color:#1e3c72; text-decoration:none; font-weight:bold; }
+  .container { max-width:1300px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); overflow:hidden; }
+  .header { background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%); color:white; padding:20px 25px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  .header h1 { font-size:22px; }
+  .header h2 { font-size:13px; font-weight:normal; opacity:0.9; }
+  .header .today { background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; }
+  .content { padding:25px; }
+  .staff-info { background:#e9ecef; padding:12px 15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:14px; }
+  .role-badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:12px; font-weight:bold; margin-left:8px; background:#28a745; color:white; }
+  .logout-btn { background:#6c757d; color:white; padding:6px 15px; font-size:13px; border:none; border-radius:4px; cursor:pointer; }
+  .logout-btn:hover { background:#5a6268; }
+
+  .tabs { display:flex; gap:8px; margin-bottom:20px; border-bottom:2px solid #e9ecef; }
+  .tab-btn { background:none; border:none; padding:12px 20px; font-size:14px; font-weight:bold; color:#666; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:inherit; }
+  .tab-btn.active { color:#1e3c72; border-bottom-color:#1e3c72; }
+  .tab-btn:hover { color:#1e3c72; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  .error { background:#f8d7da; color:#721c24; padding:15px; border-radius:8px; margin-top:20px; border-left:5px solid #dc3545; }
+  .success { background:#d4edda; color:#155724; padding:15px; border-radius:8px; margin-top:20px; border-left:5px solid #28a745; }
+  .hidden { display:none; }
+  .loading { text-align:center; padding:20px; color:#666; }
+
+  .stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:20px; }
+  .stat-card { background:#f8f9fa; border-radius:10px; padding:18px; text-align:center; border:1px solid #e9ecef; }
+  .stat-card .value { font-size:28px; font-weight:bold; color:#1e3c72; }
+  .stat-card .label { font-size:12px; color:#666; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px; }
+  .stat-card.available .value { color:#28a745; }
+  .stat-card.booked .value { color:#dc3545; }
+  .stat-card.pending .value { color:#856404; }
+
+  .section-title { color:#1e3c72; font-size:17px; margin:20px 0 15px 0; padding-bottom:8px; border-bottom:2px solid #e9ecef; }
+
+  .btn { padding:10px 18px; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; font-family:inherit; transition:transform .15s; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn-primary { background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%); color:white; }
+  .btn-success { background:#28a745; color:white; }
+  .btn-danger { background:#dc3545; color:white; }
+  .btn-secondary { background:#6c757d; color:white; }
+  .btn-small { padding:6px 12px; font-size:12px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  th, td { padding:10px 12px; text-align:left; border-bottom:1px solid #e9ecef; vertical-align:middle; }
+  th { background:#f8f9fa; color:#1e3c72; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; }
+  tr:hover { background:#f8f9fa; }
+  .empty-row td { text-align:center; padding:40px; color:#666; }
+  .status-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:bold; }
+  .status-confirmed { background:#28a745; color:white; }
+  .status-pending { background:#ffc107; color:#856404; }
+  .status-released { background:#6c757d; color:white; }
+  .status-expired { background:#dc3545; color:white; }
+
+  .price-form { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end; max-width:600px; margin-top:15px; }
+  .price-form .form-group { margin:0; }
+  .price-form label { display:block; font-weight:600; margin-bottom:6px; color:#333; font-size:13px; }
+  .price-form input, .price-form select { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; }
+
+  .info-card { background:#cce5ff; border-left:5px solid #007bff; padding:15px; border-radius:8px; margin-bottom:20px; font-size:14px; }
+  .warning-card { background:#fff3cd; border-left:5px solid #ffc107; padding:15px; border-radius:8px; margin-bottom:20px; font-size:14px; color:#856404; }
+
+  .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; justify-content:center; align-items:center; padding:20px; }
+  .modal.show { display:flex; }
+  .modal-content { background:white; border-radius:12px; max-width:520px; width:100%; max-height:90vh; overflow-y:auto; }
+  .modal-header { background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%); color:white; padding:18px 20px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; }
+  .modal-header h3 { font-size:17px; }
+  .modal-close { background:transparent; border:none; color:white; font-size:22px; cursor:pointer; line-height:1; }
+  .modal-body { padding:22px; }
+  .modal-body .info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0; font-size:14px; }
+  .modal-body .info-row:last-of-type { border-bottom:none; }
+  .modal-body .info-row .label { color:#666; }
+  .modal-body .info-row .value { font-weight:bold; color:#1e3c72; text-align:right; }
+  .modal-actions { display:flex; gap:10px; margin-top:18px; }
+  .modal-actions .btn { flex:1; }
+
+  @media (max-width:900px) {
+    .stat-row { grid-template-columns:repeat(2,1fr); }
+    .content { padding:15px; }
+    table { font-size:11px; }
+    th, td { padding:6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="back-link">
+  <a href="index.html">Back to Dashboard</a>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Manyame Rural District Council</h1>
+      <h2>Market Stand Management</h2>
+    </div>
+    <div class="today" id="todayLabel">Today</div>
+  </div>
+
+  <div class="content">
+    <div id="staffInfoSection" class="staff-info">
+      <span>Logged in as: <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge">District Planner</span></span>
+      <button class="logout-btn" onclick="staffLogout()">Logout</button>
+    </div>
+
+    <div id="errorDisplay" class="error hidden"></div>
+    <div id="successDisplay" class="success hidden"></div>
+
+    <div id="accessDenied" class="error hidden">
+      <strong>Access Denied</strong><br>
+      Only the District Planner can access market management.
+      <br><br>
+      <a href="index.html">Return to Dashboard</a>
+    </div>
+
+    <div id="adminBody" class="hidden">
+
+      <div class="stat-row">
+        <div class="stat-card available">
+          <div class="value" id="statAvailable">-</div>
+          <div class="label">Available</div>
+        </div>
+        <div class="stat-card booked">
+          <div class="value" id="statBooked">-</div>
+          <div class="label">Booked</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="value" id="statPending">-</div>
+          <div class="label">Pending Payment</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="statRevenue">-</div>
+          <div class="label">Today Revenue</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="grid">Live Grid</button>
+        <button class="tab-btn" data-tab="bookings">Bookings</button>
+        <button class="tab-btn" data-tab="pricing">Pricing</button>
+      </div>
+
+      <!-- Grid tab -->
+      <div class="tab-panel active" id="panel-grid">
+        <div class="info-card">
+          Click any stand to view details. Red stands are booked for today. Yellow stands have a payment in progress. Click a red or yellow stand to release it or mark payment received.
+        </div>
+        <div id="marketContainer">
+          <div class="loading">Loading market layout...</div>
+        </div>
+        <div class="market-legend">
+          <div class="market-legend-item"><div class="market-legend-swatch" style="background:#e7f6ea;"></div><span>Available</span></div>
+          <div class="market-legend-item"><div class="market-legend-swatch" style="background:#ffc107;"></div><span>Pending payment</span></div>
+          <div class="market-legend-item"><div class="market-legend-swatch" style="background:#dc3545;"></div><span>Booked</span></div>
+          <div class="market-legend-item"><div class="market-legend-swatch" style="background:#343a40;"></div><span>Central wall</span></div>
+          <div class="market-legend-item"><div class="market-legend-swatch" style="background:#e9ecef;"></div><span>Aisle</span></div>
+        </div>
+      </div>
+
+      <!-- Bookings tab -->
+      <div class="tab-panel" id="panel-bookings">
+        <h3 class="section-title">Today's Bookings</h3>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-small" onclick="refreshAll()">Refresh</button>
+          <button class="btn btn-primary btn-small" onclick="exportBookingsCsv()">Export CSV</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="bookingsTable">
+            <thead>
+              <tr>
+                <th>Stand</th>
+                <th>Reference</th>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsBody">
+              <tr class="empty-row"><td colspan="8">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pricing tab -->
+      <div class="tab-panel" id="panel-pricing">
+        <h3 class="section-title">Set Daily Price</h3>
+        <div class="warning-card">
+          The price applies to all 100 stands. Changing the price does not affect bookings that are already confirmed for today; it applies to new bookings only.
+        </div>
+        <div class="price-form">
+          <div class="form-group">
+            <label>Price per stand (per day)</label>
+            <input type="number" id="newPrice" step="0.01" min="0" placeholder="e.g., 5.00">
+          </div>
+          <div class="form-group">
+            <label>Currency</label>
+            <select id="newCurrency">
+              <option value="USD">USD</option>
+              <option value="ZWG">ZWG</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="saveNewPrice()">Save Price</button>
+        </div>
+        <h3 class="section-title" style="margin-top:30px;">Price History</h3>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>Price</th><th>Currency</th><th>Effective From</th><th>Status</th><th>Updated By</th><th>Updated At</th></tr>
+            </thead>
+            <tbody id="pricingHistoryBody">
+              <tr class="empty-row"><td colspan="6">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Stand detail modal -->
+<div class="modal" id="standModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="standModalTitle">Stand Details</h3>
+      <button class="modal-close" onclick="closeStandModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="standModalBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="market-utils.js"></script>
+<script src="market-admin.js"></script>
+</body>
+</html>
