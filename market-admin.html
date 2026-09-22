@@ -20,8 +20,8 @@
   .logout-btn { background:#6c757d; color:white; padding:6px 15px; font-size:13px; border:none; border-radius:4px; cursor:pointer; }
   .logout-btn:hover { background:#5a6268; }
 
-  .tabs { display:flex; gap:8px; margin-bottom:20px; border-bottom:2px solid #e9ecef; }
-  .tab-btn { background:none; border:none; padding:12px 20px; font-size:14px; font-weight:bold; color:#666; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:inherit; }
+  .tabs { display:flex; gap:6px; margin-bottom:20px; border-bottom:2px solid #e9ecef; overflow-x:auto; }
+  .tab-btn { background:none; border:none; padding:12px 16px; font-size:13px; font-weight:bold; color:#666; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:inherit; white-space:nowrap; }
   .tab-btn.active { color:#1e3c72; border-bottom-color:#1e3c72; }
   .tab-btn:hover { color:#1e3c72; }
   .tab-panel { display:none; }
@@ -60,18 +60,24 @@
   .status-pending { background:#ffc107; color:#856404; }
   .status-released { background:#6c757d; color:white; }
   .status-expired { background:#dc3545; color:white; }
+  .status-inprogress { background:#17a2b8; color:white; }
 
-  .price-form { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end; max-width:600px; margin-top:15px; }
+  .price-form { display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end; max-width:420px; margin-top:15px; }
   .price-form .form-group { margin:0; }
   .price-form label { display:block; font-weight:600; margin-bottom:6px; color:#333; font-size:13px; }
-  .price-form input, .price-form select { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; }
+  .price-form input { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; }
 
   .info-card { background:#cce5ff; border-left:5px solid #007bff; padding:15px; border-radius:8px; margin-bottom:20px; font-size:14px; }
   .warning-card { background:#fff3cd; border-left:5px solid #ffc107; padding:15px; border-radius:8px; margin-bottom:20px; font-size:14px; color:#856404; }
 
+  .rate-box { background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:14px; margin-top:15px; font-size:14px; }
+  .rate-box .row { display:flex; justify-content:space-between; padding:4px 0; }
+  .rate-box .row .label { color:#666; }
+  .rate-box .row .value { font-weight:bold; color:#1e3c72; text-align:right; }
+
   .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; justify-content:center; align-items:center; padding:20px; }
   .modal.show { display:flex; }
-  .modal-content { background:white; border-radius:12px; max-width:520px; width:100%; max-height:90vh; overflow-y:auto; }
+  .modal-content { background:white; border-radius:12px; max-width:560px; width:100%; max-height:90vh; overflow-y:auto; }
   .modal-header { background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%); color:white; padding:18px 20px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; }
   .modal-header h3 { font-size:17px; }
   .modal-close { background:transparent; border:none; color:white; font-size:22px; cursor:pointer; line-height:1; }
@@ -80,8 +86,16 @@
   .modal-body .info-row:last-of-type { border-bottom:none; }
   .modal-body .info-row .label { color:#666; }
   .modal-body .info-row .value { font-weight:bold; color:#1e3c72; text-align:right; }
-  .modal-actions { display:flex; gap:10px; margin-top:18px; }
-  .modal-actions .btn { flex:1; }
+  .modal-actions { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .modal-actions .btn { flex:1; min-width:140px; }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-weight:600; margin-bottom:6px; color:#333; font-size:13px; }
+  .form-group input, .form-group select, .form-group textarea { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; }
+  .form-group textarea { resize:vertical; }
+
+  .filter-bar { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:flex-end; }
+  .filter-bar .form-group { margin:0; min-width:140px; }
+  .filter-bar input, .filter-bar select { padding:8px 12px; }
 
   @media (max-width:900px) {
     .stat-row { grid-template-columns:repeat(2,1fr); }
@@ -146,13 +160,17 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="grid">Live Grid</button>
         <button class="tab-btn" data-tab="bookings">Bookings</button>
+        <button class="tab-btn" data-tab="reports">Reports <span id="reportCountBadge" class="schedule-count hidden">0</span></button>
+        <button class="tab-btn" data-tab="quotas">Quotas</button>
         <button class="tab-btn" data-tab="pricing">Pricing</button>
+        <button class="tab-btn" data-tab="history">History</button>
+        <button class="tab-btn" data-tab="audit">Audit</button>
       </div>
 
-      <!-- Grid tab -->
+      <!-- GRID -->
       <div class="tab-panel active" id="panel-grid">
         <div class="info-card">
-          Click any stand to view details. Red stands are booked for today. Yellow stands have a payment in progress. Click a red or yellow stand to release it or mark payment received.
+          Click any stand to view details. Red stands are booked for today. Yellow stands have a payment in progress. Orange dots mean a customer has filed a report for that stand.
         </div>
         <div id="marketContainer">
           <div class="loading">Loading market layout...</div>
@@ -163,15 +181,16 @@
           <div class="market-legend-item"><div class="market-legend-swatch" style="background:#dc3545;"></div><span>Booked</span></div>
           <div class="market-legend-item"><div class="market-legend-swatch" style="background:#343a40;"></div><span>Central wall</span></div>
           <div class="market-legend-item"><div class="market-legend-swatch" style="background:#e9ecef;"></div><span>Aisle</span></div>
+          <div class="market-legend-item"><div class="market-legend-swatch" style="background:#fd7e14;"></div><span>Has open reports</span></div>
         </div>
       </div>
 
-      <!-- Bookings tab -->
+      <!-- BOOKINGS -->
       <div class="tab-panel" id="panel-bookings">
         <h3 class="section-title">Today's Bookings</h3>
         <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
           <button class="btn btn-secondary btn-small" onclick="refreshAll()">Refresh</button>
-          <button class="btn btn-primary btn-small" onclick="exportBookingsCsv()">Export CSV</button>
+          <button class="btn btn-primary btn-small" onclick="exportBookingsCsv()">Export Today CSV</button>
         </div>
         <div style="overflow-x:auto;">
           <table id="bookingsTable">
@@ -181,6 +200,7 @@
                 <th>Reference</th>
                 <th>Customer</th>
                 <th>Phone</th>
+                <th>Email</th>
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Time</th>
@@ -188,40 +208,192 @@
               </tr>
             </thead>
             <tbody id="bookingsBody">
+              <tr class="empty-row"><td colspan="9">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="tab-panel" id="panel-reports">
+        <h3 class="section-title">Customer Reports</h3>
+        <div class="info-card">
+          Reports filed by members of the public about stand users. Click View to change a report's status and add admin notes.
+        </div>
+        <div class="filter-bar">
+          <button class="btn btn-secondary btn-small" onclick="refreshReportsTable()">Refresh</button>
+          <div class="form-group">
+            <label>Status filter</label>
+            <select id="reportStatusFilter" onchange="refreshReportsTable()">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="resolved">Resolved</option>
+              <option value="dismissed">Dismissed</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="reportsTable">
+            <thead>
+              <tr>
+                <th>Stand</th>
+                <th>Reason</th>
+                <th>Reported By</th>
+                <th>Phone</th>
+                <th>Details</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reportsBody">
               <tr class="empty-row"><td colspan="8">Loading...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Pricing tab -->
+      <!-- QUOTAS -->
+      <div class="tab-panel" id="panel-quotas">
+        <h3 class="section-title">Multi-Stand Quotas</h3>
+        <div class="info-card">
+          Approve a farmer to book more than one stand per day. Without a quota, every phone or email is limited to one stand per day.
+        </div>
+        <button class="btn btn-primary btn-small" onclick="openQuotaModal()">Create New Quota</button>
+        <div style="overflow-x:auto;margin-top:14px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Farmer</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Max Stands / Day</th>
+                <th>Valid From</th>
+                <th>Valid To</th>
+                <th>Status</th>
+                <th>Approved By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="quotasBody">
+              <tr class="empty-row"><td colspan="9">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PRICING -->
       <div class="tab-panel" id="panel-pricing">
         <h3 class="section-title">Set Daily Price</h3>
         <div class="warning-card">
-          The price applies to all 100 stands. Changing the price does not affect bookings that are already confirmed for today; it applies to new bookings only.
+          Price is set in USD only. The ZWG equivalent is calculated automatically using the daily Reserve Bank of Zimbabwe rate. Changing the price does not affect bookings already confirmed for today.
         </div>
         <div class="price-form">
           <div class="form-group">
-            <label>Price per stand (per day)</label>
+            <label>Price per stand (USD)</label>
             <input type="number" id="newPrice" step="0.01" min="0" placeholder="e.g., 5.00">
           </div>
-          <div class="form-group">
-            <label>Currency</label>
-            <select id="newCurrency">
-              <option value="USD">USD</option>
-              <option value="ZWG">ZWG</option>
-            </select>
-          </div>
           <button class="btn btn-primary" onclick="saveNewPrice()">Save Price</button>
+        </div>
+        <div class="rate-box">
+          <div class="row"><span class="label">Current USD price:</span><span class="value" id="rateUsd">-</span></div>
+          <div class="row"><span class="label">Current ZWG rate (RBZ):</span><span class="value" id="rateRate">-</span></div>
+          <div class="row"><span class="label">Computed ZWG price:</span><span class="value" id="rateZwg">-</span></div>
+          <div class="row"><span class="label">Rate last updated:</span><span class="value" id="rateUpdated">-</span></div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-secondary btn-small" onclick="refreshZwgRate()">Refresh ZWG Rate Now</button>
+          </div>
         </div>
         <h3 class="section-title" style="margin-top:30px;">Price History</h3>
         <div style="overflow-x:auto;">
           <table>
             <thead>
-              <tr><th>Price</th><th>Currency</th><th>Effective From</th><th>Status</th><th>Updated By</th><th>Updated At</th></tr>
+              <tr><th>Price (USD)</th><th>Effective From</th><th>Status</th><th>ZWG Rate at Time</th><th>Updated By</th><th>Updated At</th></tr>
             </thead>
             <tbody id="pricingHistoryBody">
               <tr class="empty-row"><td colspan="6">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="tab-panel" id="panel-history">
+        <h3 class="section-title">History</h3>
+        <div class="info-card">
+          Select a period to review all market activity. Download the records as CSV or PDF.
+        </div>
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>From</label>
+            <input type="date" id="historyFrom">
+          </div>
+          <div class="form-group">
+            <label>To</label>
+            <input type="date" id="historyTo">
+          </div>
+          <button class="btn btn-primary btn-small" onclick="loadHistory()">Load</button>
+          <button class="btn btn-secondary btn-small" onclick="quickHistory('today')">Today</button>
+          <button class="btn btn-secondary btn-small" onclick="quickHistory('yesterday')">Yesterday</button>
+          <button class="btn btn-secondary btn-small" onclick="quickHistory('week')">This Week</button>
+          <button class="btn btn-secondary btn-small" onclick="quickHistory('month')">This Month</button>
+          <button class="btn btn-secondary btn-small" onclick="quickHistory('lastmonth')">Last Month</button>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn btn-success btn-small" onclick="downloadHistory('csv')">Download CSV</button>
+          <button class="btn btn-success btn-small" onclick="downloadHistory('pdf')">Download PDF</button>
+        </div>
+        <div id="historyContent">
+          <div class="loading">Select a date range and click Load.</div>
+        </div>
+      </div>
+
+      <!-- AUDIT -->
+      <div class="tab-panel" id="panel-audit">
+        <h3 class="section-title">Audit Trail</h3>
+        <div class="info-card">
+          Every action on the market system is recorded here. Use filters to narrow the view.
+        </div>
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>From</label>
+            <input type="date" id="auditFrom">
+          </div>
+          <div class="form-group">
+            <label>To</label>
+            <input type="date" id="auditTo">
+          </div>
+          <div class="form-group">
+            <label>Action</label>
+            <select id="auditActionFilter">
+              <option value="">All actions</option>
+              <option value="marked_paid">Marked Paid</option>
+              <option value="released">Released</option>
+              <option value="price_changed">Price Changed</option>
+              <option value="zwg_rate_fetched">ZWG Rate Fetched</option>
+              <option value="email_sent">Email Sent</option>
+              <option value="report_updated">Report Updated</option>
+              <option value="quota_created">Quota Created</option>
+              <option value="quota_revoked">Quota Revoked</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-small" onclick="loadAudit()">Load</button>
+          <button class="btn btn-secondary btn-small" onclick="refreshAudit()">Refresh</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="auditTable">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Stand</th>
+                <th>Performed By</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="auditBody">
+              <tr class="empty-row"><td colspan="5">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -231,7 +403,7 @@
   </div>
 </div>
 
-<!-- Stand detail modal -->
+<!-- STAND DETAIL MODAL -->
 <div class="modal" id="standModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -239,6 +411,28 @@
       <button class="modal-close" onclick="closeStandModal()">&times;</button>
     </div>
     <div class="modal-body" id="standModalBody"></div>
+  </div>
+</div>
+
+<!-- QUOTA MODAL -->
+<div class="modal" id="quotaModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="quotaModalTitle">Create Quota</h3>
+      <button class="modal-close" onclick="closeQuotaModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="quotaModalBody"></div>
+  </div>
+</div>
+
+<!-- REPORT DETAIL MODAL -->
+<div class="modal" id="reportModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="reportModalTitle">Report Details</h3>
+      <button class="modal-close" onclick="closeReportModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="reportModalBody"></div>
   </div>
 </div>
 
