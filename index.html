@@ -406,7 +406,6 @@
                 <input type="text" id="verifyDocId" placeholder="Example: MANY/PLAN/8173/2026 or MANY/311/2026">
             </div>
             <button id="verifyBtn">Verify Document</button>
-            <button style="background:#28a745;margin-top:10px;" onclick="window.location.href='market-booking.html'">Book a Market Stand</button>
             <div id="verifyResult"></div>
             <div class="footer">
                 This is an official verification system of Manyame Rural District Council, created by Tonderai Nyamandi.
@@ -936,6 +935,8 @@
         
         // ============================================
         // VERIFICATION - CHECKS document_type FIELD
+        // Now also handles market booking references
+        // starting with MKT-
         // ============================================
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
@@ -948,6 +949,47 @@
             verifyResult.innerHTML = '<div class="loading">Querying database...</div>';
             
             try {
+                // ---- MARKET BOOKING PATH ----
+                if (docId.toUpperCase().indexOf('MKT-') === 0) {
+                    const { data: booking, error: bErr } = await supabaseClient
+                        .from('market_bookings')
+                        .select('*')
+                        .eq('booking_reference', docId)
+                        .maybeSingle();
+                    if (bErr) throw bErr;
+                    if (!booking) {
+                        verifyResult.innerHTML = '<div class="invalid">INVALID - Booking reference "' + escapeHtml(docId) + '" not found.</div>';
+                        return;
+                    }
+                    const isConfirmed = booking.status === 'confirmed';
+                    const isReleased = booking.status === 'released' || booking.status === 'expired';
+                    const isValid = isConfirmed && !isReleased;
+                    let wrapperCls = isValid ? 'valid' : (isReleased ? 'invalid' : 'error');
+                    let heading = isValid ? 'VERIFIED - VALID MARKET BOOKING'
+                                : (isReleased ? 'INVALID - Booking Released or Expired'
+                                              : 'PENDING - Payment Not Yet Confirmed');
+                    let html = '<div class="' + wrapperCls + '">'
+                        + '<strong>' + heading + '</strong><br><br>'
+                        + '<table style="width:100%;border-collapse:collapse;margin-top:10px;">'
+                        + '<tr><td style="padding:4px 8px;font-weight:bold;width:160px;">Reference:</td><td style="padding:4px 8px;">' + escapeHtml(booking.booking_reference) + '</td></tr>'
+                        + '<tr><td style="padding:4px 8px;font-weight:bold;">Document Type:</td><td style="padding:4px 8px;"><strong>Market Stand Booking</strong></td></tr>'
+                        + '<tr><td style="padding:4px 8px;font-weight:bold;">Stand Number:</td><td style="padding:4px 8px;">' + booking.stand_number + '</td></tr>'
+                        + '<tr><td style="padding:4px 8px;font-weight:bold;">Booking Date:</td><td style="padding:4px 8px;">' + escapeHtml(booking.booking_date) + '</td></tr>'
+                        + '<tr><td style="padding:4px 8px;font-weight:bold;">Holder:</td><td style="padding:4px 8px;">' + escapeHtml(booking.customer_name) + '</td></tr>'
+                        + '<tr><td style="padding:4px 8px;font-weight:bold;">Amount Paid:</td><td style="padding:4px 8px;">' + escapeHtml(booking.currency) + ' ' + Number(booking.amount_paid).toFixed(2) + '</td></tr>';
+                    if (booking.zwg_amount) {
+                        html += '<tr><td style="padding:4px 8px;font-weight:bold;">ZWG Equivalent:</td><td style="padding:4px 8px;">ZWG ' + Number(booking.zwg_amount).toFixed(2) + '</td></tr>';
+                    }
+                    html += '<tr><td style="padding:4px 8px;font-weight:bold;">Status:</td><td style="padding:4px 8px;"><span class="status-badge ' + (isValid ? 'status-approved' : 'status-pending') + '">' + String(booking.status).toUpperCase() + '</span></td></tr>';
+                    if (booking.confirmed_at) {
+                        html += '<tr><td style="padding:4px 8px;font-weight:bold;">Confirmed At:</td><td style="padding:4px 8px;">' + new Date(booking.confirmed_at).toLocaleString() + '</td></tr>';
+                    }
+                    html += '</table></div>';
+                    verifyResult.innerHTML = html;
+                    return;
+                }
+
+                // ---- EXISTING DOCUMENT PATH ----
                 // First check issued_documents table
                 let { data, error } = await supabaseClient
                     .from('issued_documents')
