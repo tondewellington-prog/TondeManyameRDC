@@ -2,6 +2,9 @@
 // MARKET ADMIN - COUNCIL SIDE
 // ============================================
 
+var SUPABASE_FUNCTIONS_URL = 'https://ocojsigqagaehlebubdw.supabase.co/functions/v1';
+var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+
 var currentStaffUser = sessionStorage.getItem('staffEmail');
 var currentStaffName = sessionStorage.getItem('staffDisplayName');
 var currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
@@ -12,6 +15,23 @@ var realtimeBookingChannel = null;
 var realtimeReportChannel = null;
 var realtimeQuotaChannel = null;
 var reportCount = 0;
+
+// --------------------------------------------
+// EDGE FUNCTION CALL HELPER
+// Supabase's new gateway requires the "apikey"
+// header, not "Authorization: Bearer".
+// --------------------------------------------
+async function callEdgeFunction(path, body) {
+  var res = await fetch(SUPABASE_FUNCTIONS_URL + '/' + path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify(body || {})
+  });
+  return res;
+}
 
 // --------------------------------------------
 // BOOT
@@ -156,8 +176,7 @@ function openStandModal(standNumber, booking) {
     html += '<div class="info-row"><span class="label">Email</span><span class="value">' + MarketUtils.escapeHtml(booking.customer_email) + '</span></div>';
   }
 
-  html += ''
-    + '<div class="info-row"><span class="label">Amount (USD)</span><span class="value">' + MarketUtils.formatMoney(booking.amount_paid, 'USD') + '</span></div>';
+  html += '<div class="info-row"><span class="label">Amount (USD)</span><span class="value">' + MarketUtils.formatMoney(booking.amount_paid, 'USD') + '</span></div>';
 
   if (booking.zwg_amount) {
     html += '<div class="info-row"><span class="label">Amount (ZWG)</span><span class="value">ZWG ' + Number(booking.zwg_amount).toFixed(2) + '</span></div>';
@@ -207,7 +226,6 @@ async function markAsPaid(bookingId) {
   if (!confirm('Mark this booking as paid? The customer will receive their confirmation email with QR code.')) return;
 
   try {
-    // Update booking
     var { error } = await client
       .from('market_bookings')
       .update({
@@ -226,18 +244,8 @@ async function markAsPaid(bookingId) {
       details: {}
     }]);
 
-    // Trigger the email
     try {
-      var emailRes = await fetch(MarketUtils.getClient() ? 
-        'https://ocojsigqagaehlebubdw.supabase.co/functions/v1/send-booking-email' :
-        '', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C'
-        },
-        body: JSON.stringify({ booking_id: bookingId })
-      });
+      var emailRes = await callEdgeFunction('send-booking-email', { booking_id: bookingId });
       console.log('Email function status:', emailRes.status);
       if (!emailRes.ok) {
         var text = await emailRes.text();
@@ -258,14 +266,7 @@ async function markAsPaid(bookingId) {
 
 async function resendEmail(bookingId) {
   try {
-    var res = await fetch('https://ocojsigqagaehlebubdw.supabase.co/functions/v1/send-booking-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C'
-      },
-      body: JSON.stringify({ booking_id: bookingId })
-    });
+    var res = await callEdgeFunction('send-booking-email', { booking_id: bookingId });
     if (!res.ok) throw new Error('Email function returned ' + res.status);
     showSuccess('Confirmation email resent.');
     closeStandModal();
@@ -760,17 +761,13 @@ async function saveNewPrice() {
 
 async function refreshZwgRate() {
   try {
-    var res = await fetch('https://ocojsigqagaehlebubdw.supabase.co/functions/v1/fetch-zwg-rate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C'
-      },
-      body: JSON.stringify({})
-    });
-    var data = await res.json();
-    console.log('fetch-zwg-rate response:', data);
-    if (!res.ok || !data.success) throw new Error(data.error || ('HTTP ' + res.status));
+    var res = await callEdgeFunction('fetch-zwg-rate', {});
+    var data;
+    try { data = await res.json(); } catch (e) { data = {}; }
+    console.log('fetch-zwg-rate response:', data, 'status:', res.status);
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || ('HTTP ' + res.status));
+    }
     activePrice = await MarketUtils.fetchActivePrice();
     updateRateBox();
     showSuccess('ZWG rate updated to ' + Number(data.rate).toFixed(4) + ' per USD.');
@@ -827,20 +824,18 @@ function quickHistory(range) {
   var today = new Date();
   var from, to;
 
-  if (range === 'today') {
-    from = to = today;
-  } else if (range === 'yesterday') {
-    var y = new Date(today.getTime() - 86400000);
-    from = to = y;
-  } else if (range === 'week') {
+  if (range === 'today') { from = to = today; }
+  else if (range === 'yesterday') { var y = new Date(today.getTime() - 86400000); from = to = y; }
+  else if (range === 'week') {
     var dayOfWeek = today.getDay() || 7;
     var monday = new Date(today.getTime() - (dayOfWeek - 1) * 86400000);
-    from = monday;
-    to = today;
-  } else if (range === 'month') {
+    from = monday; to = today;
+  }
+  else if (range === 'month') {
     from = new Date(today.getFullYear(), today.getMonth(), 1);
     to = today;
-  } else if (range === 'lastmonth') {
+  }
+  else if (range === 'lastmonth') {
     from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     to = new Date(today.getFullYear(), today.getMonth(), 0);
   }
@@ -945,14 +940,7 @@ async function downloadHistory(format) {
   if (!fromDate || !toDate) { showError('Please select both From and To dates.'); return; }
 
   try {
-    var res = await fetch('https://ocojsigqagaehlebubdw.supabase.co/functions/v1/export-history', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C'
-      },
-      body: JSON.stringify({ from: fromDate, to: toDate, format: format })
-    });
+    var res = await callEdgeFunction('export-history', { from: fromDate, to: toDate, format: format });
 
     if (!res.ok) {
       var text = await res.text();
