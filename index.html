@@ -403,9 +403,10 @@
         <div class="content">
             <div class="form-group">
                 <label>Enter Document ID to Verify</label>
-                <input type="text" id="verifyDocId" placeholder="Example: MANY/PLAN/8173/2026 or MANY/311/2026">
+                <input type="text" id="verifyDocId" placeholder="Example: MANY/PLAN/8173/2026 or MKT-20260922-4521">
             </div>
             <button id="verifyBtn">Verify Document</button>
+            <button style="background:#28a745;margin-top:10px;" onclick="window.location.href='market-booking.html'">Book a Market Stand</button>
             <div id="verifyResult"></div>
             <div class="footer">
                 This is an official verification system of Manyame Rural District Council, created by Tonderai Nyamandi.
@@ -555,7 +556,8 @@
                 'site_plan_approval': 'Site Plan Approval',
                 'occupancy_certificate': 'Occupancy Certificate',
                 'stage_form': 'Stage Form',
-                'issued_document': 'Issued Document'
+                'issued_document': 'Issued Document',
+                'market_booking': 'Market Stand Booking'
             };
             return typeMap[docType.toLowerCase()] || docType;
         }
@@ -935,8 +937,7 @@
         
         // ============================================
         // VERIFICATION - CHECKS document_type FIELD
-        // Now also handles market booking references
-        // starting with MKT-
+        // Also handles market booking refs starting with MKT-
         // ============================================
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
@@ -990,7 +991,6 @@
                 }
 
                 // ---- EXISTING DOCUMENT PATH ----
-                // First check issued_documents table
                 let { data, error } = await supabaseClient
                     .from('issued_documents')
                     .select('*')
@@ -998,7 +998,6 @@
                 
                 if (error) throw error;
                 
-                // If not found in issued_documents, check plan_appraisals
                 if (!data || data.length === 0) {
                     const { data: appraisalData, error: appraisalError } = await supabaseClient
                         .from('plan_appraisals')
@@ -1029,15 +1028,11 @@
                 const doc = data[0];
                 const isValid = doc.status === 'active' || doc.status === 'approved' || doc.status === 'issued';
                 
-                // ============================================
-                // CHECK document_type FIELD
-                // ============================================
                 let docTypeDisplay = getDocumentTypeDisplay(doc.document_type);
                 
                 let issuedToName = doc.owner_name || doc.issued_to || 'N/A';
                 let propertyLoc = doc.location || doc.property_location || doc.stand_number || 'N/A';
                 
-                // Build verification result
                 let resultHtml = `
                     <div class="${isValid ? 'valid' : 'invalid'}">
                         <strong>${isValid ? '✓ VERIFIED - VALID OFFICIAL DOCUMENT' : '✗ INVALID - Document not fully approved'}</strong>
