@@ -1,5 +1,5 @@
 // ============================================
-// MARKET BOOKING - SHARED UTILITIES
+// MARKET BOOKING - SHARED UTILITy
 // ============================================
 
 var SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
