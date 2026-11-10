@@ -122,7 +122,7 @@
 
   <div class="content">
     <div id="staffInfoSection" class="staff-info">
-      <span>Logged in as: <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge">District Planner</span></span>
+      <span>Logged in as: <strong id="staffName"></strong> <span id="staffRoleBadge" class="role-badge"></span></span>
       <button class="logout-btn" onclick="staffLogout()">Logout</button>
     </div>
 
@@ -131,7 +131,7 @@
 
     <div id="accessDenied" class="error hidden">
       <strong>Access Denied</strong><br>
-      Only the District Planner can access market management.
+      Only Administrators can access market management.
       <br><br>
       <a href="index.html">Return to Dashboard</a>
     </div>
@@ -439,5 +439,23 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="market-utils.js"></script>
 <script src="market-admin.js"></script>
+<script>
+  // Dynamically set the role badge text based on the logged-in user's role
+  document.addEventListener('DOMContentLoaded', function() {
+    var roleBadge = document.getElementById('staffRoleBadge');
+    var staffName = document.getElementById('staffName');
+    
+    // Get details from session storage (set by index.html on login)
+    var actualRole = sessionStorage.getItem('staffRole');
+    var actualName = sessionStorage.getItem('staffDisplayName');
+    
+    if (roleBadge && actualRole) {
+      roleBadge.textContent = actualRole;
+    }
+    if (staffName && actualName) {
+      staffName.textContent = actualName;
+    }
+  });
+</script>
 </body>
 </html>
