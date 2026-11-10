@@ -460,6 +460,7 @@
                         <option value="stage_form">Stage Form (Construction Inspection)</option>
                         <option value="consideration_schedule" id="scheduleOption" style="display:none;">Consideration Schedule 261</option>
                         <option value="market_stands" id="marketOption" style="display:none;">Market Stands Management</option>
+                        <option value="manage_users" id="userManagementOption" style="display:none;">User Management (Admin)</option>
                     </select>
                     <button id="continueBtn" class="continue-btn">Continue</button>
                 </div>
@@ -499,6 +500,7 @@
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
         let currentStaffUserId = sessionStorage.getItem('staffUserId');
         let currentStaffRole = sessionStorage.getItem('staffRole');
+        let currentPermissions = JSON.parse(sessionStorage.getItem('staffPermissions') || '[]');
         let allDocuments = [];
         
         // Initialize Supabase
@@ -508,6 +510,11 @@
             }
         } catch(e) {
             console.log("Supabase connection note");
+        }
+        
+        // Permission Checker
+        function hasPermission(permId) {
+            return currentPermissions.includes(permId);
         }
         
         // DOM Elements
@@ -567,27 +574,32 @@
             const badge = document.getElementById('staffRoleBadge');
             if (!badge) return;
             
-            // Display exact text from DB
             badge.textContent = currentStaffRole;
             badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
             
             const marketOption = document.getElementById('marketOption');
-            const r = (currentStaffRole || '').toLowerCase();
+            const userManagementOption = document.getElementById('userManagementOption');
             
-            // Give admin powers to anyone with 'planner', 'admin', 'ceo', or 'hod' in their role name
-            if (r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod')) {
+            if (hasPermission('view_schedule')) {
                 scheduleOption.style.display = 'block';
-                if (marketOption) marketOption.style.display = 'block';
                 updateScheduleOptionLabel();
             } else {
                 scheduleOption.style.display = 'none';
+                if (documentTypeSelect.value === 'consideration_schedule') documentTypeSelect.value = '';
+            }
+
+            if (hasPermission('manage_market')) {
+                if (marketOption) marketOption.style.display = 'block';
+            } else {
                 if (marketOption) marketOption.style.display = 'none';
-                if (documentTypeSelect.value === 'consideration_schedule') {
-                    documentTypeSelect.value = '';
-                }
-                if (documentTypeSelect.value === 'market_stands') {
-                    documentTypeSelect.value = '';
-                }
+                if (documentTypeSelect.value === 'market_stands') documentTypeSelect.value = '';
+            }
+
+            if (hasPermission('manage_users')) {
+                if (userManagementOption) userManagementOption.style.display = 'block';
+            } else {
+                if (userManagementOption) userManagementOption.style.display = 'none';
+                if (documentTypeSelect.value === 'manage_users') documentTypeSelect.value = '';
             }
         }
         
@@ -639,7 +651,7 @@
             }
         }
         
-        // Staff Login - STRICT ROLE READING
+        // Staff Login - STRICT ROLE READING & PERMISSIONS
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
@@ -671,7 +683,7 @@
                 // Fetch profile strictly from table
                 const { data: profileData, error: profileError } = await supabaseClient
                     .from('profiles')
-                    .select('full_name, role')
+                    .select('full_name, role, permissions')
                     .eq('id', userId)
                     .maybeSingle();
                 
@@ -692,14 +704,17 @@
                 
                 let displayName = profileData.full_name || email.split('@')[0];
                 let staffRole = profileData.role; 
+                let perms = profileData.permissions || [];
                 
                 currentStaffUser = email;
                 currentStaffName = displayName;
                 currentStaffRole = staffRole;
+                currentPermissions = perms;
                 
                 sessionStorage.setItem('staffEmail', email);
                 sessionStorage.setItem('staffDisplayName', displayName);
                 sessionStorage.setItem('staffRole', staffRole);
+                sessionStorage.setItem('staffPermissions', JSON.stringify(perms));
                 
                 loginError.innerHTML = '';
                 loginSection.classList.add('hidden');
@@ -722,11 +737,13 @@
             sessionStorage.removeItem('staffEmail');
             sessionStorage.removeItem('staffDisplayName');
             sessionStorage.removeItem('staffRole');
+            sessionStorage.removeItem('staffPermissions');
             sessionStorage.removeItem('staffUserId');
             currentStaffUser = null;
             currentStaffName = null;
             currentStaffUserId = null;
             currentStaffRole = null;
+            currentPermissions = [];
             loginSection.classList.remove('hidden');
             dashboardSection.classList.add('hidden');
             document.getElementById('loginEmail').value = '';
@@ -941,7 +958,6 @@
         
         // ============================================
         // VERIFICATION - CHECKS document_type FIELD
-        // Also handles market booking refs starting with MKT-
         // ============================================
         async function verifyDocument() {
             const docId = document.getElementById('verifyDocId').value.trim();
@@ -1257,8 +1273,7 @@
         
         // Auto-refresh schedule count every 30 seconds
         setInterval(function() {
-            const r = (currentStaffRole || '').toLowerCase();
-            if ((r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod')) && document.visibilityState === 'visible') {
+            if (hasPermission('view_schedule') && document.visibilityState === 'visible') {
                 updateScheduleOptionLabel();
             }
         }, 30000);
@@ -1287,11 +1302,13 @@
                 return;
             }
             
-            const r = (currentStaffRole || '').toLowerCase();
-            const isAdmin = r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod');
-            
-            if (docType === 'market_stands' && !isAdmin) {
-                alert('Only Administrators or Planners can manage market stands.');
+            if (docType === 'market_stands' && !hasPermission('manage_market')) {
+                alert('You do not have permission to manage market stands.');
+                return;
+            }
+
+            if (docType === 'manage_users' && !hasPermission('manage_users')) {
+                alert('You do not have permission to manage users.');
                 return;
             }
             
@@ -1305,6 +1322,8 @@
                 window.location.href = 'consideration-schedule.html';
             } else if (docType === 'market_stands') {
                 window.location.href = 'market-admin.html';
+            } else if (docType === 'manage_users') {
+                window.location.href = 'users-admin.html';
             }
         }
         
