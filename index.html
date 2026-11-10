@@ -646,7 +646,7 @@
             }
         }
         
-        // Staff Login
+        // Staff Login - STRICT ROLE READING
         async function staffLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
@@ -675,19 +675,30 @@
                 sessionStorage.setItem('staffUserId', userId);
                 currentStaffUserId = userId;
                 
-                let displayName = email.split('@')[0];
-                let staffRole = 'building_inspector';
-                
+                // Fetch profile strictly from table
                 const { data: profileData, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('full_name, role')
                     .eq('id', userId)
                     .maybeSingle();
                 
-                if (profileData) {
-                    if (profileData.full_name) displayName = profileData.full_name;
-                    if (profileData.role) staffRole = profileData.role;
+                if (profileError) {
+                    console.error("Profile fetch error:", profileError);
+                    throw new Error("Could not read from profiles table. Contact IT.");
                 }
+
+                if (!profileData) {
+                    console.error("No profile row for user:", userId);
+                    throw new Error("No profile exists for this account. You must be added to the 'profiles' table.");
+                }
+
+                if (!profileData.role) {
+                    console.error("Role is empty in profiles for user:", userId);
+                    throw new Error("Your profile exists, but the 'role' column is empty. Contact IT.");
+                }
+                
+                let displayName = profileData.full_name || email.split('@')[0];
+                let staffRole = profileData.role;
                 
                 currentStaffUser = email;
                 currentStaffName = displayName;
