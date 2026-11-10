@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Management - Manyame RDC</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f0f2f5; min-height:100vh; padding:20px; }
+  .back-link { max-width:1100px; margin:0 auto 15px auto; }
+  .back-link a { color:#1e3c72; text-decoration:none; font-weight:bold; }
+  .container { max-width:1100px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); overflow:hidden; }
+  .header { background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%); color:white; padding:25px; text-align:center; }
+  .header h1 { font-size:22px; }
+  .header h2 { font-size:13px; font-weight:normal; opacity:0.9; }
+  .content { padding:30px; }
+  .staff-info { background:#e9ecef; padding:12px 15px; border-radius:8px; margin-bottom:25px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:14px; }
+  .logout-btn { background:#6c757d; color:white; padding:6px 15px; font-size:13px; border:none; border-radius:4px; cursor:pointer; }
+  .info-card { background:#cce5ff; border-left:5px solid #007bff; padding:15px; border-radius:8px; margin-bottom:20px; font-size:14px; }
+  
+  table { width:100%; border-collapse:collapse; margin-top:15px; background:white; }
+  th, td { padding:12px 15px; text-align:left; border-bottom:1px solid #dee2e6; font-size:14px; }
+  th { background:#f8f9fa; color:#1e3c72; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; }
+  tr:hover { background:#f8f9fa; }
+  
+  .checkbox-group { display:flex; flex-direction:column; gap:6px; }
+  .checkbox-label { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .checkbox-label input { width:16px; height:16px; cursor:pointer; }
+  
+  .role-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:bold; background:#e9ecef; color:#333; }
+  
+  .btn { padding:8px 16px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-family:inherit; font-size:13px; transition:transform .15s; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn-save { background:#28a745; color:white; }
+  
+  .error { background:#f8d7da; color:#721c24; padding:15px; border-radius:8px; margin-bottom:20px; border-left:5px solid #dc3545; }
+  .success { background:#d4edda; color:#155724; padding:15px; border-radius:8px; margin-bottom:20px; border-left:5px solid #28a745; }
+  .hidden { display:none; }
+  .loading { text-align:center; padding:40px; color:#666; }
+</style>
+</head>
+<body>
+
+<div class="back-link">
+  <a href="index.html">Back to Dashboard</a>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>Manyame Rural District Council</h1>
+    <h2>System User Management</h2>
+  </div>
+
+  <div class="content">
+    <div class="staff-info">
+      <span>Logged in as: <strong id="staffName"></strong></span>
+      <button class="logout-btn" onclick="window.location.href='index.html'">Return to Dashboard</button>
+    </div>
+
+    <div id="errorDisplay" class="error hidden"></div>
+    <div id="successDisplay" class="success hidden"></div>
+
+    <div class="info-card">
+      Tick the boxes to grant or revoke access for each staff member. Changes take effect the next time they log in.
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Database Role</th>
+            <th>Permissions (Tick to Allow)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr><td colspan="4" class="loading">Loading users...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://ocojsigqagaehlebubdw.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
+  let supabaseClient = null;
+  let currentStaffUserId = sessionStorage.getItem('staffUserId');
+
+  try {
+    if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch(e) {}
+
+  // The master list of permissions in the system
+  const PERMISSIONS = [
+    { id: 'verify_docs', label: 'Verify Documents' },
+    { id: 'create_permit', label: 'Issue Development Permits' },
+    { id: 'create_appraisal', label: 'Create Plan Appraisals' },
+    { id: 'view_schedule', label: 'View Consideration Schedule 261' },
+    { id: 'manage_market', label: 'Manage Market Stands' },
+    { id: 'manage_users', label: 'Manage Users (Admin)' }
+  ];
+
+  async function loadUsers() {
+    const tbody = document.getElementById('usersBody');
+    const errorBox = document.getElementById('errorDisplay');
+
+    if (!currentStaffUserId) {
+      errorBox.textContent = 'You must be logged in to view this page.';
+      errorBox.classList.remove('hidden');
+      tbody.innerHTML = '';
+      return;
+    }
+
+    // Security check: Does this user have permission to manage users?
+    const { data: myProfile } = await supabaseClient.from('profiles').select('permissions').eq('id', currentStaffUserId).single();
+    const myPerms = myProfile?.permissions || [];
+    if (!myPerms.includes('manage_users')) {
+      errorBox.textContent = 'Access Denied. You do not have permission to manage users.';
+      errorBox.classList.remove('hidden');
+      tbody.innerHTML = '';
+      return;
+    }
+
+    document.getElementById('staffName').textContent = sessionStorage.getItem('staffDisplayName');
+
+    // Fetch all users
+    const { data: users, error } = await supabaseClient
+      .from('profiles')
+      .select('id, full_name, role, permissions')
+      .order('full_name', { ascending: true });
+
+    if (error) {
+      errorBox.textContent = 'Error loading users: ' + error.message;
+      errorBox.classList.remove('hidden');
+      return;
+    }
+
+    if (!users || users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No users found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+
+    users.forEach(user => {
+      const tr = document.createElement('tr');
+      
+      let checkboxesHtml = '<div class="checkbox-group">';
+      PERMISSIONS.forEach(p => {
+        const isChecked = (user.permissions || []).includes(p.id) ? 'checked' : '';
+        // Prevent editing own "Manage Users" permission to avoid locking yourself out
+        const isDisabled = (user.id === currentStaffUserId && p.id === 'manage_users') ? 'disabled' : '';
+        
+        checkboxesHtml += `
+          <label class="checkbox-label">
+            <input type="checkbox" data-userid="${user.id}" value="${p.id}" ${isChecked} ${isDisabled}>
+            ${p.label}
+          </label>
+        `;
+      });
+      checkboxesHtml += '</div>';
+
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(user.full_name || 'Unnamed User')}</strong></td>
+        <td><span class="role-badge">${escapeHtml(user.role)}</span></td>
+        <td>${checkboxesHtml}</td>
+        <td><button class="btn btn-save" onclick="savePermissions('${user.id}', this)">Save</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function savePermissions(userId, btnElement) {
+    const row = btnElement.closest('tr');
+    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+    
+    // Collect all checked values
+    const newPermissions = [];
+    checkboxes.forEach(cb => {
+      if (cb.checked) newPermissions.push(cb.value);
+    });
+
+    btnElement.textContent = 'Saving...';
+    btnElement.disabled = true;
+
+    try {
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({ permissions: newPermissions })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      showSuccess('Permissions updated successfully.');
+    } catch (err) {
+      console.error(err);
+      alert('Error saving permissions: ' + err.message);
+    } finally {
+      btnElement.textContent = 'Save';
+      btnElement.disabled = false;
+    }
+  }
+
+  function showSuccess(msg) {
+    const el = document.getElementById('successDisplay');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 3000);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // Init
+  if (supabaseClient) loadUsers();
+</script>
+</body>
+</html>
