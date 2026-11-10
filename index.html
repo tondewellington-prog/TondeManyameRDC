@@ -498,7 +498,7 @@
         let currentStaffUser = sessionStorage.getItem('staffEmail');
         let currentStaffName = sessionStorage.getItem('staffDisplayName');
         let currentStaffUserId = sessionStorage.getItem('staffUserId');
-        let currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
+        let currentStaffRole = sessionStorage.getItem('staffRole');
         let allDocuments = [];
         
         // Initialize Supabase
@@ -529,21 +529,11 @@
         const scheduleOption = document.getElementById('scheduleOption');
         
         function getRoleBadgeClass(role) {
-            var roleMap = {
-                'building_inspector': 'role-inspector',
-                'planning_tech': 'role-tech',
-                'district_planner': 'role-planner'
-            };
-            return roleMap[role] || 'role-inspector';
-        }
-        
-        function getStaffRoleDisplay(role) {
-            var roleMap = {
-                'building_inspector': 'Building Inspector',
-                'planning_tech': 'Planning Technician',
-                'district_planner': 'District Planner'
-            };
-            return roleMap[role] || 'Building Inspector';
+            if (!role) return 'role-inspector';
+            const r = role.toLowerCase();
+            if (r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod')) return 'role-planner';
+            if (r.includes('tech')) return 'role-tech';
+            return 'role-inspector';
         }
         
         function getDocumentTypeDisplay(docType) {
@@ -576,13 +566,16 @@
         function updateRoleBadge() {
             const badge = document.getElementById('staffRoleBadge');
             if (!badge) return;
-            badge.textContent = getStaffRoleDisplay(currentStaffRole);
+            
+            // Display exact text from DB
+            badge.textContent = currentStaffRole;
             badge.className = 'role-badge ' + getRoleBadgeClass(currentStaffRole);
             
             const marketOption = document.getElementById('marketOption');
+            const r = (currentStaffRole || '').toLowerCase();
             
-            // Show/hide schedule option based on role
-            if (currentStaffRole === 'district_planner') {
+            // Give admin powers to anyone with 'planner', 'admin', 'ceo', or 'hod' in their role name
+            if (r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod')) {
                 scheduleOption.style.display = 'block';
                 if (marketOption) marketOption.style.display = 'block';
                 updateScheduleOptionLabel();
@@ -634,7 +627,7 @@
         }
         
         function checkLoginState() {
-            if (currentStaffUser && currentStaffName) {
+            if (currentStaffUser && currentStaffName && currentStaffRole) {
                 loginSection.classList.add('hidden');
                 dashboardSection.classList.remove('hidden');
                 staffNameSpan.innerHTML = currentStaffName;
@@ -698,7 +691,7 @@
                 }
                 
                 let displayName = profileData.full_name || email.split('@')[0];
-                let staffRole = profileData.role;
+                let staffRole = profileData.role; 
                 
                 currentStaffUser = email;
                 currentStaffName = displayName;
@@ -733,7 +726,7 @@
             currentStaffUser = null;
             currentStaffName = null;
             currentStaffUserId = null;
-            currentStaffRole = 'building_inspector';
+            currentStaffRole = null;
             loginSection.classList.remove('hidden');
             dashboardSection.classList.add('hidden');
             document.getElementById('loginEmail').value = '';
@@ -1264,7 +1257,8 @@
         
         // Auto-refresh schedule count every 30 seconds
         setInterval(function() {
-            if (currentStaffRole === 'district_planner' && document.visibilityState === 'visible') {
+            const r = (currentStaffRole || '').toLowerCase();
+            if ((r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod')) && document.visibilityState === 'visible') {
                 updateScheduleOptionLabel();
             }
         }, 30000);
@@ -1293,8 +1287,11 @@
                 return;
             }
             
-            if (docType === 'market_stands' && currentStaffRole !== 'district_planner') {
-                alert('Only the District Planner can manage market stands.');
+            const r = (currentStaffRole || '').toLowerCase();
+            const isAdmin = r.includes('planner') || r.includes('admin') || r.includes('ceo') || r.includes('hod');
+            
+            if (docType === 'market_stands' && !isAdmin) {
+                alert('Only Administrators or Planners can manage market stands.');
                 return;
             }
             
