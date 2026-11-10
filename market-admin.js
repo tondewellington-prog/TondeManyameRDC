@@ -7,7 +7,7 @@ var SUPABASE_ANON_KEY = 'sb_publishable_njwmRaZK-bnzut7bZPDpNQ_0VolCv-C';
 
 var currentStaffUser = sessionStorage.getItem('staffEmail');
 var currentStaffName = sessionStorage.getItem('staffDisplayName');
-var currentStaffRole = sessionStorage.getItem('staffRole') || 'building_inspector';
+var currentPermissions = JSON.parse(sessionStorage.getItem('staffPermissions') || '[]');
 
 var todayBookings = {};
 var activePrice = { price_per_day: 5.00, currency: 'USD', zwg_rate: null };
@@ -17,9 +17,14 @@ var realtimeQuotaChannel = null;
 var reportCount = 0;
 
 // --------------------------------------------
+// PERMISSION CHECK HELPER
+// --------------------------------------------
+function hasPermission(permId) {
+  return currentPermissions.includes(permId);
+}
+
+// --------------------------------------------
 // EDGE FUNCTION CALL HELPER
-// Supabase's new gateway requires the "apikey"
-// header, not "Authorization: Bearer".
 // --------------------------------------------
 async function callEdgeFunction(path, body) {
   var res = await fetch(SUPABASE_FUNCTIONS_URL + '/' + path, {
@@ -42,12 +47,14 @@ async function adminBoot() {
 
   document.getElementById('todayLabel').textContent = MarketUtils.todayLong();
 
+  // CHANGED: Check for Permission instead of exact role name
   if (!currentStaffUser || !currentStaffName) {
     showAccessDenied('Please login first.');
     return;
   }
-  if (currentStaffRole !== 'district_planner') {
-    showAccessDenied('Only the District Planner can manage the market.');
+  
+  if (!hasPermission('manage_market')) {
+    showAccessDenied('You do not have permission to manage the market. Please ask an admin to tick the "Manage Market Stands" box for your account.');
     return;
   }
 
@@ -1054,6 +1061,7 @@ function staffLogout() {
   sessionStorage.removeItem('staffEmail');
   sessionStorage.removeItem('staffDisplayName');
   sessionStorage.removeItem('staffRole');
+  sessionStorage.removeItem('staffPermissions');
   sessionStorage.removeItem('staffUserId');
   window.location.href = 'index.html';
 }
